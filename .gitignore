@@ -11,7 +11,7 @@
 *.tar.gz
 *.rar
 *pyc
-
+.vscode
 wandb
 cifar-10-batches-py
 FashionMNIST
