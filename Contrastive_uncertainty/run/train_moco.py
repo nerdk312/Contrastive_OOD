@@ -44,7 +44,7 @@ def train(params):
     desired_callbacks = [callback_dict['Confusion_matrix'],callback_dict['ROC'],
                         callback_dict['Reliability'],callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean']]
-    '''    
+    '''   
     desired_callbacks = [callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean']]
     #desired_callbacks = [callback_dict['Mahalanobis_compressed']]
 
