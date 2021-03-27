@@ -312,10 +312,6 @@ class MMD_distance(pl.Callback):
         return MMD_dist
 
         
-        
-
-
-
 class OOD_ROC(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule):
         super().__init__()
@@ -631,9 +627,11 @@ class Mahalanobis_OOD(pl.Callback):
 class Mahalanobis_OOD_compressed(Mahalanobis_OOD):
     def __init__(self, Datamodule,OOD_Datamodule,quick_callback):
         super().__init__(Datamodule,OOD_Datamodule,quick_callback)
-        self.log = "Mahalanobis_compressed_"    
+        self.log_name = "Mahalanobis_compressed_"    
         self.true_histogram = 'Mahalanobis_True_data_compressed'
         self.ood_histogram = 'Mahalanobis_OOD_data_compressed'
+
+        
 
     def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
         features, labels = [], []
@@ -663,9 +661,10 @@ class Mahalanobis_OOD_compressed(Mahalanobis_OOD):
 class Euclidean_OOD(Mahalanobis_OOD):
     def __init__(self, Datamodule,OOD_Datamodule,quick_callback):
         super().__init__(Datamodule,OOD_Datamodule,quick_callback)
-        self.log_AUROC = "Euclidean_"
+        self.log_name = "Euclidean_"
         self.true_histogram = 'Euclidean_True_data_scores'
         self.ood_histogram = 'Euclidean_OOD_data_scores'
+
 
     def get_scores_multi_cluster(self,ftrain, ftest, food, ypred):
         # Nawid - get all the features which belong to each of the different classes

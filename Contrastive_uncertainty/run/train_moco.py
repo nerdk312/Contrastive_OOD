@@ -45,8 +45,8 @@ def train(params):
                         callback_dict['Reliability'],callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean']]
     '''   
-    #desired_callbacks = [callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean']]
-    desired_callbacks = [callback_dict['MMD']]
+    desired_callbacks = [callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean']]
+    #desired_callbacks = [callback_dict['MMD']]
 
     model = MocoV2(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
         encoder_momentum = config['encoder_momentum'], softmax_temperature = config['softmax_temperature'],
