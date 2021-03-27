@@ -36,7 +36,7 @@ validation_ratio = 1.0,
 test_ratio = 1.0,
 val_check = 1,
 model_saving = 100, # Used to control how often the model is saved
-pretrained_network = 'softmax_baseline.pt',
+pretrained_network = 'Pretrained_models/finetuned_network.pt',
 
-project = 'evaluation'# evaluation, Moco_training
+project = 'evaluation'  # evaluation, Moco_training
 )

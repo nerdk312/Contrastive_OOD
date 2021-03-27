@@ -38,11 +38,15 @@ def train(params):
     datamodule = Datamodule_selection(config['dataset'],config)
     OOD_datamodule = Datamodule_selection(config['OOD_dataset'],config)
     channels = Channel_selection(config['dataset'])
-    class_names_dict = datamodule.idx2class # name of dict which contains class names
-    callback_dict = callback_dictionary(datamodule,OOD_datamodule,config)
+    class_names_dict = datamodule.idx2class  # name of dict which contains class names
+    callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
+    '''
     desired_callbacks = [callback_dict['Confusion_matrix'],callback_dict['ROC'],
-                        callback_dict['Reliability'],callback_dict['Metrics'],callback_dict['Model_saving'],callback_dict['Mahalanobis']]
-
+                        callback_dict['Reliability'],callback_dict['Metrics'], callback_dict['Model_saving'], 
+                        callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean']]
+    '''    
+    desired_callbacks = [callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean']]
+    #desired_callbacks = [callback_dict['Mahalanobis_compressed']]
 
     model = MocoV2(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
         encoder_momentum = config['encoder_momentum'], softmax_temperature = config['softmax_temperature'],

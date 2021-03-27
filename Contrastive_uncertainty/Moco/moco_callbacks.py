@@ -35,11 +35,10 @@ class ReliabiltyLogger(pl.Callback):
         labels = self.labels.to(device=pl_module.device)
         # Make target centroids
         #one_hot_labels = F.one_hot(labels).float()
-        
 
         logits = pl_module.class_discrimination(imgs)
         y_pred = F.softmax(logits,dim = 1)
-        ece = self.make_model_diagrams(y_pred,labels,pl_module) # calculates ECE as well as makes reliability diagram
+        ece = self.make_model_diagrams(y_pred,labels,pl_module)# calculates ECE as well as makes reliability diagram
 
 
     def calculate_ece(self,logits, labels,pl_module, n_bins=10):
@@ -57,14 +56,15 @@ class ReliabiltyLogger(pl.Callback):
         2015.
         """
 
+
         bin_boundaries = torch.linspace(0, 1, n_bins + 1) # Makes bins
         bin_lowers = bin_boundaries[:-1] # Lower boundary of bin
         bin_uppers = bin_boundaries[1:] # Upper boundary of bin
 
         #softmaxes = F.softmax(logits, dim=1)
-        confidences, predictions = torch.max(logits, 1) # Nawid - obtain the confidences and the indices of confidence which are the predictions
+        confidences, predictions = torch.max(logits, 1)  # Nawid - obtain the confidences and the indices of confidence which are the predictions
 
-        accuracies = predictions.eq(labels) # Calculate accuracies
+        accuracies = predictions.eq(labels)  # Calculate accuracies
 
         ece = torch.zeros(1,device = pl_module.device)#.cuda()#, device=pl_module.device)
         for bin_lower, bin_upper in zip(bin_lowers, bin_uppers): # Iterate through the bin intervals
@@ -233,12 +233,15 @@ class ModelSaving(pl.Callback):
     def __init__(self,interval):
         super().__init__()
         self.interval = interval
+        self.counter = interval
         #self.epoch_last_check = 0
     # save the state dict in the local directory as well as in wandb
     def on_validation_epoch_end(self,trainer,pl_module): # save every interval
         epoch = trainer.current_epoch 
-        if epoch % self.interval == 0:
+        if epoch > self.counter:
             self.save_model(pl_module,epoch)
+            self.counter += self.interval # Increase the interval
+            
     
     def on_test_epoch_end(self,trainer,pl_module): # save during the test stage
         epoch =  trainer.current_epoch
@@ -422,8 +425,11 @@ class Mahalanobis_OOD(pl.Callback):
         self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
         self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
+        self.log_AUROC = "Mahalanobis AUROC"
+        self.true_histogram = 'Mahalanobis_True_data_scores'
+        self.ood_histogram = 'Mahalanobis_OOD_data_scores'
 
-    def on_validation_epoch_end(self,trainer,pl_module):
+    def on_test_epoch_end(self,trainer,pl_module):
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
         ood_loader = self.OOD_Datamodule.test_dataloader()
@@ -439,7 +445,6 @@ class Mahalanobis_OOD(pl.Callback):
             np.copy(labels_train),
         )
 
-        wandb.log({"Mahalanobis AUROC":auroc})
         return fpr95,auroc,aupr 
 
     def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
@@ -514,12 +519,12 @@ class Mahalanobis_OOD(pl.Callback):
          # histogram of the confidence scores for the true data
         true_data = [[s] for s in confidence_test]
         true_table = wandb.Table(data=true_data, columns=["scores"])
-        wandb.log({'Mahalanobis_True_data_confidence': wandb.plot.histogram(true_table, "scores",title="Mahalanobis_true_data_scores")})
+        wandb.log({self.true_histogram: wandb.plot.histogram(true_table, "scores",title= self.true_histogram)})
 
         # Histogram of the confidence scores for the OOD data
         ood_data = [[s] for s in confidence_OOD]
         ood_table = wandb.Table(data=ood_data, columns=["scores"])
-        wandb.log({'Mahalanobis_OOD_data_confidence': wandb.plot.histogram(ood_table, "scores",title="Mahalanobis_OOD_data_scores")})
+        wandb.log({self.ood_histogram: wandb.plot.histogram(ood_table, "scores",title=self.ood_histogram)})
     
     def get_eval_results(self,ftrain, ftest, food, labelstrain):
         """
@@ -543,10 +548,70 @@ class Mahalanobis_OOD(pl.Callback):
         # Nawid- get false postive rate and asweel as AUROC and aupr
         fpr95 = get_fpr(dtest, dood)
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
+        wandb.log({self.log_AUROC:auroc})
         return fpr95, auroc, aupr    
 
 
+class Mahalanobis_OOD_compressed(Mahalanobis_OOD):
+    def __init__(self, Datamodule,OOD_Datamodule,quick_callback):
+        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
+        self.log_AUROC = "Mahalanobis AUROC compressed"    
+        self.true_histogram = 'Mahalanobis_True_data_compressed'
+        self.ood_histogram = 'Mahalanobis_OOD_data_compressed'
 
+    def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
+        features, labels = [], []
+        total = 0
+        loader = quickloading(self.quick_callback,dataloader)
+        for index, (img, label) in enumerate(loader):
+            if isinstance(img, tuple) or isinstance(img, list):
+                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
+
+
+            if total > max_images:
+                break
+            
+            img, label = img.to(pl_module.device), label.to(pl_module.device)
+
+            features += list(pl_module.feature_vector_compressed(img).data.cpu().numpy())
+            labels += list(label.data.cpu().numpy())
+
+            if verbose and not index % 50:
+                print(index)
+                
+            total += len(img)
+
+        return np.array(features), np.array(labels)
+    
+
+class Euclidean_OOD(Mahalanobis_OOD):
+    def __init__(self, Datamodule,OOD_Datamodule,quick_callback):
+        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
+        self.log_AUROC = "Euclidean AUROC"
+        self.true_histogram = 'Euclidean_True_data_scores'
+        self.ood_histogram = 'Euclidean_OOD_data_scores'
+
+    def get_scores_multi_cluster(self,ftrain, ftest, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        # Calculate the sqrt of the sum of the squared distances
+        din = [
+            np.sqrt(np.sum(
+                (ftest - np.mean(x, axis=0, keepdims=True))**2,axis=-1,))
+            for x in xc # Nawid - done for all the different classes
+        ]
+        dood = [
+            np.sqrt(np.sum(
+                (food - np.mean(x, axis=0, keepdims=True))**2,axis=-1,))
+            for x in xc # Nawid - done for all the different classes
+        ]
+
+        din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
+        dood = np.min(dood, axis=0)
+
+        return din, dood
+
+        
 class OOD_confusion_matrix(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule):
         super().__init__()

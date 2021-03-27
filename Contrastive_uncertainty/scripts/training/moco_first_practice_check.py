@@ -11,6 +11,6 @@ sweep_hparams['validation_ratio'] = 0.2
 sweep_hparams['test_ratio'] = 0.2
 sweep_hparams['val_check'] = 1
 sweep_hparams['project'] = 'practice' # evaluation, Moco_training
-sweep_hparams['pretrained_network'] = None
+sweep_hparams['pretrained_network'] = None#'Pretrained_models/finetuned_network.pt'
 sweep_hparams['quick_callback'] = True
 train(sweep_hparams)

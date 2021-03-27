@@ -41,7 +41,7 @@ def eval_moco(params):
     callback_dict = callback_dictionary(datamodule,OOD_datamodule,config)
     
     desired_callbacks = [callback_dict['Confusion_matrix'],callback_dict['ROC'],
-                        callback_dict['Reliability'],callback_dict['Metrics'],callback_dict['Mahalanobis']]
+                        callback_dict['Reliability'],callback_dict['Metrics'], callback_dict['Model_saving'], callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed']]
     
     #desired_callbacks = []
 

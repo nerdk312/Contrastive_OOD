@@ -228,6 +228,18 @@ class MocoV2(pl.LightningModule):
         """
         z = self.encoder_q.representation_output(x)
         return z
+    
+    def feature_vector_compressed(self,x):
+        """
+        Input:
+            x: a batch of images for classification
+        Output:
+            logits
+        """
+        # compute query features
+        z = self.feature_vector(x) # Gets the feature map representations which I use for the purpose of pretraining
+        z = self.encoder_q.class_fc1(z)
+        return z
 
     def class_discrimination(self,x):
         """

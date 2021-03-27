@@ -1,6 +1,7 @@
 from Contrastive_uncertainty.datamodules.datamodule_dict import dataset_dict
-from Contrastive_uncertainty.Moco.moco_callbacks import ReliabiltyLogger,ImagePredictionLogger,ModelSaving,OOD_confusion_matrix,OOD_ROC,Mahalanobis_OOD
-from Contrastive_uncertainty.metrics.metric_callback import MetricLogger,evaluation_metrics,evaltypes
+from Contrastive_uncertainty.Moco.moco_callbacks import ReliabiltyLogger, ImagePredictionLogger, ModelSaving, OOD_confusion_matrix, OOD_ROC, \
+                                                        Mahalanobis_OOD, Mahalanobis_OOD_compressed, Euclidean_OOD
+from Contrastive_uncertainty.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 
 def run_name(config):
     run_name = 'Epochs:'+ str(config['epochs']) +  '_lr:' + f"{config['learning_rate']:.3e}" + '_bsz:' + str(config['bsz']) +  '_classifier:' +str(config['classifier']) + '_seed:' +str(config['seed'])  
@@ -28,16 +29,17 @@ def Channel_selection(dataset):
 
 
 def callback_dictionary(Datamodule,OOD_Datamodule,config):
-    val_train_loader,val_test_loader =  Datamodule.val_dataloader() # Used for metric logger callback also
+    val_train_loader, val_test_loader = Datamodule.val_dataloader() # Used for metric logger callback also
     samples = next(iter(val_test_loader))
     sample_size = config['bsz']
 
-    OOD_val_train_loader,OOD_val_test_loader = OOD_Datamodule.val_dataloader()
+    OOD_val_train_loader, OOD_val_test_loader = OOD_Datamodule.val_dataloader()
 
-    OOD_samples= next(iter(OOD_val_test_loader))
+    OOD_samples = next(iter(OOD_val_test_loader))
 
-    callback_dict = {'Model_saving':ModelSaving(config['model_saving']),'Confusion_matrix':OOD_confusion_matrix(Datamodule,OOD_Datamodule),'ROC':OOD_ROC(Datamodule,OOD_Datamodule),
-                'Reliability':ReliabiltyLogger(samples,sample_size),'Metrics':MetricLogger(evaluation_metrics,val_test_loader,evaltypes,config['quick_callback']),'Image_prediction':ImagePredictionLogger(samples,OOD_samples,sample_size),
-                'Mahalanobis':Mahalanobis_OOD(Datamodule,OOD_Datamodule,config['quick_callback'])}
+    callback_dict = {'Model_saving':ModelSaving(config['model_saving']), 'Confusion_matrix':OOD_confusion_matrix(Datamodule,OOD_Datamodule),'ROC':OOD_ROC(Datamodule,OOD_Datamodule),
+                'Reliability': ReliabiltyLogger(samples,sample_size), 'Metrics': MetricLogger(evaluation_metrics,val_test_loader,evaltypes,config['quick_callback']),'Image_prediction':ImagePredictionLogger(samples,OOD_samples,sample_size),
+                'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule, config['quick_callback']), 'Mahalanobis_compressed': Mahalanobis_OOD_compressed(Datamodule,OOD_Datamodule,config['quick_callback']),
+                'Euclidean':Euclidean_OOD(Datamodule,OOD_Datamodule, config['quick_callback'])}
     
     return callback_dict
