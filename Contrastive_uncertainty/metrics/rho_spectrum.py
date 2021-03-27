@@ -18,7 +18,7 @@ class Metric():
         import torch
 
         if isinstance(features, torch.Tensor):
-            _,s,_ = torch.svd(features)
+            _,s,_ = torch.svd(features)  # Nawid - obtains singular values of svd
             s     = s.cpu().numpy()
         else:
             svd = TruncatedSVD(n_components=self.embed_dim-1, n_iter=7, random_state=42)
@@ -26,12 +26,12 @@ class Metric():
             s = svd.singular_values_
 
         if self.mode!=0:
-            s = s[np.abs(self.mode)-1:]
-        s_norm  = s/np.sum(s)
+            s = s[np.abs(self.mode)-1:] # Nawid - select a subset of the values (from the mode -1 value to the last value)
+        s_norm  = s/np.sum(s) # Nawid- normalise by sum of spectral values
         uniform = np.ones(len(s))/(len(s))
 
         if self.mode<0:
-            kl = entropy(s_norm, uniform)
+            kl = entropy(s_norm, uniform) # Nawid - calculate the KL divergence between a uniform distribution and the singular values 
         if self.mode>0:
             kl = entropy(uniform, s_norm)
         if self.mode==0:
