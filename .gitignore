@@ -1,7 +1,8 @@
 *.pt
 
 *.mat
-
+*.pdf
+*.png
 # Package Files #
 *.jar
 *.war

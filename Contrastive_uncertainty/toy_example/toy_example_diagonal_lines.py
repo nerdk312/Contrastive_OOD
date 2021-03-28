@@ -78,7 +78,6 @@ def train(net2train, p_switch=0):
 
     loss_collect = []
     for i in range(train_iter):
-        import ipdb; ipdb.set_trace()
         idxs   = np.random.choice(len(train_lines), bs, replace=False) # Obtain batch size number of indices from the train lines array
         batch  = torch.from_numpy(train_lines[idxs,:]).to(torch.float).to(device) # Obtain points from train lines corresponding to indices sampled
         train_labels = train_cls[idxs] # obtain train labels
