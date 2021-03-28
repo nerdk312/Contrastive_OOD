@@ -3,7 +3,7 @@ from Contrastive_uncertainty.Moco.moco_callbacks import ReliabiltyLogger, ImageP
                                                         Mahalanobis_OOD, Mahalanobis_OOD_compressed, Euclidean_OOD, \
                                                         MMD_distance
 from Contrastive_uncertainty.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
-
+from Contrastive_uncertainty.Moco.visualisation_callback import Visualisation
 def run_name(config):
     run_name = 'Epochs:'+ str(config['epochs']) +  '_lr:' + f"{config['learning_rate']:.3e}" + '_bsz:' + str(config['bsz']) +  '_classifier:' +str(config['classifier']) + '_seed:' +str(config['seed'])  
     return run_name
@@ -12,7 +12,7 @@ def Evaluation_run_name(config):
     run_name = 'Evaluation_' +'Epochs:'+ str(config['epochs']) +  '_lr:' + f"{config['learning_rate']:.3e}" + '_bsz:' + str(config['bsz']) +  '_classifier:' +str(config['classifier']) + '_seed:' +str(config['seed'])  
     return run_name
 
-def Datamodule_selection(dataset,config):
+def Datamodule_selection(dataset, config):
     # Information regarding the configuration of the data module for the specific task
     datamodule_info =  dataset_dict[dataset] # Specific module
     Datamodule = datamodule_info['module'](data_dir= './',batch_size = config['bsz'],seed = config['seed'])
@@ -41,6 +41,7 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
     callback_dict = {'Model_saving':ModelSaving(config['model_saving']), 'Confusion_matrix':OOD_confusion_matrix(Datamodule,OOD_Datamodule),'ROC':OOD_ROC(Datamodule,OOD_Datamodule),
                 'Reliability': ReliabiltyLogger(samples,sample_size), 'Metrics': MetricLogger(evaluation_metrics,val_test_loader,evaltypes,config['quick_callback']),'Image_prediction':ImagePredictionLogger(samples,OOD_samples,sample_size),
                 'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule, config['quick_callback']), 'Mahalanobis_compressed': Mahalanobis_OOD_compressed(Datamodule,OOD_Datamodule,config['quick_callback']),
-                'Euclidean': Euclidean_OOD(Datamodule,OOD_Datamodule, config['quick_callback']),'MMD': MMD_distance(Datamodule, config['quick_callback'])}
+                'Euclidean': Euclidean_OOD(Datamodule,OOD_Datamodule, config['quick_callback']),'MMD': MMD_distance(Datamodule, config['quick_callback']),
+                'Visualisation': Visualisation(Datamodule, OOD_Datamodule, config['quick_callback'])}
     
     return callback_dict

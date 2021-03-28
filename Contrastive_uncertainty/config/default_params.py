@@ -8,7 +8,7 @@ instance_encoder = 'resnet50',
 
 # optimizer args
 optimizer = 'sgd',
-learning_rate= 0.003,#3e-4,
+learning_rate= 0.03,#3e-4,
 momentum= 0.9,
 weight_decay = 1e-4,
 
@@ -19,7 +19,7 @@ dataset = 'FashionMNIST',
 OOD_dataset = 'MNIST',
 
 classifier = True,
-normalize = False,
+normalize = True,
 contrastive = False,
 use_mlp = True,
 
@@ -35,7 +35,7 @@ training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
 val_check = 5,
-model_saving = 100, # Used to control how often the model is saved
+model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,
 
 project = 'evaluation'# evaluation, Moco_training
