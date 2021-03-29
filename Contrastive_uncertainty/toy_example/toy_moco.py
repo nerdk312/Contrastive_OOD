@@ -7,14 +7,7 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-
-from Contrastive_uncertainty.datamodules.cifar10_datamodule import CIFAR10DataModule
-from Contrastive_uncertainty.datamodules.fashionmnist_datamodule import FashionMNISTDataModule
-from Contrastive_uncertainty.datamodules.mnist_datamodule import MNISTDataModule
-from Contrastive_uncertainty.datamodules.datamodule_transforms import Moco2TrainCIFAR10Transforms, Moco2EvalCIFAR10Transforms, Moco2TrainFashionMNISTTransforms, Moco2EvalFashionMNISTTransforms, Moco2TrainMNISTTransforms, Moco2EvalMNISTTransforms
-from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
-from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.Moco.hybrid_utils import label_smoothing
+from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k
 
 # Neural network
 class Backbone(nn.Module):
@@ -151,5 +144,3 @@ class MocoToy(nn.Module):
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
 
-model = MocoToy()
-import ipdb; ipdb.set_trace()
