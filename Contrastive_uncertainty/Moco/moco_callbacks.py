@@ -243,7 +243,7 @@ class ModelSaving(pl.Callback):
             self.counter += self.interval # Increase the interval
             
     
-    def on_test_epoch_end(self,trainer,pl_module): # save during the test stage
+    def on_test_epoch_end(self, trainer, pl_module): # save during the test stage
         epoch =  trainer.current_epoch
         self.save_model(pl_module,epoch)
 
@@ -278,6 +278,11 @@ class MMD_distance(pl.Callback):
     
     def on_test_epoch_end(self,trainer, pl_module):
         self.calculate_MMD(pl_module)
+
+    # Log MMD whilst the network is training
+    def on_validation_epoch_end(self,trainer,pl_module):
+        self.calculate_MMD(pl_module)
+
     
     def calculate_MMD(self,pl_module):
         dataloader = self.Datamodule.train_dataloader()
@@ -311,7 +316,115 @@ class MMD_distance(pl.Callback):
 
         return MMD_dist
 
+class Uniformity(pl.Callback):
+    def __init__(self, t,datamodule,quick_callback):
+        super().__init__()
+        self.t  = t
+        self.datamodule = datamodule
+        self.quick_callback = quick_callback
+        self.log_name = 'uniformity'
+
+    def on_test_epoch_end(self,trainer,pl_module):
+        features = self.obtain_features(pl_module) 
+        uniformity = self.calculate_uniformity(features)
+
+
+    def obtain_features(self,pl_module):
+        features = []
+        dataloader = self.Datamodule.val_loader()
+        loader = quickloading(quick_test, dataloader)
+        for index, (img, label) in enumerate(loader):
+            if isinstance(img, tuple) or isinstance(img, list):
+                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
+            
+            features.append(pl_module.feature_vector(img))
         
+        features = torch.cat(features) # Obtaint the features for the representation
+        return features
+
+    def calculate_uniformity(self, features):
+        if isinstance(features, np.ndarray):
+            features = torch.from_numpy(features) # Change to a torch tensor
+
+        uniformity = torch.pdist(features, p=2).pow(2).mul(-self.t).exp().mean().log()
+        wandb.log({self.log_name:uniformity.item})
+        #uniformity = uniformity.item()
+        return uniformity
+
+
+class Centroid_distance(pl.Callback):
+    def __init__(self,datamodule,quick_callback):
+        super().__init__()
+        self.datamodule = datamodule
+        self.quick_callback = quick_callback
+    
+    def on_test_epoch_end(self,trainer,pl_module):
+        optimal_centroids = self.optimal_centroids(pl_module)
+        test_loader = self.datamodule.test_dataloader()
+        loader = quickloading(self.quick_callback, test_loader)
+        distances = []
+        for step, (data,labels) in enumerate(loader):
+            if isinstance(data,tuple) or isinstance(data,list):
+                data, *aug_data = data
+                data, labels =  data.to(pl_module.device), labels.to(pl_module.device)
+                latent_vector = pl_module.feature_vector(data)
+
+            distances = self.distance(pl_module,latent_vector,optimal_centroids)
+
+    def optimal_centroids(self,pl_module):
+        centroids_list = []
+        test_loader = self.datamodule.test_dataloader()
+        loader = quickloading(self.quick_callback, test_loader)
+        for step, (data,labels) in enumerate(loader):
+            if isinstance(data,tuple) or isinstance(data,list):
+                data, *aug_data = data
+            data,labels = data.to(pl_module.device), labels.to(pl_module.device)
+
+            centroids = self.update_embeddings(pl_module, data, labels)
+            centroids_list.append(centroids)
+        
+        collated_centroids = torch.stack(centroids_list)
+        optimal_centroids = torch.mean(collated_centroids, dim=0)
+        return optimal_centroids
+
+    @torch.no_grad()
+    def update_embeddings(self, pl_module, x, labels): # Assume y is one hot encoder
+        z = pl_module.feature_vector(x) # (batch,features)
+        y = F.one_hot(labels,num_classes = pl_module.num_classes).float()
+        # compute sum of embeddings on class by class basis
+
+        #features_sum = torch.einsum('ij,ik->kj',z,y) # (batch, features) , (batch, num classes) to get (num classes,features)
+        #y = y.float() # Need to change into a float to be able to use it for the matrix multiplication
+        #features_sum = torch.matmul(y.T,z) # (num_classes,batch) (batch,features) to get (num_class, features)
+
+        features_sum = torch.matmul(z.T, y) # (batch,features) (batch,num_classes) to get (features,num_classes)
+        embeddings = features_sum / y.sum(0)
+        #embeddings = features_sum.T / y.sum(0) # Nawid - divide each of the feature sum by the number of instances present in the class (need to transpose to get into shape which can divide column wise) shape : (features,num_classes)
+        embeddings = embeddings.T # Turn back into shape (num_classes,features)
+        return embeddings
+
+    def distance(self,pl_module, x, centroids):
+        n = x.size(0)
+        m = centroids.size(0)
+        d = x.size(1)
+        import pdb; pdb.set_trace()
+        assert d == centroids.size(1)
+
+        x = x.unsqueeze(1).expand(n, m, d)
+        centroids = centroids.unsqueeze(0).expand(n, m, d)
+        diff = x - centroids
+        distances = -torch.pow(diff,2).sum(2) # Need to get the negative distance
+        return distances
+
+        #confidence, indices = torch.max(y_pred,dim=1)
+        
+    #\n",    
+    "        confidence,indices =  confidence.reshape(len(confidence),1), indices.reshape(len(indices),1) # reshape the tensors\n",
+    "        density_targets = torch.zeros(len(confidence),2).to(self.device)\n",
+    "        density_targets.scatter(1,indices,confidence) # place the values of confidences in the locations specified by indices\n",
+
+
+
 class OOD_ROC(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule):
         super().__init__()
@@ -499,6 +612,25 @@ class Mahalanobis_OOD(pl.Callback):
         self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)
 
         return fpr95,auroc,aupr 
+    
+    def on_validation_epoch_end(self,trainer,pl_module):
+        train_loader = self.Datamodule.train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+            
+        features_train, labels_train = self.get_features(pl_module, train_loader)  # using feature befor MLP-head
+        features_test, labels_test = self.get_features(pl_module, train_loader)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
+        
+        # Obtain the fpr95, aupr, test predictions, OOD predictions (basic version does not log the confidence scores or the confusion matrices)
+        fpr95, auroc, aupr, indices_dtest, indices_dood = self.get_eval_results_basic(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train),
+        )
+
+        return fpr95,auroc,aupr 
 
     def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
         features, labels = [], []
@@ -607,6 +739,31 @@ class Mahalanobis_OOD(pl.Callback):
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
         wandb.log({self.log_name + 'AUROC': auroc})
         return fpr95, auroc, aupr, indices_dtest, indices_dood
+
+    def get_eval_results_basic(self,ftrain, ftest, food, labelstrain):
+        """
+            None.
+        """
+        # Nawid -normalise the featues for the training, test and ood data
+        # standardize data
+        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
+        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
+        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
+        # Nawid - calculate the mean and std of the traiing features
+        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
+        # Nawid - normalise data using the mean and std
+        ftrain = (ftrain - m) / (s + 1e-10)
+        ftest = (ftest - m) / (s + 1e-10)
+        food = (food - m) / (s + 1e-10)
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain)
+
+
+        # Nawid- get false postive rate and asweel as AUROC and aupr
+        fpr95 = get_fpr(dtest, dood)
+        auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
+        wandb.log({self.log_name + 'AUROC': auroc})
+        return fpr95, auroc, aupr, indices_dtest, indices_dood
         
     
     def distance_confusion_matrix(self,trainer,predictions,labels):
@@ -689,7 +846,7 @@ class Euclidean_OOD(Mahalanobis_OOD):
 
         return din, dood, indices_din, indices_dood
 
-        
+
 
 
 class OOD_confusion_matrix(pl.Callback):
