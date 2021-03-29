@@ -11,9 +11,6 @@ import pytorch_lightning as pl
 from pytorch_lightning import LightningDataModule
 
 
-
-
-
 class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons dataset
 
     def __init__(self,batch_size=32,noise_perc = 0.1):
@@ -58,18 +55,9 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
     def test_dataloader(self):
         '''returns test dataloader'''
         test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels))
-        test_loader = DataLoader(test_dataset,batch_size = self.batch_size, shuffle= False, drop_last= True,num_workers = 8)# Batch size is entire test set
+        test_loader = DataLoader(test_dataset, batch_size = self.batch_size, shuffle= False, drop_last= True,num_workers = 8)# Batch size is entire test set
         return test_loader
 
-
-        
-        
-        '''
-        x_test_line1 = np.stack([0.2*np.ones(ppline), np.linspace(0.2,0.4,ppline)])[:,np.random.choice(ppline, int(ppline*noise_perc), replace=False)]
-        x_test_line2 = np.stack([0.2*np.ones(ppline), np.linspace(0.55,0.85,ppline)])[:,np.random.choice(ppline, int(ppline*noise_perc), replace=False)]
-        y_test_line1 = np.stack([np.linspace(0.4,0.6,ppline), 0.2*np.ones(ppline)])[:,np.random.choice(ppline, int(ppline*noise_perc), replace=False)]
-        y_test_line2 = np.stack([np.linspace(0.7,0.9,ppline), 0.2*np.ones(ppline)])[:,np.random.choice(ppline, int(ppline*noise_perc), replace=False)]
-        '''        
 
 Datamodule = DiagonalLinesDataModule(32,0.1)
 Datamodule.setup()

@@ -1,3 +1,24 @@
+FashionMNIST
+
+
 finetuned_network - resnet 50 which was pretrained for 1000 epochs on the instance discrimination contrastive loss followed by training for 200 epochs on joint instance discrimination and normal contrastive loss
 
 unnormalised_softmax_baseline - resnet 50 which was trained on the softmax cross entropy without normalisation
+
+
+
+
+
+MNIST
+
+MNIST_pretrained - Resnet 50 which was pretrained for 1000 epochs on the instance discrimination contrastive loss
+
+
+
+
+
+
+
+CIFAR10
+
+CIFAR_pretrained_network - Resnet50 which was pretrained on the instance discrimination task for 1000 epochs

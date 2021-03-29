@@ -15,8 +15,8 @@ weight_decay = 1e-4,
 
 bsz = 256,
 z_dim = 512,
-dataset = 'FashionMNIST',
-OOD_dataset = 'MNIST',
+dataset = 'MNIST',
+OOD_dataset = 'FashionMNIST',
 
 classifier = True,
 normalize = True,
