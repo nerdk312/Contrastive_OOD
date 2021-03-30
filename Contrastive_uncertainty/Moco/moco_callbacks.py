@@ -331,12 +331,12 @@ class Uniformity(pl.Callback):
 
     def obtain_features(self,pl_module):
         features = []
-        dataloader = self.Datamodule.val_loader()
-        loader = quickloading(quick_test, dataloader)
+        dataloader = self.datamodule.test_dataloader()
+        loader = quickloading(self.quick_callback, dataloader)
         for index, (img, label) in enumerate(loader):
             if isinstance(img, tuple) or isinstance(img, list):
                     img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
-            
+            img = img.to(pl_module.device)
             features.append(pl_module.feature_vector(img))
         
         features = torch.cat(features) # Obtaint the features for the representation
@@ -347,7 +347,7 @@ class Uniformity(pl.Callback):
             features = torch.from_numpy(features) # Change to a torch tensor
 
         uniformity = torch.pdist(features, p=2).pow(2).mul(-self.t).exp().mean().log()
-        wandb.log({self.log_name:uniformity.item})
+        wandb.log({self.log_name:uniformity.item()})
         #uniformity = uniformity.item()
         return uniformity
 
@@ -357,12 +357,15 @@ class Centroid_distance(pl.Callback):
         super().__init__()
         self.datamodule = datamodule
         self.quick_callback = quick_callback
+        self.log_distance_name = 'centroid_distance'
+        self.log_rbf_similarity_name = 'centroid_rbf_similarity'
     
     def on_test_epoch_end(self,trainer,pl_module):
         optimal_centroids = self.optimal_centroids(pl_module)
         test_loader = self.datamodule.test_dataloader()
         loader = quickloading(self.quick_callback, test_loader)
-        distances = []
+        collated_distances = []
+        collated_rbf_similarity = []
         for step, (data,labels) in enumerate(loader):
             if isinstance(data,tuple) or isinstance(data,list):
                 data, *aug_data = data
@@ -370,6 +373,26 @@ class Centroid_distance(pl.Callback):
                 latent_vector = pl_module.feature_vector(data)
 
             distances = self.distance(pl_module,latent_vector,optimal_centroids)
+            #import ipdb;ipdb.set_trace()
+            labels = labels.reshape(len(labels),1)
+            # gather takes the values from distances along dimension 1 based on the values of labels
+            class_distances = torch.gather(distances,1,labels)
+            class_rbf_sim = self.rbf_similarity(class_distances)
+
+            collated_distances.append(class_distances)
+            collated_rbf_similarity.append(class_rbf_sim)
+
+        collated_distances = torch.cat(collated_distances) # combine all the values
+        collated_rbf_similarity = torch.cat(collated_rbf_similarity)
+
+        mean_distance = torch.mean(collated_distances)
+        mean_rbf_similarity = torch.mean(collated_rbf_similarity)
+
+        wandb.log({self.log_distance_name: mean_distance.item()})
+        wandb.log({self.log_rbf_similarity_name:mean_rbf_similarity})
+
+        #import ipdb; ipdb.set_trace()
+        
 
     def optimal_centroids(self,pl_module):
         centroids_list = []
@@ -404,17 +427,23 @@ class Centroid_distance(pl.Callback):
         return embeddings
 
     def distance(self,pl_module, x, centroids):
-        n = x.size(0)
-        m = centroids.size(0)
+        n = x.size(0) # (batch,features)
+        m = centroids.size(0) # (num classes, features)
         d = x.size(1)
-        import pdb; pdb.set_trace()
+        
         assert d == centroids.size(1)
 
-        x = x.unsqueeze(1).expand(n, m, d)
-        centroids = centroids.unsqueeze(0).expand(n, m, d)
-        diff = x - centroids
-        distances = -torch.pow(diff,2).sum(2) # Need to get the negative distance
+        x = x.unsqueeze(1).expand(n, m, d) # (batch,num_classes, features)
+        centroids = centroids.unsqueeze(0).expand(n, m, d) # (batch,num_classes,features)
+        diff = x - centroids # (batch,num_classes,features) 
+        distances = diff.sum(2) # (batch,num_classes) - distances to each class centroid for each data point in the batch
+        #distances = -torch.pow(diff,2).sum(2) # Need to get the negative distance
         return distances
+
+    def rbf_similarity(self,distances):
+        exp_similarity = (-(distances**2)).div(2*1**2).exp() # square the distances and divide by a scaling temr
+        return exp_similarity
+    
 
         #confidence, indices = torch.max(y_pred,dim=1)
         
@@ -909,6 +938,111 @@ class OOD_confusion_matrix(pl.Callback):
                   })
 
 
+
+class SupConLoss(pl.Callback):
+    def __init__(self,datamodule,quick_callback, temperature=0.07, contrast_mode='all',
+                 base_temperature=0.07):
+        super().__init__()
+        self.datamodule = datamodule
+        self.temperature = temperature
+        self.contrast_mode = contrast_mode
+        self.base_temperature = base_temperature
+        self.quick_callback = quick_callback
+        self.log_name = 'SupCon' 
+    
+    def on_test_epoch_end(self,trainer,pl_module):
+        dataloader  = self.datamodule.test_dataloader()
+        loader = quickloading(self.quick_callback, dataloader)
+        for i, (imgs, labels) in enumerate(loader):
+            # Obtain the image representations of the data for the specific task
+            # Concatenate the two different views of the same images
+            imgs = torch.cat([imgs[0],imgs[1]],dim=0) 
+            bsz = labels.shape[0]
+
+            imgs,labels = imgs.to(pl_module.device), labels.to(pl_module.device)
+
+            features = pl_module.feature_vector(imgs)
+            features_q, features_k = torch.split(features, [bsz,bsz],dim=0)
+            features = torch.cat([features_q.unsqueeze(1),features_k.unsqueeze(1)],dim=1)
+            self.forward(pl_module,features,labels)
+
+    # https://github.com/HobbitLong/SupContrast/blob/master/main_supcon.py
+    # https://github.com/HobbitLong/SupContrast/blob/8d0963a7dbb1cd28accb067f5144d61f18a77588/losses.py#L11
+    def forward(self,pl_module, features, labels=None, mask=None):
+        """Compute loss for model. If both `labels` and `mask` are None,
+        it degenerates to SimCLR unsupervised loss:
+        https://arxiv.org/pdf/2002.05709.pdf
+        Args:
+            features: hidden vector of shape [bsz, n_views, ...].
+            labels: ground truth of shape [bsz].
+            mask: contrastive mask of shape [bsz, bsz], mask_{i,j}=1 if sample j
+                has the same class as sample i. Can be asymmetric.
+        Returns:
+            A loss scalar.
+        """
+
+        if len(features.shape) < 3:
+            raise ValueError('`features` needs to be [bsz, n_views, ...],'
+                             'at least 3 dimensions are required')
+        if len(features.shape) > 3:
+            features = features.view(features.shape[0], features.shape[1], -1)
+
+        batch_size = features.shape[0]
+        if labels is not None and mask is not None:
+            raise ValueError('Cannot define both `labels` and `mask`')
+        elif labels is None and mask is None:
+            mask = torch.eye(batch_size, dtype=torch.float32, device = pl_module.device)
+        elif labels is not None:
+            labels = labels.contiguous().view(-1, 1)
+            if labels.shape[0] != batch_size:
+                raise ValueError('Num of labels does not match num of features')
+            mask = torch.eq(labels, labels.T).float().to(pl_module.device)
+        else:
+            mask = mask.float().to(pl_module.device)
+
+        contrast_count = features.shape[1]
+        contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)
+        if self.contrast_mode == 'one':
+            anchor_feature = features[:, 0] # Nawid - anchor is only the index itself and only the single view
+            anchor_count = 1 # Nawid - only one anchor
+        elif self.contrast_mode == 'all':
+            anchor_feature = contrast_feature 
+            anchor_count = contrast_count # Nawid - all the different views are the anchors
+        else:
+            raise ValueError('Unknown mode: {}'.format(self.contrast_mode))
+
+        # compute logits
+        anchor_dot_contrast = torch.div( # Nawid - similarity between the anchor and the contrast feature
+            torch.matmul(anchor_feature, contrast_feature.T),
+            self.temperature)
+        # for numerical stability
+        logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
+        logits = anchor_dot_contrast - logits_max.detach()
+
+        # tile mask
+        mask = mask.repeat(anchor_count, contrast_count)
+        # mask-out self-contrast cases
+        logits_mask = torch.scatter(
+            torch.ones_like(mask),
+            1,
+            torch.arange(batch_size * anchor_count).view(-1, 1).to(pl_module.device),
+            0
+        )
+        mask = mask * logits_mask
+
+        # compute log_prob
+        exp_logits = torch.exp(logits) * logits_mask
+        log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
+
+        # compute mean of log-likelihood over positive
+        mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
+
+        # loss
+        loss = - (self.temperature / self.base_temperature) * mean_log_prob_pos
+        loss = loss.view(anchor_count, batch_size).mean()
+        wandb.log({self.log_name: loss.item()})
+
+        return loss
 
 
 def get_roc_sklearn(xin, xood):

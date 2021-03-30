@@ -28,9 +28,9 @@ class BCELoss(nn.BCELoss):
                                     smooth_eps=self.smooth_eps, from_logits=self.from_logits)
 
 def label_smoothing(ys,smoothing,num_classes): # Based on equation 1 from https://amaarora.github.io/2020/07/18/label-smoothing.html#fastaipytorch-implementation-of-label-smoothing-cross-entropy-loss
-    #import ipdb; ipdb.set_trace()
-    soft_target = torch.where(ys>0,ys,smoothing/num_classes) #  Anything that fails to meet the condition is changed
-    soft_target = torch.where(soft_target<=smoothing/num_classes, soft_target , 1- smoothing/num_classes)
+    import ipdb; ipdb.set_trace()
+    soft_target = torch.where(ys>0,ys,smoothing/num_classes) #  Anything that fails to meet the condition is changed, gives values to the off diagonal terms
+    soft_target = torch.where(soft_target<=smoothing/num_classes, soft_target , 1-smoothing +(smoothing/num_classes)) # calculates the value for the target label
     return soft_target
 
 def reset_wandb_env():

@@ -268,15 +268,14 @@ class MocoV2(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         (img_1, img_2), labels = batch
-        '''
-        one_hot_labels = F.one_hot(labels).float()
-        smoothing = torch.tensor([1],device = self.device).float()
+        
+        one_hot_labels = F.one_hot(labels,num_classes = self.hparams.num_classes).float()
+        smoothing = torch.tensor([0.1],device = self.device).float()
         smoothed_labels = label_smoothing(one_hot_labels,smoothing,self.hparams.num_classes)
         print('smoothed labels',smoothed_labels)
-        '''
+        import ipdb; ipdb.set_trace()
         loss = torch.tensor([0], device=self.device) 
         if self.hparams.contrastive:
-            
             output, target = self(img_q=img_1, img_k=img_2)
             loss = F.cross_entropy(output, target.long())
             acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
