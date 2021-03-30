@@ -14,7 +14,7 @@ from Contrastive_uncertainty.datamodules.mnist_datamodule import MNISTDataModule
 from Contrastive_uncertainty.datamodules.datamodule_transforms import Moco2TrainCIFAR10Transforms, Moco2EvalCIFAR10Transforms, Moco2TrainFashionMNISTTransforms, Moco2EvalFashionMNISTTransforms, Moco2TrainMNISTTransforms, Moco2EvalMNISTTransforms
 from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.Moco.hybrid_utils import label_smoothing
+from Contrastive_uncertainty.Moco.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
 
 
 
@@ -42,6 +42,7 @@ class MocoV2(pl.LightningModule):
         class_dict:dict = None,
         instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
+        label_smoothing:bool = False,
         ):
 
         super().__init__()
@@ -268,12 +269,12 @@ class MocoV2(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         (img_1, img_2), labels = batch
-        
+        '''        
         one_hot_labels = F.one_hot(labels,num_classes = self.hparams.num_classes).float()
         smoothing = torch.tensor([0.1],device = self.device).float()
         smoothed_labels = label_smoothing(one_hot_labels,smoothing,self.hparams.num_classes)
         print('smoothed labels',smoothed_labels)
-        import ipdb; ipdb.set_trace()
+        '''
         loss = torch.tensor([0], device=self.device) 
         if self.hparams.contrastive:
             output, target = self(img_q=img_1, img_k=img_2)
@@ -287,8 +288,9 @@ class MocoV2(pl.LightningModule):
         if self.hparams.classifier:
             logits = self.class_discrimination(img_1)
             
-            loss_proto = F.cross_entropy(logits.float(), labels.long())
-
+            loss_proto = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) \
+            if self.hparams.label_smoothing else F.cross_entropy(logits.float(), labels.long())
+            import ipdb; ipdb.set_trace() 
             loss = loss + loss_proto
             class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
             self.log('Training Class Loss', loss_proto.item(),on_epoch=True)
@@ -317,7 +319,8 @@ class MocoV2(pl.LightningModule):
 
         if self.hparams.classifier:
             logits = self.class_discrimination(img_1,)
-            loss_proto = F.cross_entropy(logits.float(), labels.long())
+            loss_proto = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) \
+            if self.hparams.label_smoothing else F.cross_entropy(logits.float(), labels.long())
 
             loss = loss + loss_proto
             class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
@@ -358,7 +361,8 @@ class MocoV2(pl.LightningModule):
 
         # Always perform the classification loss for the case of the test set in order to see the confusion matrix
         logits = self.class_discrimination(img_1,)
-        loss_proto = F.cross_entropy(logits.float(), labels.long())
+        loss_proto = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) \
+            if self.hparams.label_smoothing else F.cross_entropy(logits.float(), labels.long())
 
         loss = loss + loss_proto
         class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))

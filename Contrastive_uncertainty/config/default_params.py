@@ -37,6 +37,7 @@ test_ratio = 1.0,
 val_check = 5,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,
+label_smoothing =True,
 
 project = 'evaluation'# evaluation, Moco_training
 )

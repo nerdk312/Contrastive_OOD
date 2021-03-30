@@ -41,15 +41,17 @@ def train(params):
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
-    '''
+    
     desired_callbacks = [callback_dict['Confusion_matrix'],callback_dict['ROC'],
                         callback_dict['Reliability'],callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean'],
-                        callback_dict['MMD'],callback_dict['Visualisation']]
-    '''      
+                        callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Centroid'],callback_dict['Uniformity'],
+                        callback_dict['SupCon']]
+          
     #desired_callbacks = [callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean']]
     #desired_callbacks = [callback_dict['Visualisation']]
-    desired_callbacks = [callback_dict['Centroid'],callback_dict['Uniformity']]
+    #desired_callbacks = [callback_dict['Centroid'],callback_dict['Uniformity']]
+    #desired_callbacks = [callback_dict['SupCon'],callback_dict['Uniformity']]
 
     model = MocoV2(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
         encoder_momentum = config['encoder_momentum'], softmax_temperature = config['softmax_temperature'],
@@ -58,7 +60,8 @@ def train(params):
         batch_size = config['bsz'],use_mlp = config['use_mlp'], z_dim = config['z_dim'],
         num_classes = config['num_classes'],datamodule = datamodule,num_channels = channels,
         classifier = config['classifier'],normalize = config['normalize'],contrastive = config['contrastive'],
-        class_dict = class_names_dict,instance_encoder = config['instance_encoder'],pretrained_network = config['pretrained_network'])
+        class_dict = class_names_dict,instance_encoder = config['instance_encoder'],pretrained_network = config['pretrained_network'],
+        label_smoothing=config['label_smoothing'])
 
 
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
@@ -78,12 +81,15 @@ def train(params):
     wandb.config.update({"learning_rate": model.hparams.learning_rate},allow_val_change=True)
     '''
     wandb.run.name = run_name(config)
+    '''    
+    trainer.test(model,datamodule=datamodule,
+            ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
+    '''
     
-
     trainer.fit(model,datamodule)
     trainer.test(datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
-
+    
     # load the backbone
     #backbone = CPCV2.load_from_checkpoint(args.ckpt_path, strict=False)
     #model.encoder_loading('Epochs_1000_lr_3.000e-02_bsz_256_seed_42.pt')

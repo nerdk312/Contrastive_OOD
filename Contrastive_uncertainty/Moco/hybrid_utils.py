@@ -43,6 +43,23 @@ def reset_wandb_env():
         if k.startswith("WANDB_") and k not in exclude:
             del os.environ[k]
 
+# https://amaarora.github.io/2020/07/18/label-smoothing.html#fastaipytorch-implementation-of-label-smoothing-cross-entropy-loss - Implementation of label smoothing
+def reduce_loss(loss, reduction='mean'):
+    return loss.mean() if reduction=='mean' else loss.sum() if reduction=='sum' else loss 
+
+class LabelSmoothingCrossEntropy(nn.Module):
+    def __init__(self, ε:float=0.1, reduction='mean'):
+        super().__init__()
+        self.ε,self.reduction = ε,reduction
+    
+    def forward(self, output, target):
+        # number of classes
+        c = output.size()[-1]
+        log_preds = F.log_softmax(output, dim=-1)
+        loss = reduce_loss(-log_preds.sum(dim=-1), self.reduction)
+        nll = F.nll_loss(log_preds, target, reduction=self.reduction)
+        # (1-ε)* H(q,p) + ε*H(u,p)
+        return (1-self.ε)*nll + self.ε*(loss/c) 
 
 # Altered version of Wandb confusion matrix to allow checking the accuracy of the OOD examples
 def OOD_conf_matrix(probs=None, y_true=None, preds=None, class_names=None,OOD_class_names = None):
