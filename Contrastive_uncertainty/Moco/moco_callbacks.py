@@ -236,12 +236,13 @@ class ModelSaving(pl.Callback):
         self.counter = interval
         #self.epoch_last_check = 0
     # save the state dict in the local directory as well as in wandb
+    '''
     def on_validation_epoch_end(self,trainer,pl_module): # save every interval
         epoch = trainer.current_epoch 
         if epoch > self.counter:
             self.save_model(pl_module,epoch)
             self.counter += self.interval # Increase the interval
-            
+    '''            
     
     def on_test_epoch_end(self, trainer, pl_module): # save during the test stage
         epoch =  trainer.current_epoch
@@ -327,7 +328,11 @@ class Uniformity(pl.Callback):
     def on_test_epoch_end(self,trainer,pl_module):
         features = self.obtain_features(pl_module) 
         uniformity = self.calculate_uniformity(features)
+    
 
+    def on_validation_epoch_end(self,trainer,pl_module):
+        features = self.obtain_features(pl_module) 
+        uniformity = self.calculate_uniformity(features)
 
     def obtain_features(self,pl_module):
         features = []
@@ -361,6 +366,37 @@ class Centroid_distance(pl.Callback):
         self.log_rbf_similarity_name = 'centroid_rbf_similarity'
     
     def on_test_epoch_end(self,trainer,pl_module):
+        optimal_centroids = self.optimal_centroids(pl_module)
+        test_loader = self.datamodule.test_dataloader()
+        loader = quickloading(self.quick_callback, test_loader)
+        collated_distances = []
+        collated_rbf_similarity = []
+        for step, (data,labels) in enumerate(loader):
+            if isinstance(data,tuple) or isinstance(data,list):
+                data, *aug_data = data
+                data, labels =  data.to(pl_module.device), labels.to(pl_module.device)
+                latent_vector = pl_module.feature_vector(data)
+
+            distances = self.distance(pl_module,latent_vector,optimal_centroids)
+            #import ipdb;ipdb.set_trace()
+            labels = labels.reshape(len(labels),1)
+            # gather takes the values from distances along dimension 1 based on the values of labels
+            class_distances = torch.gather(distances,1,labels)
+            class_rbf_sim = self.rbf_similarity(class_distances)
+
+            collated_distances.append(class_distances)
+            collated_rbf_similarity.append(class_rbf_sim)
+
+        collated_distances = torch.cat(collated_distances) # combine all the values
+        collated_rbf_similarity = torch.cat(collated_rbf_similarity)
+
+        mean_distance = torch.mean(collated_distances)
+        mean_rbf_similarity = torch.mean(collated_rbf_similarity)
+
+        wandb.log({self.log_distance_name: mean_distance.item()})
+        wandb.log({self.log_rbf_similarity_name:mean_rbf_similarity})
+    
+    def on_validation_epoch_end(self,trainer,pl_module):
         optimal_centroids = self.optimal_centroids(pl_module)
         test_loader = self.datamodule.test_dataloader()
         loader = quickloading(self.quick_callback, test_loader)

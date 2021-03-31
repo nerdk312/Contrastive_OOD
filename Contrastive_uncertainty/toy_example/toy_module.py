@@ -9,6 +9,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
 from Contrastive_uncertainty.toy_example.toy_moco import MocoToy
+from Contrastive_uncertainty.toy_example.toy_supcon import SupConToy
 
 class Toy(pl.LightningModule):
     def __init__(self,model,
@@ -22,30 +23,36 @@ class Toy(pl.LightningModule):
         self.save_hyperparameters()
 
     def training_step(self, batch, batch_idx):
+        loss = self.model.loss_function(batch)
+        '''
         loss, acc1, acc5 = self.model.loss_function(batch)
-        (img_1, img_2), labels = batch
         
         self.log('Training Instance Loss', loss.item(),on_epoch=True)
         self.log('Training Instance Accuracy @ 1',acc1.item(),on_epoch = True)
         self.log('Training Instance Accuracy @ 5',acc1.item(),on_epoch = True)
         
         return loss
+        '''
         #return {'loss': loss, 'log': log, 'progress_bar': log}
 
     def validation_step(self, batch, batch_idx,dataset_idx):
+        loss = self.model.loss_function(batch)
+        '''
         loss, acc1, acc5 = self.model.loss_function(batch)
             
         self.log('Validation Instance Loss', loss.item(),on_epoch=True)
         self.log('Validation Instance Accuracy @ 1',acc1.item(),on_epoch = True)
         self.log('Validation Instance Accuracy @ 5',acc1.item(),on_epoch = True)        
-
+        '''
     def test_step(self, batch, batch_idx):
+        loss = self.model.loss_function(batch)
+        '''
         loss, acc1, acc5 = self.model.loss_function(batch)
         
         self.log('Test Instance Loss', loss.item(),on_epoch=True)
         self.log('Test Instance Accuracy @ 1',acc1.item(),on_epoch = True)
         self.log('Test Instance Accuracy @ 5',acc1.item(),on_epoch = True)
-
+        '''
 
     def configure_optimizers(self):
         if self.hparams.optimizer =='sgd':
@@ -58,5 +65,6 @@ class Toy(pl.LightningModule):
         return optimizer
 
 
-encoder = MocoToy()
+#encoder = MocoToy()
+encoder = SupConToy()
 Model = Toy(encoder)

@@ -287,10 +287,14 @@ class MocoV2(pl.LightningModule):
         
         if self.hparams.classifier:
             logits = self.class_discrimination(img_1)
+            if self.hparams.label_smoothing:
+                loss_proto = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
+                loss_proto = torch.mean(loss_proto)
+            else:
+                loss_proto =  F.cross_entropy(logits.float(), labels.long())
             
-            loss_proto = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) \
-            if self.hparams.label_smoothing else F.cross_entropy(logits.float(), labels.long())
-            import ipdb; ipdb.set_trace() 
+            #import ipdb; ipdb.set_trace()
+
             loss = loss + loss_proto
             class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
             self.log('Training Class Loss', loss_proto.item(),on_epoch=True)
@@ -319,9 +323,12 @@ class MocoV2(pl.LightningModule):
 
         if self.hparams.classifier:
             logits = self.class_discrimination(img_1,)
-            loss_proto = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) \
-            if self.hparams.label_smoothing else F.cross_entropy(logits.float(), labels.long())
-
+            if self.hparams.label_smoothing:
+                loss_proto = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
+                loss_proto = torch.mean(loss_proto)
+            else:
+                loss_proto =  F.cross_entropy(logits.float(), labels.long())
+            
             loss = loss + loss_proto
             class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
             self.log('Validataion Class Loss', loss_proto.item(),on_epoch=True)
@@ -361,8 +368,11 @@ class MocoV2(pl.LightningModule):
 
         # Always perform the classification loss for the case of the test set in order to see the confusion matrix
         logits = self.class_discrimination(img_1,)
-        loss_proto = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) \
-            if self.hparams.label_smoothing else F.cross_entropy(logits.float(), labels.long())
+        if self.hparams.label_smoothing:
+            loss_proto = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
+            loss_proto = torch.mean(loss_proto)
+        else:
+            loss_proto =  F.cross_entropy(logits.float(), labels.long())
 
         loss = loss + loss_proto
         class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))

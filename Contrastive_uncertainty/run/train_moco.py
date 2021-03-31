@@ -41,12 +41,19 @@ def train(params):
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
-    
+    '''
     desired_callbacks = [callback_dict['Confusion_matrix'],callback_dict['ROC'],
                         callback_dict['Reliability'],callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean'],
                         callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Centroid'],callback_dict['Uniformity'],
                         callback_dict['SupCon']]
+    '''
+
+    desired_callbacks = [callback_dict['Confusion_matrix'],callback_dict['ROC'],
+                        callback_dict['Reliability'],callback_dict['Metrics'], callback_dict['Model_saving'], 
+                        callback_dict['Mahalanobis'],callback_dict['MMD'],callback_dict['Visualisation'],
+                        callback_dict['Centroid'],callback_dict['Uniformity'],callback_dict['SupCon']]
+    
           
     #desired_callbacks = [callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean']]
     #desired_callbacks = [callback_dict['Visualisation']]

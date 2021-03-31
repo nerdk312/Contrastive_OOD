@@ -8,15 +8,8 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k
+from Contrastive_uncertainty.toy_example.toy_encoder import Backbone
 
-# Neural network
-class Backbone(nn.Module):
-    def __init__(self,emb_dim):
-        super().__init__()
-        self.backbone = nn.Sequential(nn.Linear(2,emb_dim), nn.ReLU(), nn.Linear(emb_dim,emb_dim), nn.ReLU(), nn.Linear(emb_dim,2))
-
-    def forward(self, x):
-        return torch.nn.functional.normalize(self.backbone(x),dim=1)
 
 class MocoToy(nn.Module):
     def __init__(self,
