@@ -276,9 +276,10 @@ class MMD_distance(pl.Callback):
         self.Datamodule = Datamodule
         self.quick_callback = quick_callback
         self.log_name = 'MMD_distance'
-    
+    '''
     def on_test_epoch_end(self,trainer, pl_module):
         self.calculate_MMD(pl_module)
+    '''
 
     # Log MMD whilst the network is training
     def on_validation_epoch_end(self,trainer,pl_module):
@@ -324,10 +325,11 @@ class Uniformity(pl.Callback):
         self.datamodule = datamodule
         self.quick_callback = quick_callback
         self.log_name = 'uniformity'
-
+    '''
     def on_test_epoch_end(self,trainer,pl_module):
         features = self.obtain_features(pl_module) 
         uniformity = self.calculate_uniformity(features)
+    '''
     
 
     def on_validation_epoch_end(self,trainer,pl_module):
@@ -364,7 +366,7 @@ class Centroid_distance(pl.Callback):
         self.quick_callback = quick_callback
         self.log_distance_name = 'centroid_distance'
         self.log_rbf_similarity_name = 'centroid_rbf_similarity'
-    
+    '''
     def on_test_epoch_end(self,trainer,pl_module):
         optimal_centroids = self.optimal_centroids(pl_module)
         test_loader = self.datamodule.test_dataloader()
@@ -395,7 +397,7 @@ class Centroid_distance(pl.Callback):
 
         wandb.log({self.log_distance_name: mean_distance.item()})
         wandb.log({self.log_rbf_similarity_name:mean_rbf_similarity})
-    
+    '''
     def on_validation_epoch_end(self,trainer,pl_module):
         optimal_centroids = self.optimal_centroids(pl_module)
         test_loader = self.datamodule.test_dataloader()
@@ -509,6 +511,7 @@ class OOD_ROC(pl.Callback):
     def on_test_epoch_end(self,trainer,pl_module):
         #print('OOD ROC training?:',pl_module.encoder_q.training)
         accuracy, roc_auc = self.get_auroc_ood(pl_module)
+
 
     def prepare_ood_datasets(self): # Code seems to be same as DUQ implementation
         true_dataset,ood_dataset = self.Datamodule.test_dataset, self.OOD_Datamodule.test_dataset # Dataset is not transformed at this point
@@ -656,7 +659,7 @@ class Mahalanobis_OOD(pl.Callback):
         # Obtain class names list for the case of the OOD data
         OOD_class_dict = self.OOD_Datamodule.idx2class
         self.OOD_class_names = [v for k,v in OOD_class_dict.items()] # names of the categories of the dataset
-
+    '''
     def on_test_epoch_end(self,trainer,pl_module):
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
@@ -677,7 +680,7 @@ class Mahalanobis_OOD(pl.Callback):
         self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)
 
         return fpr95,auroc,aupr 
-    
+    '''
     def on_validation_epoch_end(self,trainer,pl_module):
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
@@ -986,6 +989,7 @@ class SupConLoss(pl.Callback):
         self.quick_callback = quick_callback
         self.log_name = 'SupCon' 
     
+    '''
     def on_test_epoch_end(self,trainer,pl_module):
         dataloader  = self.datamodule.test_dataloader()
         loader = quickloading(self.quick_callback, dataloader)
@@ -1001,6 +1005,7 @@ class SupConLoss(pl.Callback):
             features_q, features_k = torch.split(features, [bsz,bsz],dim=0)
             features = torch.cat([features_q.unsqueeze(1),features_k.unsqueeze(1)],dim=1)
             self.forward(pl_module,features,labels)
+    '''
 
     # https://github.com/HobbitLong/SupContrast/blob/master/main_supcon.py
     # https://github.com/HobbitLong/SupContrast/blob/8d0963a7dbb1cd28accb067f5144d61f18a77588/losses.py#L11

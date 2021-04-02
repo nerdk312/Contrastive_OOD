@@ -274,10 +274,14 @@ class MetricLogger(pl.Callback):
                 #wandb.log({eval_metric:numeric_metrics[evaltype][eval_metric]})
                 #print('parent metric',parent_metric)
 
+    def on_validation_epoch_end(self,trainer,pl_module):
+        self.metric_initialise(trainer,pl_module)
+        self.evaluate_data(trainer,pl_module)
+    '''
     def on_test_epoch_end(self,trainer,pl_module):
         self.metric_initialise(trainer,pl_module)
         self.evaluate_data(trainer,pl_module)
-
+    '''
 
 evaluation_metrics =['e_recall@1', 'e_recall@2', 'e_recall@4', 'nmi', 'f1', 'mAP_1000', 'mAP_lim', 'mAP_c', \
                         'dists@intra', 'dists@inter', 'dists@intra_over_inter', 'rho_spectrum@0', \

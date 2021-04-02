@@ -293,7 +293,6 @@ class MocoV2(pl.LightningModule):
             else:
                 loss_proto =  F.cross_entropy(logits.float(), labels.long())
             
-            #import ipdb; ipdb.set_trace()
 
             loss = loss + loss_proto
             class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
