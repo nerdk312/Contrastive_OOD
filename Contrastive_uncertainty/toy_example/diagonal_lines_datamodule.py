@@ -3,6 +3,8 @@ import os, numpy as np, matplotlib.pyplot as plt
 import numpy as np
 import random
 
+import matplotlib.cm as cm
+
 import torch, torch.nn as nn
 from torch.utils.data import DataLoader, random_split,  Dataset, Subset
 import torchvision
@@ -10,38 +12,57 @@ import pytorch_lightning as pl
 from pytorch_lightning import LightningDataModule
 from toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms
 
+
+
 class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons dataset
 
     def __init__(self,batch_size=32,noise_perc = 0.1,train_transforms = None, test_transforms = None):
         super().__init__()
         self.batch_size = batch_size
         self.noise_perc = noise_perc
-        self.train_transforms =  train_transforms
+        self.train_transforms = train_transforms
         self.test_transforms = test_transforms
         self.n_lines = 4
-        self.ppline = 10000
+        self.ppline = 50
         self.intervals = [(0.1, 0.3), (0.35,0.55), (0.6, 0.8), (0.85, 1.05)]
     
     def setup(self):
         # First ppline (100) points are generated from the network for each of the line intervals and then 0.15 percent of those points are chosen from each interval (choosing 15 points out of 100 for each interval)
         lines = [np.stack([np.linspace(intv[0],intv[1],self.ppline), np.linspace(intv[0],intv[1],self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)] for intv in self.intervals]
-        #import ipdb; ipdb.set_trace()
+        
         cls   = [x*np.ones(int(self.ppline*self.noise_perc)) for x in range(self.n_lines)] # Classes labels for each of the data points in lines
         
         self.data = np.concatenate(lines, axis=1).T
         self.labels = np.concatenate(cls) # class labels
+        #import ipdb; ipdb.set_trace()
         data_length = len(self.data)
         idxs  = np.random.choice(data_length, data_length,replace=False)
         # Shuffle the data before placing in different data to allow points in different datasets to be present
         self.data, self.labels =self.data[idxs], self.labels[idxs]
-
+        
+        
         self.train_data, self.train_labels = self.data[:int(0.7*data_length)], self.labels[:int(0.7*data_length)]
-        print('train data',self.train_data)
+        #print('train data',self.train_data)
         mean  = np.mean(self.train_data,axis = 0)
         std = np.std(self.train_data,axis=0)
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         self.val_data, self.val_labels = self.data[int(0.7*data_length):int(0.8*data_length)], self.labels[int(0.7*data_length):int(0.8*data_length)]
         self.test_data, self.test_labels = self.data[int(0.8*data_length):], self.labels[int(0.8*data_length):]
+        
+    def visualise_data(self):
+        #colors = cm.rainbow(np.linspace(0, 0.5,self.n_lines)) # Creates a list of numbers which represents colors
+        #import ipdb; ipdb.set_trace()
+        #colors = np.array([colors[int(sample_cls)] for sample_cls in self.labels][::-1]) # colors for train dataset
+        f, ax = plt.subplots(1, 2)
+        #import ipdb; ipdb.set_trace()
+        for i in range(self.n_lines):            
+            loc = np.where(self.train_labels ==i)[0] # gets all the indices where the label has a certain index (this is correct I believe)
+            ax[0].scatter(self.train_data[loc,0], self.train_data[loc,1])#, label= 'Train Cls {}'.format(i), s=40) #, color=list(colors[loc,:]), label='Train Cls {}'.format(i), s=40) # plotting the train data
+
+        f.savefig('practice.png')
+        f.savefig('practice.pdf')
+        plt.close()
+        
 
     def train_dataloader(self):
         '''returns training dataloader'''
@@ -89,10 +110,14 @@ class CustomTensorDataset(Dataset):
 Datamodule = DiagonalLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
 Datamodule.setup()
 
+'''
 train_loader = Datamodule.train_dataloader()
 val_loader = Datamodule.val_dataloader()
 test_loader = Datamodule.test_dataloader()
+'''
+Datamodule.visualise_data()
 
+'''
 mean = 0.
 std = 0.
 nb_samples = 0.
@@ -111,3 +136,4 @@ std /= nb_samples
 
 print('mean',mean)
 print('std',std)
+'''
