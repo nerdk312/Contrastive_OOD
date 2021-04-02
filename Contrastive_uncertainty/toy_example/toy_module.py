@@ -35,7 +35,7 @@ class Toy(pl.LightningModule):
         '''
         #return {'loss': loss, 'log': log, 'progress_bar': log}
 
-    def validation_step(self, batch, batch_idx,dataset_idx):
+    def validation_step(self, batch, batch_idx):
         loss = self.model.loss_function(batch)
         '''
         loss, acc1, acc5 = self.model.loss_function(batch)

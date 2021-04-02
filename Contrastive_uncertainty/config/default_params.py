@@ -18,14 +18,14 @@ z_dim = 512,
 dataset = 'FashionMNIST',
 OOD_dataset = 'MNIST',
 
-classifier = True,
+classifier = False,
 normalize = False,
-contrastive = False,
+contrastive = True,
 use_mlp = True,
 
 # Miscellaneous arguments
 seed = 42,
-epochs = 200,
+epochs = 1000,
 
 # Trainer configurations
 fast_run = False,
@@ -36,7 +36,7 @@ test_ratio = 1.0,
 val_check = 5,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
-label_smoothing =True,
+label_smoothing =False ,
 
 project = 'evaluation'# evaluation, Moco_training
 )

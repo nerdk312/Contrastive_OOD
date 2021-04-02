@@ -158,15 +158,17 @@ y_2 = np.sin(theta)
 plt.style.use('default')
 import matplotlib.cm as cm
 colors = cm.rainbow(np.linspace(0, 0.5, n_lines))
-colors = np.array([colors[int(sample_cls)] for sample_cls in train_cls][::-1])
+colors = np.array([colors[int(sample_cls)] for sample_cls in train_cls][::-1]) # colors for train dataset
 f,ax = plt.subplots(1,4)
 for i in range(len(lines)):
     loc = np.where(train_cls==i)[0]
-    ax[0].scatter(train_lines[loc,0], train_lines[loc,1], color=list(colors[loc,:]), label='Train Cls {}'.format(i), s=40)
+    ax[0].scatter(train_lines[loc,0], train_lines[loc,1], color=list(colors[loc,:]), label='Train Cls {}'.format(i), s=40) # plotting the train data
 ax[0].scatter(x_test_line1[0,:], x_test_line1[1,:], marker='x', label='Test Cls 1', color='r', s=40)
 ax[0].scatter(x_test_line2[0,:], x_test_line2[1,:], marker='x', label='Test Cls 2', color='black', s=60)
 ax[0].scatter(y_test_line1[0,:], y_test_line1[1,:], marker='^', label='Test Cls 3', color='brown', s=40)
 ax[0].scatter(y_test_line2[0,:], y_test_line2[1,:], marker='^', label='Test Cls 4', color='magenta', s=60)
+
+# Plotting the second image
 ax[1].plot(x_2, y_2, '--', color='gray', label='Unit Circle')
 for i in range(len(lines)):
     loc = np.where(train_cls==i)[0]
@@ -177,6 +179,9 @@ ax[1].scatter(y_base_t1[:,0], y_base_t1[:,1], marker='^', color='brown', s=60)
 ax[1].scatter(y_base_t2[:,0], y_base_t2[:,1], marker='^', color='magenta', s=60)
 ax[1].set_xlim([np.min(base_embed[:,0])*0.85,np.max(base_embed[:,0]*1.15)])
 ax[1].set_ylim([np.min(base_embed[:,1])*1.15,np.max(base_embed[:,1]*0.85)])
+
+
+# Plotting the third image (regularised )
 ax[2].plot(x_2, y_2, '--', color='gray', label='Unit Circle')
 for i in range(len(lines)):
     loc = np.where(train_cls==i)[0]
@@ -187,6 +192,8 @@ ax[2].scatter(sp[3][:,0], sp[3][:,1], marker='^', color='brown', s=60)
 ax[2].scatter(sp[4][:,0], sp[4][:,1], marker='^', color='magenta', s=60)
 ax[2].set_xlim([np.min(sp[0][:,0])*1.15,np.max(sp[0][:,0]*1.15)])
 ax[2].set_ylim([np.min(sp[0][:,1])*1.15,np.max(sp[0][:,1]*1.15)])
+
+# Plotting the singular values
 ax[3].bar(np.array([0,0.25]), base_s, width=0.25, alpha=0.5,edgecolor='k', label=r'$Base$')
 ax[3].bar(np.array([0.6,0.85]), sp[5],width=0.25, alpha=0.5,edgecolor='k', label=r'$Reg.~Emb.$')
 ax[3].set_xticks([0,0.25,0.6,0.85])

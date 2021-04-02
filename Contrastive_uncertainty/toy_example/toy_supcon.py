@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from Contrastive_uncertainty.toy_example.toy_encoder import Backbone
 class SupConToy(nn.Module):
     def __init__(self,
-        emb_dim: int = 20,
+        hidden_dim: int =  20,
+        emb_dim: int = 2,
         temperature = 0.07,
         base_temperature = 0.07,
         softmax_temperature: float = 0.07,
@@ -13,7 +14,7 @@ class SupConToy(nn.Module):
         ):
         super().__init__()
         # Nawid - required to use for the fine tuning
-
+        self.hidden_dim = hidden_dim
         self.emb_dim = emb_dim
         self.temperature = temperature
         self.base_temperature = base_temperature
@@ -28,7 +29,7 @@ class SupConToy(nn.Module):
         """
         Override to add your own encoders
         """
-        encoder = Backbone(self.emb_dim)
+        encoder = Backbone(self.hidden_dim,self.emb_dim)
         
         
         return encoder

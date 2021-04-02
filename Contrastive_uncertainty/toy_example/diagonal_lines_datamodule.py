@@ -23,7 +23,7 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
         self.n_lines = 4
-        self.ppline = 50
+        self.ppline = 1000
         self.intervals = [(0.1, 0.3), (0.35,0.55), (0.6, 0.8), (0.85, 1.05)]
     
     def setup(self):
@@ -107,15 +107,15 @@ class CustomTensorDataset(Dataset):
     def __len__(self):
         return self.tensors[0].size(0)
 
-Datamodule = DiagonalLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
-Datamodule.setup()
+#Datamodule = DiagonalLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+#Datamodule.setup()
 
 '''
 train_loader = Datamodule.train_dataloader()
 val_loader = Datamodule.val_dataloader()
 test_loader = Datamodule.test_dataloader()
 '''
-Datamodule.visualise_data()
+#Datamodule.visualise_data()
 
 '''
 mean = 0.

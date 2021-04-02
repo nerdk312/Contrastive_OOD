@@ -13,7 +13,8 @@ from Contrastive_uncertainty.toy_example.toy_encoder import Backbone
 
 class MocoToy(nn.Module):
     def __init__(self,
-        emb_dim: int = 20,
+        hidden_dim: int = 20,
+        emb_dim: int = 2,
         num_negatives: int = 2000,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
@@ -22,7 +23,7 @@ class MocoToy(nn.Module):
         ):
         super().__init__()
         # Nawid - required to use for the fine tuning
-
+        self.hidden_dim = hidden_dim
         self.emb_dim = emb_dim
         self.num_negatives = num_negatives
         self.encoder_momentum = encoder_momentum
@@ -51,8 +52,8 @@ class MocoToy(nn.Module):
         """
         Override to add your own encoders
         """
-        encoder_q = Backbone(self.emb_dim)
-        encoder_k = Backbone(self.emb_dim)
+        encoder_q = Backbone(self.hidden_dim,self.emb_dim)
+        encoder_k = Backbone(self.hidden_dim,self.emb_dim)
         
         return encoder_q, encoder_k
 
@@ -89,6 +90,7 @@ class MocoToy(nn.Module):
             logits, targets
         """
         # compute query features
+        #import ipdb; ipdb.set_trace()
         q = self.encoder_q(img_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1)
 
