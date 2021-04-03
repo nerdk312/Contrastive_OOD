@@ -132,10 +132,14 @@ class MocoToy(nn.Module):
 
         return loss, acc1, acc5
 
+    def feature_vector(self, data):
+        z = self.encoder_q(data)
+        return z
+
+
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):
         print('checkpoint loaded')
         checkpoint = torch.load(pretrained_network)
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
-

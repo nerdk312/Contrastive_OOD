@@ -24,6 +24,7 @@ class Toy(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss = self.model.loss_function(batch)
+        return loss
         '''
         loss, acc1, acc5 = self.model.loss_function(batch)
         
@@ -66,5 +67,5 @@ class Toy(pl.LightningModule):
 
 
 #encoder = MocoToy()
-encoder = SupConToy()
-Model = Toy(encoder)
+#encoder = SupConToy()
+#Model = Toy(encoder)

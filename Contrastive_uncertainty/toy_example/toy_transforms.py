@@ -1,6 +1,9 @@
 import random
 import torch
 from torchvision import transforms
+
+mean = torch.tensor([0.57647171, 0.57647171])
+std = torch.tensor([0.28364347, 0.28364347])
 class ToyTrainDiagonalLinesTransforms:
     """
     Moco 2 augmentation:
@@ -13,8 +16,13 @@ class ToyTrainDiagonalLinesTransforms:
         ])
 
     def __call__(self, inp):
+        
         q = self.train_transform(inp)
+        #print('pre normalised q',q)
+        q = Normalize(q,mean,std)
+        #print('post normalised q',q)
         k = self.train_transform(inp)
+        k = Normalize(k,mean,std)
         return q, k
 
 
@@ -29,7 +37,9 @@ class ToyEvalDiagonalLinesTransforms:
 
     def __call__(self, inp):
         q = self.test_transform(inp)
+        q = Normalize(q, mean, std)
         k = self.test_transform(inp)
+        k = Normalize(k, mean, std)
         return q, k
         
 
@@ -42,6 +52,10 @@ class GaussianNoise(object):
     def __call__(self, x):
         
         sigma = random.uniform(self.sigma[0], self.sigma[1])
-        x = x + (sigma*torch.randn_like(x))  # adding zero mean gaussian noise 
+        x = x #  + (sigma*torch.randn_like(x))  # adding zero mean gaussian noise 
         #x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
         return x
+    
+def Normalize(x,mean,std):
+    x = (x -mean)/std
+    return x

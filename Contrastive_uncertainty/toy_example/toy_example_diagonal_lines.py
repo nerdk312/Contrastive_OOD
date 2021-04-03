@@ -171,21 +171,21 @@ ax[0].scatter(y_test_line2[0,:], y_test_line2[1,:], marker='^', label='Test Cls 
 # Plotting the second image
 ax[1].plot(x_2, y_2, '--', color='gray', label='Unit Circle')
 for i in range(len(lines)):
-    loc = np.where(train_cls==i)[0]
-    ax[1].scatter(base_embed[loc,0], base_embed[loc,1], color=list(colors[loc,:]), s=60)
-ax[1].scatter(x_base_t1[:,0], x_base_t1[:,1], marker='x', color='r', s=60)
+    loc = np.where(train_cls==i)[0] # Get all the datapoints of a specific class
+    ax[1].scatter(base_embed[loc,0], base_embed[loc,1], color=list(colors[loc,:]), s=60) # plot the data points for a specific class
+ax[1].scatter(x_base_t1[:,0], x_base_t1[:,1], marker='x', color='r', s=60) # Plot the data for the embedding of the x test line
 ax[1].scatter(x_base_t2[:,0], x_base_t2[:,1], marker='x', color='black', s=60)
 ax[1].scatter(y_base_t1[:,0], y_base_t1[:,1], marker='^', color='brown', s=60)
 ax[1].scatter(y_base_t2[:,0], y_base_t2[:,1], marker='^', color='magenta', s=60)
-ax[1].set_xlim([np.min(base_embed[:,0])*0.85,np.max(base_embed[:,0]*1.15)])
-ax[1].set_ylim([np.min(base_embed[:,1])*1.15,np.max(base_embed[:,1]*0.85)])
+ax[1].set_xlim([np.min(base_embed[:,0])*0.85,np.max(base_embed[:,0]*1.15)]) # Set an x limit for the graph
+ax[1].set_ylim([np.min(base_embed[:,1])*1.15,np.max(base_embed[:,1]*0.85)]) # Set y limit for the graph
 
 
-# Plotting the third image (regularised )
+# Plotting the third image (regularised ) # Same info as the one above excepr that the it uses sp data rather than base data
 ax[2].plot(x_2, y_2, '--', color='gray', label='Unit Circle')
 for i in range(len(lines)):
     loc = np.where(train_cls==i)[0]
-    ax[2].scatter(sp[0][loc,0], sp[0][loc,1], color=list(colors[loc,:]), alpha=0.4, s=60)
+    ax[2].scatter(sp[0][loc,0], sp[0][loc,1], color=list(colors[loc,:]), alpha=0.4, s=60) 
 ax[2].scatter(sp[1][:,0], sp[1][:,1], marker='x', color='r', s=60)
 ax[2].scatter(sp[2][:,0], sp[2][:,1], marker='x', color='black', s=60)
 ax[2].scatter(sp[3][:,0], sp[3][:,1], marker='^', color='brown', s=60)

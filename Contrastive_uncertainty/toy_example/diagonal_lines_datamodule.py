@@ -23,7 +23,7 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
         self.n_lines = 4
-        self.ppline = 1000
+        self.ppline = 10000
         self.intervals = [(0.1, 0.3), (0.35,0.55), (0.6, 0.8), (0.85, 1.05)]
     
     def setup(self):
@@ -43,9 +43,12 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
         
         self.train_data, self.train_labels = self.data[:int(0.7*data_length)], self.labels[:int(0.7*data_length)]
         #print('train data',self.train_data)
+        '''
         mean  = np.mean(self.train_data,axis = 0)
         std = np.std(self.train_data,axis=0)
-        #import ipdb; ipdb.set_trace()
+        print('mean',mean)
+        print('std',std)
+        '''        
         self.val_data, self.val_labels = self.data[int(0.7*data_length):int(0.8*data_length)], self.labels[int(0.7*data_length):int(0.8*data_length)]
         self.test_data, self.test_labels = self.data[int(0.8*data_length):], self.labels[int(0.8*data_length):]
         
@@ -107,9 +110,10 @@ class CustomTensorDataset(Dataset):
     def __len__(self):
         return self.tensors[0].size(0)
 
-#Datamodule = DiagonalLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
-#Datamodule.setup()
-
+'''
+Datamodule = DiagonalLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+Datamodule.setup()
+'''
 '''
 train_loader = Datamodule.train_dataloader()
 val_loader = Datamodule.val_dataloader()

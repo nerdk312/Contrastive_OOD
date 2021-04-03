@@ -14,7 +14,9 @@ from Contrastive_uncertainty.toy_example.toy_transforms import ToyTrainDiagonalL
 
 
 from Contrastive_uncertainty.toy_example.toy_moco import MocoToy
+from Contrastive_uncertainty.toy_example.toy_softmax import SoftmaxToy
 from Contrastive_uncertainty.toy_example.toy_module import Toy
+
 
 def train(params):
     wandb.init(entity="nerdk312",config = params,project= params['project']) # Required to have access to wandb config, which is needed to set up a sweep
@@ -28,14 +30,16 @@ def train(params):
     # Run setup
     pl.seed_everything(config['seed'])
 
-    datamodule = DiagonalLinesDataModule(4,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+    datamodule = DiagonalLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     datamodule.setup()
 
     # Model for the task
-    encoder = MocoToy(config['hidden_dim'],config['embed_dim'])
+    #encoder = MocoToy(config['hidden_dim'],config['embed_dim'])
+    encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
     model = Toy(encoder)
 
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
+    
     
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],

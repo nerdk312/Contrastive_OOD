@@ -33,6 +33,8 @@ class SupConToy(nn.Module):
         
         
         return encoder
+
+    
     
     def loss_function(self, batch):
         (img_1, img_2), labels = batch
@@ -44,6 +46,10 @@ class SupConToy(nn.Module):
         loss = self.forward(features,labels)
         
         return loss
+    
+    def feature_vector(self,data):
+        z = self.encoder(data)
+        return z
 
 
     # https://github.com/HobbitLong/SupContrast/blob/master/main_supcon.py

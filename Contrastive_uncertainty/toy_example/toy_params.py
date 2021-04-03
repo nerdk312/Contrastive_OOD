@@ -3,8 +3,8 @@ hidden_dim = 20,
 embed_dim = 2,
 
 # optimizer args
-optimizer = 'sgd',
-learning_rate= 0.03,#3e-4,
+optimizer = 'adam',
+learning_rate= 3e-3, # 0.03
 momentum= 0.9,
 weight_decay = 1e-4,
 
