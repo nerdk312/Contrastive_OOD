@@ -10,6 +10,7 @@ class PCLToy(nn.Module):
         num_negatives: int = 2000,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
+        num_cluster :list = [2100,4000,6000]
         num_workers: int = 8,
         pretrained_network = None,
         ):
@@ -27,6 +28,7 @@ class PCLToy(nn.Module):
         self.num_negatives = num_negatives
         self.encoder_momentum = encoder_momentum
         self.softmax_temperature = softmax_temperature
+        self.num_cluster = num_cluster
         self.num_workers = num_workers
         self.pretrained_network = pretrained_network
         
@@ -276,10 +278,16 @@ class PCLToy(nn.Module):
                 acc_proto.update(accp[0], images[0].size(0))
 
             # average loss across all sets of prototypes
-            loss_proto /= len(args.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
+            loss_proto /= len(self.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
             loss += loss_proto # Nawid - increase the loss
 
-           
+    def on_train_epoch_start(self,datamodule):
+        dataloader =  datamodule.train_dataloader()
+        cluster_result = self.cluster_data(dataloader)
+        return cluster_result
+
+        
+
     
 
 

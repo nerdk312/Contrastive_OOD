@@ -32,7 +32,7 @@ class SoftmaxToy(nn.Module):
         encoder = Backbone(self.hidden_dim,self.emb_dim)
         return encoder
     
-    def loss_function(self, batch):
+    def loss_function(self, batch, auxillary_data=None):
         
         (img_1, img_2), labels = batch
         loss = self.forward(img_1, labels)
@@ -48,6 +48,9 @@ class SoftmaxToy(nn.Module):
     
         return loss 
     
-    def feature_vector(self,data):
+    def feature_vector(self, data):
         z = self.encoder(data)
         return z
+    
+    def on_train_epoch_start(self, datamodule):
+        return None

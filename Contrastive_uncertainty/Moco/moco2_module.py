@@ -268,12 +268,12 @@ class MocoV2(pl.LightningModule):
 
 
     def training_step(self, batch, batch_idx):
+        '''
         (img_1, img_2), labels = batch
-        '''        
-        one_hot_labels = F.one_hot(labels,num_classes = self.hparams.num_classes).float()
-        smoothing = torch.tensor([0.1],device = self.device).float()
-        smoothed_labels = label_smoothing(one_hot_labels,smoothing,self.hparams.num_classes)
-        print('smoothed labels',smoothed_labels)
+        f1,f2 = self.feature_vector(img_1), self.feature_vector(img_2)
+        loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2  
+        self.log('Training Uniformity Loss', loss.item(),on_epoch=True)
+        
         '''
         loss = torch.tensor([0], device=self.device) 
         if self.hparams.contrastive:
@@ -301,13 +301,20 @@ class MocoV2(pl.LightningModule):
             #self.log('Class Training Accuracy @ 5',acc1.item(),on_epoch = True)
 
             self.log('Training Total Loss', loss.item(),on_epoch=True)
-
-
+        
+        
 
         return loss
         #return {'loss': loss, 'log': log, 'progress_bar': log}
 
     def validation_step(self, batch, batch_idx,dataset_idx):
+        '''
+        (img_1, img_2), labels = batch
+        f1,f2 = self.feature_vector(img_1), self.feature_vector(img_2)
+        loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2  
+        self.log('Validation Uniformity Loss', loss.item(),on_epoch=True)
+        
+        '''
         (img_1, img_2), labels = batch
         loss = torch.tensor([0], device=self.device) 
         if self.hparams.contrastive:
@@ -335,7 +342,7 @@ class MocoV2(pl.LightningModule):
             #self.log('Class Training Accuracy @ 5',acc1.item(),on_epoch = True)
 
             self.log('Validation Total Loss', loss.item(),on_epoch=True)
-
+        
 
         #return results
     '''
@@ -426,6 +433,10 @@ class MocoV2(pl.LightningModule):
         checkpoint = torch.load(pretrained_network)
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
+
+    
+    def uniform_loss(self,x, t=2):
+        return torch.pdist(x, p=2).pow(2).mul(-t).exp().mean().log()
 
 # utils
 @torch.no_grad()

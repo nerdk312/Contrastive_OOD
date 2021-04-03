@@ -123,7 +123,7 @@ class MocoToy(nn.Module):
 
         return logits, labels
     
-    def loss_function(self, batch):
+    def loss_function(self, batch, auxillary_data=None):
         (img_1, img_2), labels = batch
          
         output, target = self(img_q=img_1, img_k=img_2)
@@ -138,8 +138,11 @@ class MocoToy(nn.Module):
 
 
     # Loads both network as a target state dict
-    def encoder_loading(self,pretrained_network):
+    def encoder_loading(self, pretrained_network):
         print('checkpoint loaded')
         checkpoint = torch.load(pretrained_network)
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
+
+    def on_train_epoch_start(self, datamodule):
+        return None
