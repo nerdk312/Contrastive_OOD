@@ -8,11 +8,10 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.toy_example.toy_moco import MocoToy
-from Contrastive_uncertainty.toy_example.toy_supcon import SupConToy
+
 
 class Toy(pl.LightningModule):
-    def __init__(self,model,
+    def __init__(self,
         datamodule,
         optimizer:str = 'sgd',
         learning_rate: float = 0.03,
@@ -20,14 +19,13 @@ class Toy(pl.LightningModule):
         weight_decay: float = 1e-4,):
 
         super().__init__()
-        self.model = model
         self.datamodule = datamodule # Used for the purpose of obtaining data loader for the case of epoch starting
-        self.save_hyperparameters()
+        #self.save_hyperparameters()
 
-        self.auxillary_data = model.on_train_epoch_start(self.datamodule)
+        self.auxillary_data = self.aux_data() #self.on_train_epoch_start(self.datamodule)
 
     def training_step(self, batch, batch_idx):
-        loss = self.model.loss_function(batch, self.auxillary_data)
+        loss = self.loss_function(batch, self.auxillary_data)
         return loss
         '''
         loss, acc1, acc5 = self.model.loss_function(batch)
@@ -41,7 +39,7 @@ class Toy(pl.LightningModule):
         #return {'loss': loss, 'log': log, 'progress_bar': log}
 
     def validation_step(self, batch, batch_idx):
-        loss = self.model.loss_function(batch,self.auxillary_data)
+        loss = self.loss_function(batch,self.auxillary_data)
         '''
         loss, acc1, acc5 = self.model.loss_function(batch)
             
@@ -50,7 +48,7 @@ class Toy(pl.LightningModule):
         self.log('Validation Instance Accuracy @ 5',acc1.item(),on_epoch = True)        
         '''
     def test_step(self, batch, batch_idx):
-        loss = self.model.loss_function(batch,self.auxillary_data)
+        loss = self.loss_function(batch,self.auxillary_data)
         '''
         loss, acc1, acc5 = self.model.loss_function(batch)
         
@@ -59,18 +57,33 @@ class Toy(pl.LightningModule):
         self.log('Test Instance Accuracy @ 5',acc1.item(),on_epoch = True)
         '''
 
+    def loss_function(self, batch, auxillary_data=None):
+        raise NotImplementedError
+    
+
+    def aux_data(self):
+        ''' Placeholder function, used to obtain auxillary data for a specific task'''
+        auxillary_data = None
+        return auxillary_data
+
     def configure_optimizers(self):
         if self.hparams.optimizer =='sgd':
-            optimizer = torch.optim.SGD(self.model.parameters(), self.hparams.learning_rate,
+            optimizer = torch.optim.SGD(self.parameters(), self.hparams.learning_rate,
                                         momentum=self.hparams.momentum,
                                         weight_decay=self.hparams.weight_decay)
         elif self.hparams.optimizer =='adam':
-            optimizer = torch.optim.Adam(self.model.parameters(), self.hparams.learning_rate,
+            optimizer = torch.optim.Adam(self.parameters(), self.hparams.learning_rate,
                                         weight_decay=self.hparams.weight_decay)
         return optimizer
     
-    def on_train_epoch_start(self, epoch):
 
+    
+
+    '''
+    def on_train_epoch_start(self, epoch):
+        raise NotImplementedError
+
+        
         # update training progress in trainer
         self.trainer.current_epoch = epoch
 
@@ -97,7 +110,7 @@ class Toy(pl.LightningModule):
 
         #  (The only part that I added) - Used to call the cluster results for the case of the prototypical 
         self.auxillary_data = model.on_train_epoch_start(self.datamodule)
-        
+    ''' 
 
 
 

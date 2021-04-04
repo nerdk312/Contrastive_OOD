@@ -4,37 +4,44 @@ import torch.nn.functional as F
 
 from Contrastive_uncertainty.toy_example.toy_encoder import Backbone
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k
+from Contrastive_uncertainty.toy_example.toy_module import Toy
 
-
-class SoftmaxToy(nn.Module):
+class SoftmaxToy(Toy):
     def __init__(self,
+        datamodule,
+        optimizer:str = 'sgd',
+        learning_rate: float = 0.03,
+        momentum: float = 0.9,
+        weight_decay: float = 1e-4,
         hidden_dim: int =  20,
         emb_dim: int = 2,
         num_classes:int = 4,
-        
         ):
-        super().__init__()
+        super().__init__(datamodule, optimizer, learning_rate,
+                         momentum, weight_decay)
+        self.save_hyperparameters()
+        #import ipdb;ipdb.set_trace()
+
+        
         # Nawid - required to use for the fine tuning
-        self.hidden_dim = hidden_dim
-        self.emb_dim = emb_dim
+        
 
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder= self.init_encoders()
-        self.num_classes = num_classes
-        self.classifier = nn.Linear(self.emb_dim, self.num_classes)
+        self.classifier = nn.Linear(self.hparams.emb_dim, self.hparams.num_classes)
 
     # Instantiate classifier
     def init_encoders(self):
         """
         Override to add your own encoders
         """
-        encoder = Backbone(self.hidden_dim,self.emb_dim)
+        encoder = Backbone(self.hparams.hidden_dim, self.hparams.emb_dim)
         return encoder
     
     def loss_function(self, batch, auxillary_data=None):
         
-        (img_1, img_2), labels,indices = batch
+        (img_1, img_2), labels, indices = batch
         loss = self.forward(img_1, labels)
         return loss
 
@@ -52,5 +59,7 @@ class SoftmaxToy(nn.Module):
         z = self.encoder(data)
         return z
     
-    def on_train_epoch_start(self, datamodule):
+    '''
+    def on_init(self, datamodule):
         return None
+    '''

@@ -15,11 +15,11 @@ class circular_visualisation(pl.Callback):
         collated_features = []
         collated_labels = []
         dataloader = self.Datamodule.train_dataloader()
-        for data, labels in dataloader:
+        for data, labels,indices in dataloader:
             if isinstance(data, tuple) or isinstance(data, list):
                 data, *aug_data = data
             data = data.to(pl_module.device)
-            feature_vector = pl_module.model.feature_vector(data)
+            feature_vector = pl_module.feature_vector(data)
             collated_features.append(feature_vector)
 
             collated_labels.append(labels)
