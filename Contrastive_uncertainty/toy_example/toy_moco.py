@@ -124,7 +124,7 @@ class MocoToy(nn.Module):
         return logits, labels
     
     def loss_function(self, batch, auxillary_data=None):
-        (img_1, img_2), labels = batch
+        (img_1, img_2), labels,indices = batch
          
         output, target = self(img_q=img_1, img_k=img_2)
         loss = F.cross_entropy(output, target.long())

@@ -15,6 +15,7 @@ from Contrastive_uncertainty.toy_example.toy_callbacks import circular_visualisa
 
 from Contrastive_uncertainty.toy_example.toy_moco import MocoToy
 from Contrastive_uncertainty.toy_example.toy_softmax import SoftmaxToy
+from Contrastive_uncertainty.toy_example.toy_PCL import PCLToy
 from Contrastive_uncertainty.toy_example.toy_module import Toy
 
 
@@ -36,8 +37,9 @@ def train(params):
 
     # Model for the task
     #encoder = MocoToy(config['hidden_dim'],config['embed_dim'])
-    encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
-    model = Toy(encoder)
+    #encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
+    encoder = PCLToy()
+    model = Toy(encoder, datamodule=datamodule)
     circular = circular_visualisation(datamodule)
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
     

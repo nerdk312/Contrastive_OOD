@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 from random import sample
+from tqdm import tqdm
 import faiss
+
+from toy_encoder import Backbone
 
 class PCLToy(nn.Module):
     def __init__(self, 
@@ -10,7 +13,7 @@ class PCLToy(nn.Module):
         num_negatives: int = 2000,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
-        num_cluster :list = [2100,4000,6000]
+        num_cluster :list = [2100,4000,6000],
         num_workers: int = 8,
         pretrained_network = None,
         ):
@@ -167,10 +170,15 @@ class PCLToy(nn.Module):
     @torch.no_grad()
     def compute_features(self,dataloader):
         print('Computing features ...')
+        import ipdb; ipdb.set_trace()
         features = torch.zeros(len(dataloader.dataset),self.emb_dim).cuda()
-        for i, (images, index) in enumerate(tqdm(dataloader)):
-            feat = model(images,is_eval=True)   # Nawid - obtain momentum features
-            features[index] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
+        for i, (images,labels, indices) in enumerate(tqdm(dataloader)):
+            if isinstance(images, tuple) or isinstance(images, list):
+                images, *aug_images = images
+                images = images.cuda()
+
+            feat = self(images,is_eval=True)   # Nawid - obtain momentum features
+            features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
 
     def run_kmeans(x):
@@ -245,10 +253,11 @@ class PCLToy(nn.Module):
 
     def cluster_data(self,dataloader):
         features = self.compute_features(dataloader)
+        import ipdb; ipdb.set_trace()
         # placeholder for clustering result
         cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
         for num_cluster in self.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
-            cluster_result['im2cluster'].append(torch.zeros(len(eval_dataset),dtype=torch.long).cuda())
+            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long).cuda())
             cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.emb_dim).cuda())
             cluster_result['density'].append(torch.zeros(int(num_cluster)).cuda())
         
@@ -261,10 +270,10 @@ class PCLToy(nn.Module):
 
 
     def loss_function(self,batch,cluster_result=None):
-        (img_1,img_2), labels = batch
+        (img_1,img_2), labels,indices = batch
 
         # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
-        output, target, output_proto, target_proto = model(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=index) # Nawid- obtain output
+        output, target, output_proto, target_proto = model(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
 
         # InfoNCE loss
         loss = F.cross_entropy(output, target) # Nawid - instance based info NCE loss

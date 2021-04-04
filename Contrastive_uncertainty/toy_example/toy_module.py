@@ -24,6 +24,8 @@ class Toy(pl.LightningModule):
         self.datamodule = datamodule # Used for the purpose of obtaining data loader for the case of epoch starting
         self.save_hyperparameters()
 
+        self.auxillary_data = model.on_train_epoch_start(self.datamodule)
+
     def training_step(self, batch, batch_idx):
         loss = self.model.loss_function(batch, self.auxillary_data)
         return loss

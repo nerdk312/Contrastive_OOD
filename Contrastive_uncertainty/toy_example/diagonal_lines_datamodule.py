@@ -105,7 +105,7 @@ class CustomTensorDataset(Dataset):
 
         y = self.tensors[1][index]
 
-        return x, y
+        return x, y, index # Added the return of index for the purpose of PCL
 
     def __len__(self):
         return self.tensors[0].size(0)

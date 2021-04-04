@@ -34,7 +34,7 @@ class SoftmaxToy(nn.Module):
     
     def loss_function(self, batch, auxillary_data=None):
         
-        (img_1, img_2), labels = batch
+        (img_1, img_2), labels,indices = batch
         loss = self.forward(img_1, labels)
         return loss
 
