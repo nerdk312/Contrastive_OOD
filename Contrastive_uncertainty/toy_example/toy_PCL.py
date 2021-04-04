@@ -1,20 +1,27 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from random import sample
 from tqdm import tqdm
 import faiss
 
-from toy_encoder import Backbone
+from Contrastive_uncertainty.toy_example.toy_encoder import Backbone
+from Contrastive_uncertainty.toy_example.toy_module import Toy
 
-class PCLToy(nn.Module):
-    def __init__(self, 
+
+class PCLToy(Toy):
+    def __init__(self,
+        datamodule,
+        optimizer:str = 'sgd',
+        learning_rate: float = 0.03,
+        momentum: float = 0.9,
+        weight_decay: float = 1e-4, 
         hidden_dim: int = 20,
         emb_dim: int = 2,
-        num_negatives: int = 2000,
+        num_negatives: int = 128,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
-        num_cluster :list = [2100,4000,6000],
-        num_workers: int = 8,
+        num_cluster :list = [200,400,600],
         pretrained_network = None,
         ):
         """
@@ -25,20 +32,16 @@ class PCLToy(nn.Module):
         encoder_momentum: momentum for updating key encoder (default: 0.999)
         softmax_temperature: softmax temperature
         """
-        super().__init__()
-        self.hidden_dim = hidden_dim
-        self.emb_dim = emb_dim
-        self.num_negatives = num_negatives
-        self.encoder_momentum = encoder_momentum
-        self.softmax_temperature = softmax_temperature
-        self.num_cluster = num_cluster
-        self.num_workers = num_workers
-        self.pretrained_network = pretrained_network
-        
 
+        super().__init__(datamodule, optimizer, learning_rate,
+                         momentum, weight_decay)
+        
+        self.save_hyperparameters()
+
+        
         self.encoder_q, self.encoder_k = self.init_encoders()
 
-        if self.pretrained_network is not None:
+        if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.pretrained_network)
 
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
@@ -51,12 +54,14 @@ class PCLToy(nn.Module):
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
+        self.auxillary_data = self.aux_data()
+
     def init_encoders(self):
         """
         Override to add your own encoders
         """
-        encoder_q = Backbone(self.hidden_dim,self.emb_dim)
-        encoder_k = Backbone(self.hidden_dim,self.emb_dim)
+        encoder_q = Backbone(self.hparams.hidden_dim,self.hparams.emb_dim)
+        encoder_k = Backbone(self.hparams.hidden_dim,self.hparams.emb_dim)
         
         return encoder_q, encoder_k
 
@@ -66,7 +71,7 @@ class PCLToy(nn.Module):
         Momentum update of the key encoder
         """
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
-            em = self.encoder_momentum
+            em = self.hparams.encoder_momentum
             param_k.data = param_k.data * em + param_q.data * (1. - em)
 
     @torch.no_grad()
@@ -75,11 +80,11 @@ class PCLToy(nn.Module):
         batch_size = keys.shape[0]
 
         ptr = int(self.queue_ptr)
-        assert self.num_negatives % batch_size == 0  # for simplicity
+        assert self.hparams.num_negatives % batch_size == 0  # for simplicity
 
         # replace the keys at ptr (dequeue and enqueue)
         self.queue[:, ptr:ptr + batch_size] = keys.T # Nawid - add the keys to the queue
-        ptr = (ptr + batch_size) % self.num_negatives  # move pointer
+        ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
 
         self.queue_ptr[0] = ptr
 
@@ -126,10 +131,11 @@ class PCLToy(nn.Module):
         logits = torch.cat([l_pos, l_neg], dim=1) # Nawid - total logits - instance based loss to keep property of local smoothness
 
         # apply temperature
-        logits /= self.T
+        logits /= self.hparams.softmax_temperature
 
         # labels: positive key indicators
-        labels = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
+        labels = torch.zeros(logits.shape[0], dtype=torch.long)
+        labels = labels.type_as(logits)
 
         # dequeue and enqueue
         self._dequeue_and_enqueue(k) # Nawid - queue values
@@ -146,19 +152,19 @@ class PCLToy(nn.Module):
                 # sample negative prototypes
                 all_proto_id = [i for i in range(im2cluster.max())] # Nawid - obtains all the cluster ids which were present
                 neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist()) # Nawid - all the negative clusters are the set of all prototypes minus the set of all the negative prototypes
-                neg_proto_id = sample(neg_proto_id,self.r) #sample r negative prototypes
+                neg_proto_id = sample(neg_proto_id,self.hparams.num_negatives) #sample r negative prototypes
                 neg_prototypes = prototypes[neg_proto_id] # Nawid - sample negative prototypes
 
                 proto_selected = torch.cat([pos_prototypes,neg_prototypes],dim=0) # Nawid - concatenate positive and negative prototypes, so this is  a [bxd] concatenated with [rxd] to make a [b + r xd]
 
                 # compute prototypical logits
-                logits_proto = torch.mm(q,proto_selected.t()) # Nawid - dot product between query and the prototypes (where the selected prototypes are transposed). The matrix multiplication is  [b x d] . [dx b +r] to make a [b x b +r]
+                logits_proto = torch.mm(q,proto_selected.t()).to(self.device) # Nawid - dot product between query and the prototypes (where the selected prototypes are transposed). The matrix multiplication is  [b x d] . [dx b +r] to make a [b x b +r]
 
                 # targets for prototype assignment
-                labels_proto = torch.linspace(0, q.size(0)-1, steps=q.size(0)).long().cuda()# Nawid - targets for the prototypes, this is a 1D vector with values from 0 to q-1 which represents that the value which shows that the diagonal should be the largest value
+                labels_proto = torch.linspace(0, q.size(0)-1, steps=q.size(0),device = self.device).long()# Nawid - targets for the prototypes, this is a 1D vector with values from 0 to q-1 which represents that the value which shows that the diagonal should be the largest value
 
                 # scaling temperatures for the selected prototypes
-                temp_proto = density[torch.cat([pos_proto_id,torch.LongTensor(neg_proto_id).cuda()],dim=0)]
+                temp_proto = density[torch.cat([pos_proto_id,torch.LongTensor(neg_proto_id,device = self.device)],dim=0)]
                 logits_proto /= temp_proto
 
                 proto_labels.append(labels_proto)
@@ -170,18 +176,18 @@ class PCLToy(nn.Module):
     @torch.no_grad()
     def compute_features(self,dataloader):
         print('Computing features ...')
-        import ipdb; ipdb.set_trace()
-        features = torch.zeros(len(dataloader.dataset),self.emb_dim).cuda()
+        #import ipdb;ipdb.set_trace()
+        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
         for i, (images,labels, indices) in enumerate(tqdm(dataloader)):
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
-                images = images.cuda()
+                images = images
 
             feat = self(images,is_eval=True)   # Nawid - obtain momentum features
             features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
 
-    def run_kmeans(x):
+    def run_kmeans(self,x):
         """
         Args:
             x: data to be clustered
@@ -190,7 +196,7 @@ class PCLToy(nn.Module):
         print('performing kmeans clustering')
         results = {'im2cluster':[],'centroids':[],'density':[]} # Nawid -k-means results placed here
 
-        for seed, num_cluster in enumerate(self.num_cluster): # Nawid - k-means clustering is performed several times for different values of k (according to the paper)
+        for seed, num_cluster in enumerate(self.hparams.num_cluster): # Nawid - k-means clustering is performed several times for different values of k (according to the paper)
             # intialize faiss clustering parameters
             d = x.shape[1] # Nawid - dimensionality of the vector
             k = int(num_cluster) # Nawid - num cluster
@@ -235,14 +241,14 @@ class PCLToy(nn.Module):
                     density[i] = dmax
 
             density = density.clip(np.percentile(density,10),np.percentile(density,90)) #clamp extreme values for stability
-            density = self.softmax_temperature*density/density.mean()  #scale the mean to temperature
+            density = self.hparams.softmax_temperature*density/density.mean()  #scale the mean to temperature
 
             # convert to cuda Tensors for broadcast
-            centroids = torch.Tensor(centroids).cuda()
+            centroids = torch.Tensor(centroids,device = self.device)
             centroids = nn.functional.normalize(centroids, p=2, dim=1)
 
-            im2cluster = torch.LongTensor(im2cluster).cuda()
-            density = torch.Tensor(density).cuda()
+            im2cluster = torch.LongTensor(im2cluster,device = self.device)
+            density = torch.Tensor(density,device = self.device)
 
             results['centroids'].append(centroids) # Nawid - (k,d) matrix which corresponds to k different d-dimensional centroids
             results['density'].append(density) # Nawid - concentation
@@ -253,13 +259,12 @@ class PCLToy(nn.Module):
 
     def cluster_data(self,dataloader):
         features = self.compute_features(dataloader)
-        import ipdb; ipdb.set_trace()
         # placeholder for clustering result
         cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
-        for num_cluster in self.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
-            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long).cuda())
-            cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.emb_dim).cuda())
-            cluster_result['density'].append(torch.zeros(int(num_cluster)).cuda())
+        for num_cluster in self.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
+            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
+            cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
+            cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
         
          #if using a single gpuif args.gpu == 0:
         features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
@@ -273,7 +278,7 @@ class PCLToy(nn.Module):
         (img_1,img_2), labels,indices = batch
 
         # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
-        output, target, output_proto, target_proto = model(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
+        output, target, output_proto, target_proto = self(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
 
         # InfoNCE loss
         loss = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
@@ -287,14 +292,20 @@ class PCLToy(nn.Module):
                 acc_proto.update(accp[0], images[0].size(0))
 
             # average loss across all sets of prototypes
-            loss_proto /= len(self.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
+            loss_proto /= len(self.hparams.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
             loss += loss_proto # Nawid - increase the loss
 
+    def aux_data(self):
+        dataloader = self.datamodule.train_dataloader()
+        cluster_result = self.cluster_data(dataloader)
+        return cluster_result
+
+    '''
     def on_train_epoch_start(self,datamodule):
         dataloader =  datamodule.train_dataloader()
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
-
+    '''
         
 
     
