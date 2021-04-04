@@ -9,34 +9,33 @@ from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k
 from Contrastive_uncertainty.toy_example.toy_encoder import Backbone
+from Contrastive_uncertainty.toy_example.toy_module import Toy
 
-
-class MocoToy(nn.Module):
+class MocoToy(Toy):
     def __init__(self,
+        datamodule,
+        optimizer:str = 'sgd',
+        learning_rate: float = 0.03,
+        momentum: float = 0.9,
+        weight_decay: float = 1e-4,
         hidden_dim: int = 20,
         emb_dim: int = 2,
-        num_negatives: int = 2000,
+        num_negatives: int = 512,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
-        num_workers: int = 8,
         pretrained_network = None,
         ):
-        super().__init__()
+        super().__init__(datamodule, optimizer, learning_rate,
+                         momentum, weight_decay)
         # Nawid - required to use for the fine tuning
-        self.hidden_dim = hidden_dim
-        self.emb_dim = emb_dim
-        self.num_negatives = num_negatives
-        self.encoder_momentum = encoder_momentum
-        self.softmax_temperature = softmax_temperature
-        self.num_workers = num_workers
-        self.pretrained_network = pretrained_network
+        self.save_hyperparameters()
 
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder_q, self.encoder_k = self.init_encoders()
 
-        if self.pretrained_network is not None:
-            self.encoder_loading(self.pretrained_network)
+        if self.hparams.pretrained_network is not None:
+            self.encoder_loading(self.hparams.pretrained_network)
 
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
             param_k.data.copy_(param_q.data)  # initialize
@@ -52,8 +51,8 @@ class MocoToy(nn.Module):
         """
         Override to add your own encoders
         """
-        encoder_q = Backbone(self.hidden_dim,self.emb_dim)
-        encoder_k = Backbone(self.hidden_dim,self.emb_dim)
+        encoder_q = Backbone(self.hparams.hidden_dim,self.hparams.emb_dim)
+        encoder_k = Backbone(self.hparams.hidden_dim,self.hparams.emb_dim)
         
         return encoder_q, encoder_k
 
@@ -63,7 +62,7 @@ class MocoToy(nn.Module):
         Momentum update of the key encoder
         """
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
-            em = self.encoder_momentum
+            em = self.hparams.encoder_momentum
             param_k.data = param_k.data * em + param_q.data * (1. - em)
 
     @torch.no_grad()
@@ -72,11 +71,11 @@ class MocoToy(nn.Module):
         batch_size = keys.shape[0]
 
         ptr = int(self.queue_ptr)
-        assert self.num_negatives % batch_size == 0  # for simplicity
+        assert self.hparams.num_negatives % batch_size == 0  # for simplicity
 
         # replace the keys at ptr (dequeue and enqueue)
         self.queue[:, ptr:ptr + batch_size] = keys.T # Nawid - add the keys to the queue
-        ptr = (ptr + batch_size) % self.num_negatives  # move pointer
+        ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
 
         self.queue_ptr[0] = ptr
 
@@ -112,7 +111,7 @@ class MocoToy(nn.Module):
         logits = torch.cat([l_pos, l_neg], dim=1)
 
         # apply temperature
-        logits /= self.softmax_temperature
+        logits /= self.hparams.softmax_temperature
 
         # labels: positive key indicators
         labels = torch.zeros(logits.shape[0], dtype=torch.long) # Nawid - class zero is always the correct class, which corresponds to the postiive examples in the logit tensor (due to the positives being concatenated first)
@@ -124,18 +123,18 @@ class MocoToy(nn.Module):
         return logits, labels
     
     def loss_function(self, batch, auxillary_data=None):
-        (img_1, img_2), labels,indices = batch
+        (img_1, img_2), labels, indices = batch
          
         output, target = self(img_q=img_1, img_k=img_2)
+        
         loss = F.cross_entropy(output, target.long())
         acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
 
-        return loss, acc1, acc5
+        return loss#, acc1, acc5
 
     def feature_vector(self, data):
         z = self.encoder_q(data)
         return z
-
 
     # Loads both network as a target state dict
     def encoder_loading(self, pretrained_network):
@@ -144,5 +143,7 @@ class MocoToy(nn.Module):
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
 
+    '''
     def on_train_epoch_start(self, datamodule):
         return None
+    '''

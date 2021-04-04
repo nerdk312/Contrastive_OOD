@@ -40,7 +40,9 @@ def train(params):
     #encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
     #encoder = PCLToy()
     #model = Toy(encoder, datamodule=datamodule)
-    model = SoftmaxToy(datamodule = datamodule)
+    
+    #model = SoftmaxToy(datamodule = datamodule)
+    model = MocoToy(datamodule=datamodule)
     circular = circular_visualisation(datamodule)
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
     
