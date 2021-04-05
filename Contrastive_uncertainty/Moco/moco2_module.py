@@ -270,8 +270,9 @@ class MocoV2(pl.LightningModule):
 
 
     def training_step(self, batch, batch_idx):
-        
+        '''
         (img_1, img_2), labels = batch
+        
         f1,f2 = self.feature_vector_compressed(img_1), self.feature_vector_compressed(img_2)
         align_loss = self.align_loss(f1,f2)
         uniformity_loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2
@@ -280,9 +281,12 @@ class MocoV2(pl.LightningModule):
         self.log('Training Uniformity Loss', uniformity_loss.item(),on_epoch=True)
         self.log('Training U+A Loss', loss.item(),on_epoch=True)
         '''
-        loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2  
-        self.log('Training Uniformity Loss', loss.item(),on_epoch=True)
-        '''
+        
+        (img_1, img_2), labels = batch
+        f1,f2 = self.feature_vector_compressed(img_1), self.feature_vector_compressed(img_2)
+        loss = self.class_align_loss(f1,f2,labels)  
+        self.log('Training Class Align Loss', loss.item(),on_epoch=True)
+        
         '''
         loss = torch.tensor([0], device=self.device) 
         if self.hparams.contrastive:
@@ -318,7 +322,7 @@ class MocoV2(pl.LightningModule):
         #return {'loss': loss, 'log': log, 'progress_bar': log}
 
     def validation_step(self, batch, batch_idx,dataset_idx):
-        
+        '''
         (img_1, img_2), labels = batch
         f1,f2 = self.feature_vector_compressed(img_1), self.feature_vector_compressed(img_2)
         align_loss = self.align_loss(f1,f2)
@@ -328,9 +332,11 @@ class MocoV2(pl.LightningModule):
         self.log('Validation Uniformity Loss', uniformity_loss.item(),on_epoch=True)
         self.log('Validation U+A Loss', loss.item(),on_epoch=True)
         '''
-        loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2  
-        self.log('Validation Uniformity Loss', loss.item(),on_epoch=True)
-        '''
+        (img_1, img_2), labels = batch
+        f1,f2 = self.feature_vector_compressed(img_1), self.feature_vector_compressed(img_2)
+        loss = self.class_align_loss(f1,f2,labels)  
+        self.log('Validation Class Align Loss', loss.item(),on_epoch=True)
+        
         
         '''
         (img_1, img_2), labels = batch
@@ -458,6 +464,19 @@ class MocoV2(pl.LightningModule):
     
     def align_loss(self,x, y, alpha=2):
         return (x - y).norm(p=2, dim=1).pow(alpha).mean()
+    
+    def class_align_loss(self,x,y,labels):
+        class_alignment_loss = torch.tensor([0])
+        full_data = torch.cat([x,y],dim=0) # concatenate the different augmented views
+        full_labels = torch.cat([labels,labels],dim=0) # Double the labels to represent the labels for each view
+        for i in range(self.hparams.num_classes):
+            class_data= full_data[full_labels==i] # mask to only get features corresponding only the particular class
+            class_dist = torch.pdist(class_data, p=2).pow(2).mean()
+            class_alignment_loss += class_dist
+        
+        return class_alignment_loss
+        
+
 
 # utils
 @torch.no_grad()

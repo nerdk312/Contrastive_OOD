@@ -25,7 +25,7 @@ use_mlp = True,
 
 # Miscellaneous arguments
 seed = 42,
-epochs = 1000,
+epochs = 500,
 
 # Trainer configurations
 fast_run = False,
