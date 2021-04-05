@@ -49,7 +49,7 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
         print('mean',mean)
         print('std',std)
         '''        
-        self.val_data, self.val_labels = self.data[int(0.7*data_length):int(0.8*data_length)], self.labels[int(0.7*data_length):int(0.8*data_length)]
+        self.val_data, self.val_labels = self.data[int(0.4*data_length):int(0.8*data_length)], self.labels[int(0.4*data_length):int(0.8*data_length)]
         self.test_data, self.test_labels = self.data[int(0.8*data_length):], self.labels[int(0.8*data_length):]
         
     def visualise_data(self):

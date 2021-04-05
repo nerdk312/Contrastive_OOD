@@ -22,10 +22,10 @@ class PCLToy(Toy):
         weight_decay: float = 1e-4, 
         hidden_dim: int = 20,
         emb_dim: int = 2,
-        num_negatives: int = 128,
+        num_negatives: int = 32,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
-        num_cluster :list = [200,400,600],
+        num_cluster :list = [100],
         pretrained_network = None,
         ):
         """
@@ -143,12 +143,13 @@ class PCLToy(Toy):
 
         # dequeue and enqueue
         self._dequeue_and_enqueue(k) # Nawid - queue values
-
+         
         # prototypical contrast - Nawid - performs the protoNCE
         if cluster_result is not None:
             proto_labels = []
             proto_logits = []
-            for n, (im2cluster,prototypes,density) in enumerate(zip(cluster_result['im2cluster'],cluster_result['centroids'],cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+            for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+                
                 # get positive prototypes
                 pos_proto_id = im2cluster[index] # Nawid - get the true cluster assignment for each of the different samples
                 pos_prototypes = prototypes[pos_proto_id] # Nawid- prototypes is a kxd array of k , d dimensional clusters. Therefore this chooses the true clusters for the positive samples. Therefore this is a [B x d] matrix
@@ -156,10 +157,10 @@ class PCLToy(Toy):
                 # sample negative prototypes
                 all_proto_id = [i for i in range(im2cluster.max())] # Nawid - obtains all the cluster ids which were present
                 neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist()) # Nawid - all the negative clusters are the set of all prototypes minus the set of all the negative prototypes
-                neg_proto_id = sample(neg_proto_id,self.hparams.num_negatives) #sample r negative prototypes
+                neg_proto_id = sample(neg_proto_id, self.hparams.num_negatives) #sample r negative prototypes
                 neg_prototypes = prototypes[neg_proto_id] # Nawid - sample negative prototypes
 
-                proto_selected = torch.cat([pos_prototypes,neg_prototypes],dim=0) # Nawid - concatenate positive and negative prototypes, so this is  a [bxd] concatenated with [rxd] to make a [b + r xd]
+                proto_selected = torch.cat([pos_prototypes, neg_prototypes],dim=0) # Nawid - concatenate positive and negative prototypes, so this is  a [bxd] concatenated with [rxd] to make a [b + r xd]
 
                 # compute prototypical logits
                 logits_proto = torch.mm(q,proto_selected.t().to(self.device)) # Nawid - dot product between query and the prototypes (where the selected prototypes are transposed). The matrix multiplication is  [b x d] . [dx b +r] to make a [b x b +r]
@@ -182,6 +183,7 @@ class PCLToy(Toy):
         print('Computing features ...')
         #import ipdb;ipdb.set_trace()
         features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
+        import ipdb; ipdb.set_trace()
         for i, (images,labels, indices) in enumerate(tqdm(dataloader)):
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
@@ -307,7 +309,7 @@ class PCLToy(Toy):
         return loss
 
     def aux_data(self):
-        dataloader = self.datamodule.train_dataloader()
+        dataloader = self.datamodule.val_dataloader()
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
 
