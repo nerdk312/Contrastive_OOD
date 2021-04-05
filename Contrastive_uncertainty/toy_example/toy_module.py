@@ -26,6 +26,7 @@ class Toy(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss = self.loss_function(batch, self.auxillary_data)
+        #print('loss',loss)
         return loss
         '''
         loss, acc1, acc5 = self.model.loss_function(batch)

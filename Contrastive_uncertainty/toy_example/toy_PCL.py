@@ -1,12 +1,16 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from random import sample
 from tqdm import tqdm
 import faiss
 
 from Contrastive_uncertainty.toy_example.toy_encoder import Backbone
 from Contrastive_uncertainty.toy_example.toy_module import Toy
+
+from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
+
 
 
 class PCLToy(Toy):
@@ -134,8 +138,8 @@ class PCLToy(Toy):
         logits /= self.hparams.softmax_temperature
 
         # labels: positive key indicators
-        labels = torch.zeros(logits.shape[0], dtype=torch.long)
-        labels = labels.type_as(logits)
+        labels = torch.zeros(logits.shape[0], dtype=torch.long,device = self.device)
+        #labels = labels.type_as(logits)
 
         # dequeue and enqueue
         self._dequeue_and_enqueue(k) # Nawid - queue values
@@ -158,13 +162,13 @@ class PCLToy(Toy):
                 proto_selected = torch.cat([pos_prototypes,neg_prototypes],dim=0) # Nawid - concatenate positive and negative prototypes, so this is  a [bxd] concatenated with [rxd] to make a [b + r xd]
 
                 # compute prototypical logits
-                logits_proto = torch.mm(q,proto_selected.t()).to(self.device) # Nawid - dot product between query and the prototypes (where the selected prototypes are transposed). The matrix multiplication is  [b x d] . [dx b +r] to make a [b x b +r]
+                logits_proto = torch.mm(q,proto_selected.t().to(self.device)) # Nawid - dot product between query and the prototypes (where the selected prototypes are transposed). The matrix multiplication is  [b x d] . [dx b +r] to make a [b x b +r]
 
                 # targets for prototype assignment
                 labels_proto = torch.linspace(0, q.size(0)-1, steps=q.size(0),device = self.device).long()# Nawid - targets for the prototypes, this is a 1D vector with values from 0 to q-1 which represents that the value which shows that the diagonal should be the largest value
 
                 # scaling temperatures for the selected prototypes
-                temp_proto = density[torch.cat([pos_proto_id,torch.LongTensor(neg_proto_id,device = self.device)],dim=0)]
+                temp_proto = density[torch.cat([pos_proto_id,torch.LongTensor(neg_proto_id)],dim=0)].to(self.device)
                 logits_proto /= temp_proto
 
                 proto_labels.append(labels_proto)
@@ -181,11 +185,16 @@ class PCLToy(Toy):
         for i, (images,labels, indices) in enumerate(tqdm(dataloader)):
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
-                images = images
+                images = images.to(self.device)
 
             feat = self(images,is_eval=True)   # Nawid - obtain momentum features
             features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
+
+
+    def feature_vector(self, data):
+        z = self.encoder_q(data)
+        return z
 
     def run_kmeans(self,x):
         """
@@ -244,11 +253,11 @@ class PCLToy(Toy):
             density = self.hparams.softmax_temperature*density/density.mean()  #scale the mean to temperature
 
             # convert to cuda Tensors for broadcast
-            centroids = torch.Tensor(centroids,device = self.device)
+            centroids = torch.Tensor(centroids).to(self.device)
             centroids = nn.functional.normalize(centroids, p=2, dim=1)
 
-            im2cluster = torch.LongTensor(im2cluster,device = self.device)
-            density = torch.Tensor(density,device = self.device)
+            im2cluster = torch.LongTensor(im2cluster).to(self.device)
+            density = torch.Tensor(density).to(self.device)
 
             results['centroids'].append(centroids) # Nawid - (k,d) matrix which corresponds to k different d-dimensional centroids
             results['density'].append(density) # Nawid - concentation
@@ -287,27 +296,87 @@ class PCLToy(Toy):
         if output_proto is not None:
             loss_proto = 0
             for proto_out,proto_target in zip(output_proto, target_proto): # Nawid - I believe this goes through the results of the m different k clustering results
-                loss_proto += criterion(proto_out, proto_target) #
-                accp = accuracy(proto_out, proto_target)[0]
-                acc_proto.update(accp[0], images[0].size(0))
+                loss_proto += F.cross_entropy(proto_out, proto_target) #
+                accp = precision_at_k(proto_out, proto_target)[0]
+               # acc_proto.update(accp[0], images[0].size(0))
 
             # average loss across all sets of prototypes
             loss_proto /= len(self.hparams.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
             loss += loss_proto # Nawid - increase the loss
+
+        return loss
 
     def aux_data(self):
         dataloader = self.datamodule.train_dataloader()
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
 
+    def on_train_epoch_end(self, outputs):
+        self.auxillary_data = self.aux_data()
+        return self.auxillary_data
     '''
-    def on_train_epoch_start(self,datamodule):
-        dataloader =  datamodule.train_dataloader()
-        cluster_result = self.cluster_data(dataloader)
-        return cluster_result
-    '''
-        
+    def train_epoch_start(self, epoch):
 
+        # update training progress in trainer
+        self.trainer.current_epoch = epoch
+
+        model = self.trainer.lightning_module
+
+        # reset train dataloader
+        if epoch != 0 and self.trainer.reload_dataloaders_every_epoch:
+            self.trainer.reset_train_dataloader(model)
+
+        # todo: specify the possible exception
+        with suppress(Exception):
+            # set seed for distributed sampler (enables shuffling for each epoch)
+            self.trainer.train_dataloader.sampler.set_epoch(epoch)
+
+        # changing gradient according accumulation_scheduler
+        self.trainer.accumulation_scheduler.on_epoch_start(self.trainer, self.trainer.lightning_module)
+
+        # stores accumulated grad fractions per batch
+        self.accumulated_loss = TensorRunningAccum(window_length=self.trainer.accumulate_grad_batches)
+
+        # structured result accumulators for callbacks
+        self.early_stopping_accumulator = Accumulator()
+        self.checkpoint_accumulator = Accumulator()
+
+        # hook
+        self.trainer.call_hook("on_epoch_start")
+        self.trainer.call_hook("on_train_epoch_start")
+
+        self.auxillary_data = self.aux_data()
+    '''
+    '''
+    def on_train_epoch_start(self):
+        # update training progress in trainer
+        self.trainer.current_epoch = epoch
+
+        model = self.trainer.lightning_module
+
+        # reset train dataloader
+        if epoch != 0 and self.trainer.reload_dataloaders_every_epoch:
+            self.trainer.reset_train_dataloader(model)
+
+        # todo: specify the possible exception
+        with suppress(Exception):
+            # set seed for distributed sampler (enables shuffling for each epoch)
+            self.trainer.train_dataloader.sampler.set_epoch(epoch)
+
+        # changing gradient according accumulation_scheduler
+        self.trainer.accumulation_scheduler.on_train_epoch_start(self.trainer, self.trainer.lightning_module)
+
+        # stores accumulated grad fractions per batch
+        self.accumulated_loss = TensorRunningAccum(window_length=self.trainer.accumulate_grad_batches)
+
+        # hook
+        self.trainer.call_hook("on_epoch_start")
+        self.trainer.call_hook("on_train_epoch_start")
+
+        #  (The only part that I added) - Used to call the cluster results for the case of the prototypical 
+        self.auxillary_data = self.aux_data()
+        
+    '''
     
 
 

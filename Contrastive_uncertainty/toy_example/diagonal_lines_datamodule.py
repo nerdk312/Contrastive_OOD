@@ -16,14 +16,14 @@ from toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLines
 
 class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons dataset
 
-    def __init__(self,batch_size=32,noise_perc = 0.1,train_transforms = None, test_transforms = None):
+    def __init__(self,batch_size=32,noise_perc = 0.9,train_transforms = None, test_transforms = None):
         super().__init__()
         self.batch_size = batch_size
         self.noise_perc = noise_perc
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
         self.n_lines = 4
-        self.ppline = 10000
+        self.ppline = 100000
         self.intervals = [(0.1, 0.3), (0.35,0.55), (0.6, 0.8), (0.85, 1.05)]
     
     def setup(self):

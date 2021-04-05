@@ -228,6 +228,7 @@ class MocoV2(pl.LightningModule):
             z: latent vector
         """
         z = self.encoder_q.representation_output(x)
+        z = nn.functional.normalize(z, dim=1)
         return z
     
     def feature_vector_compressed(self,x):
@@ -240,6 +241,7 @@ class MocoV2(pl.LightningModule):
         # compute query features
         z = self.feature_vector(x) # Gets the feature map representations which I use for the purpose of pretraining
         z = self.encoder_q.class_fc1(z)
+        z = nn.functional.normalize(z, dim=1)
         return z
 
     def class_discrimination(self,x):
@@ -268,12 +270,19 @@ class MocoV2(pl.LightningModule):
 
 
     def training_step(self, batch, batch_idx):
-        '''
+        
         (img_1, img_2), labels = batch
-        f1,f2 = self.feature_vector(img_1), self.feature_vector(img_2)
+        f1,f2 = self.feature_vector_compressed(img_1), self.feature_vector_compressed(img_2)
+        align_loss = self.align_loss(f1,f2)
+        uniformity_loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2
+        loss = align_loss +uniformity_loss
+        self.log('Training Alignment Loss', align_loss.item(),on_epoch=True)
+        self.log('Training Uniformity Loss', uniformity_loss.item(),on_epoch=True)
+        self.log('Training U+A Loss', loss.item(),on_epoch=True)
+        '''
         loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2  
         self.log('Training Uniformity Loss', loss.item(),on_epoch=True)
-        
+        '''
         '''
         loss = torch.tensor([0], device=self.device) 
         if self.hparams.contrastive:
@@ -301,6 +310,7 @@ class MocoV2(pl.LightningModule):
             #self.log('Class Training Accuracy @ 5',acc1.item(),on_epoch = True)
 
             self.log('Training Total Loss', loss.item(),on_epoch=True)
+        '''
         
         
 
@@ -308,11 +318,19 @@ class MocoV2(pl.LightningModule):
         #return {'loss': loss, 'log': log, 'progress_bar': log}
 
     def validation_step(self, batch, batch_idx,dataset_idx):
-        '''
+        
         (img_1, img_2), labels = batch
-        f1,f2 = self.feature_vector(img_1), self.feature_vector(img_2)
+        f1,f2 = self.feature_vector_compressed(img_1), self.feature_vector_compressed(img_2)
+        align_loss = self.align_loss(f1,f2)
+        uniformity_loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2
+        loss = align_loss +uniformity_loss
+        self.log('Validation Alignment Loss', align_loss.item(),on_epoch=True)
+        self.log('Validation Uniformity Loss', uniformity_loss.item(),on_epoch=True)
+        self.log('Validation U+A Loss', loss.item(),on_epoch=True)
+        '''
         loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2  
         self.log('Validation Uniformity Loss', loss.item(),on_epoch=True)
+        '''
         
         '''
         (img_1, img_2), labels = batch
@@ -342,7 +360,7 @@ class MocoV2(pl.LightningModule):
             #self.log('Class Training Accuracy @ 5',acc1.item(),on_epoch = True)
 
             self.log('Validation Total Loss', loss.item(),on_epoch=True)
-        
+        '''        
 
         #return results
     '''
@@ -437,6 +455,9 @@ class MocoV2(pl.LightningModule):
     
     def uniform_loss(self,x, t=2):
         return torch.pdist(x, p=2).pow(2).mul(-t).exp().mean().log()
+    
+    def align_loss(self,x, y, alpha=2):
+        return (x - y).norm(p=2, dim=1).pow(alpha).mean()
 
 # utils
 @torch.no_grad()
