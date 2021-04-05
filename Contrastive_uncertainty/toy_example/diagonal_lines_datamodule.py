@@ -56,14 +56,13 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
         #colors = cm.rainbow(np.linspace(0, 0.5,self.n_lines)) # Creates a list of numbers which represents colors
         #import ipdb; ipdb.set_trace()
         #colors = np.array([colors[int(sample_cls)] for sample_cls in self.labels][::-1]) # colors for train dataset
-        f, ax = plt.subplots(1, 2)
         #import ipdb; ipdb.set_trace()
         for i in range(self.n_lines):            
             loc = np.where(self.train_labels ==i)[0] # gets all the indices where the label has a certain index (this is correct I believe)
-            ax[0].scatter(self.train_data[loc,0], self.train_data[loc,1])#, label= 'Train Cls {}'.format(i), s=40) #, color=list(colors[loc,:]), label='Train Cls {}'.format(i), s=40) # plotting the train data
+            plt.scatter(self.train_data[loc,0], self.train_data[loc,1])#, label= 'Train Cls {}'.format(i), s=40) #, color=list(colors[loc,:]), label='Train Cls {}'.format(i), s=40) # plotting the train data
 
-        f.savefig('practice.png')
-        f.savefig('practice.pdf')
+        plt.savefig('practice.png')
+        plt.savefig('practice.pdf')
         plt.close()
         
 
@@ -109,4 +108,8 @@ class CustomTensorDataset(Dataset):
 
     def __len__(self):
         return self.tensors[0].size(0)
-
+'''
+Datamodule = DiagonalLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+Datamodule.setup()
+Datamodule.visualise_data()
+'''

@@ -67,7 +67,31 @@ class circular_visualisation(pl.Callback):
         ax[1].set_ylim([np.min(base_embed[:,1])*1.15,np.max(base_embed[:,1]*0.85)]) # Set y limit for the graph
         '''
 
-        
+class data_visualisation(pl.Callback): 
+    def __init__(self, Datamodule, OOD_Datamodule):
+        super().__init__()
+        self.Datamodule = Datamodule
+        self.OOD_Datamodule = OOD_Datamodule
+
+        self.Datamodule.setup()
+        self.OOD_Datamodule.setup()
+    
+    def on_validation_epoch_end(self, trainer, pl_module):
+        self.visualise_data()
+
+    def visualise_data(self):
+        for i in range(self.Datamodule.n_lines):
+            Data_loc = np.where(self.Datamodule.train_labels ==i)[0] # gets all the indices where the label has a certain index (this is correct I believe)
+            OOD_Data_loc = np.where(self.OOD_Datamodule.train_labels ==i)[0]
+            plt.scatter(self.Datamodule.train_data[Data_loc, 0], self.Datamodule.train_data[Data_loc, 1])
+            plt.scatter(self.OOD_Datamodule.train_data[OOD_Data_loc, 0], self.OOD_Datamodule.train_data[OOD_Data_loc, 1])
+
+        plt.savefig('full_visual.png')
+        plt.savefig('full_visual.pdf')
+        plt.close()
+
+
+
         
 
 

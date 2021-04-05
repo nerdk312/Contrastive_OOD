@@ -10,8 +10,9 @@ from pytorch_lightning.loggers import WandbLogger
 
 
 from Contrastive_uncertainty.toy_example.diagonal_lines_datamodule import DiagonalLinesDataModule
+from Contrastive_uncertainty.toy_example.straight_lines_datamodule import StraightLinesDataModule
 from Contrastive_uncertainty.toy_example.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms
-from Contrastive_uncertainty.toy_example.toy_callbacks import circular_visualisation
+from Contrastive_uncertainty.toy_example.toy_callbacks import circular_visualisation, data_visualisation
 
 from Contrastive_uncertainty.toy_example.toy_moco import MocoToy
 from Contrastive_uncertainty.toy_example.toy_softmax import SoftmaxToy
@@ -35,6 +36,9 @@ def train(params):
     datamodule = DiagonalLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     datamodule.setup()
 
+    OOD_datamodule = StraightLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+    OOD_datamodule.setup()
+
     # Model for the task
     #encoder = MocoToy(config['hidden_dim'],config['embed_dim'])
     #encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
@@ -43,13 +47,14 @@ def train(params):
     
     model = SoftmaxToy(datamodule = datamodule)
     circular = circular_visualisation(datamodule)
+    visualiser = data_visualisation(datamodule, OOD_datamodule)
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
     
     
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
-                        gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = [circular])
+                        gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = [visualiser])
     
     trainer.fit(model,datamodule)
     trainer.test(datamodule=datamodule,
