@@ -41,10 +41,7 @@ def train(params):
     #encoder = PCLToy()
     #model = Toy(encoder, datamodule=datamodule)
     
-    #model = SoftmaxToy(datamodule = datamodule)
-    #model = MocoToy(datamodule=datamodule)
-    #model = PCLToy(datamodule= datamodule)
-    model = SupConToy(datamodule= datamodule)
+    model = SoftmaxToy(datamodule = datamodule)
     circular = circular_visualisation(datamodule)
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
     
@@ -52,7 +49,7 @@ def train(params):
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
-                        gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True)#,callbacks = [circular])
+                        gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = [circular])
     
     trainer.fit(model,datamodule)
     trainer.test(datamodule=datamodule,

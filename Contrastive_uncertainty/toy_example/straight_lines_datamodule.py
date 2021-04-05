@@ -14,7 +14,7 @@ from toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLines
 
 
 
-class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons dataset
+class StraightLinesDataModule(LightningDataModule): # Data module for Two Moons dataset
 
     def __init__(self,batch_size=32,noise_perc = 0.9,train_transforms = None, test_transforms = None):
         super().__init__()
@@ -23,13 +23,24 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
         self.n_lines = 4
-        self.ppline = 100000
+        self.ppline = 100
         self.intervals = [(0.1, 0.3), (0.35,0.55), (0.6, 0.8), (0.85, 1.05)]
     
     def setup(self):
-        # First ppline (100) points are generated from the network for each of the line intervals and then 0.15 percent of those points are chosen from each interval (choosing 15 points out of 100 for each interval)
-        lines = [np.stack([np.linspace(intv[0],intv[1],self.ppline), np.linspace(intv[0],intv[1],self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)] for intv in self.intervals]
-        
+        # First self.ppline (100) points are generated from the network for each of the line intervals and then 0.15 percent of those points are chosen from each interval (choosing 15 points out of 100 for each interval)        
+        lines = [np.stack([0.2*np.ones(self.ppline), np.linspace(0.2,0.4,self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)],\
+                 np.stack([0.2*np.ones(self.ppline), np.linspace(0.55,0.85,self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)],\
+                 np.stack([np.linspace(0.4,0.6,self.ppline), 0.2*np.ones(self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)], \
+                 np.stack([np.linspace(0.7,0.9,self.ppline), 0.2*np.ones(self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)]]
+        cls   = [x*np.ones(int(self.ppline*self.noise_perc)) for x in range(self.n_lines)] # Classes labels for each of the data points in lines
+
+
+    def setup(self):
+        # First self.ppline (100) points are generated from the network for each of the line intervals and then 0.15 percent of those points are chosen from each interval (choosing 15 points out of 100 for each interval)
+        lines = [np.stack([0.2*np.ones(self.ppline), np.linspace(0.2,0.4,self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)],\
+                 np.stack([0.2*np.ones(self.ppline), np.linspace(0.55,0.85,self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)],\
+                 np.stack([np.linspace(0.4,0.6,self.ppline), 0.2*np.ones(self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)], \
+                 np.stack([np.linspace(0.7,0.9,self.ppline), 0.2*np.ones(self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)]]
         cls   = [x*np.ones(int(self.ppline*self.noise_perc)) for x in range(self.n_lines)] # Classes labels for each of the data points in lines
         
         self.data = np.concatenate(lines, axis=1).T
@@ -62,8 +73,8 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
             loc = np.where(self.train_labels ==i)[0] # gets all the indices where the label has a certain index (this is correct I believe)
             ax[0].scatter(self.train_data[loc,0], self.train_data[loc,1])#, label= 'Train Cls {}'.format(i), s=40) #, color=list(colors[loc,:]), label='Train Cls {}'.format(i), s=40) # plotting the train data
 
-        f.savefig('practice.png')
-        f.savefig('practice.pdf')
+        f.savefig('OOD_practice.png')
+        f.savefig('OOD_practice.pdf')
         plt.close()
         
 
@@ -110,3 +121,36 @@ class CustomTensorDataset(Dataset):
     def __len__(self):
         return self.tensors[0].size(0)
 
+
+'''
+Datamodule = StraightLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+Datamodule.setup()
+Datamodule.visualise_data()
+'''
+'''
+train_loader = Datamodule.train_dataloader()
+val_loader = Datamodule.val_dataloader()
+test_loader = Datamodule.test_dataloader()
+'''
+
+
+'''
+mean = 0.
+std = 0.
+nb_samples = 0.
+for data, label in train_loader:
+    if isinstance(data, tuple) or isinstance(data, list):
+        data,  *augdata = data
+    #import ipdb; ipdb.set_trace()
+    batch_samples = data.size(0)
+    data = data.view(batch_samples,data.size(1),-1)
+    mean += data.mean(2).sum(0)
+    std += data.std(2).sum(0)
+
+mean /= nb_samples
+std /= nb_samples
+
+
+print('mean',mean)
+print('std',std)
+'''
