@@ -13,11 +13,13 @@ from Contrastive_uncertainty.toy_example.diagonal_lines_datamodule import Diagon
 from Contrastive_uncertainty.toy_example.straight_lines_datamodule import StraightLinesDataModule
 from Contrastive_uncertainty.toy_example.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms
 from Contrastive_uncertainty.toy_example.toy_callbacks import circular_visualisation, data_visualisation
+from Contrastive_uncertainty.toy_example.toy_run_setup import callback_dictionary
 
 from Contrastive_uncertainty.toy_example.toy_moco import MocoToy
 from Contrastive_uncertainty.toy_example.toy_softmax import SoftmaxToy
 from Contrastive_uncertainty.toy_example.toy_PCL import PCLToy
 from Contrastive_uncertainty.toy_example.toy_supcon import SupConToy
+
 
 
 
@@ -44,17 +46,18 @@ def train(params):
     #encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
     #encoder = PCLToy()
     #model = Toy(encoder, datamodule=datamodule)
-    
+
+    callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
+    desired_callbacks = [callback_dict['ROC']]
     model = SoftmaxToy(datamodule = datamodule)
-    circular = circular_visualisation(datamodule)
+    
     visualiser = data_visualisation(datamodule, OOD_datamodule)
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
-    
-    
+        
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
-                        gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = [visualiser])
+                        gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks)
     
     trainer.fit(model,datamodule)
     trainer.test(datamodule=datamodule,

@@ -59,6 +59,11 @@ class SoftmaxToy(Toy):
         z = self.encoder(data)
         return z
     
+    def class_discrimination(self, data):
+        z = self.encoder(data)
+        z = F.relu(z)
+        logits = self.classifier(z)
+        return logits
     '''
     def on_init(self, datamodule):
         return None

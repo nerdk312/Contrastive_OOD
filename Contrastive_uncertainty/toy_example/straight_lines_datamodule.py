@@ -63,6 +63,12 @@ class StraightLinesDataModule(LightningDataModule): # Data module for Two Moons 
         self.val_data, self.val_labels = self.data[int(0.4*data_length):int(0.8*data_length)], self.labels[int(0.4*data_length):int(0.8*data_length)]
         self.test_data, self.test_labels = self.data[int(0.8*data_length):], self.labels[int(0.8*data_length):]
         
+        # Making the separate datasets for the dataloaders (made it during setup so that the test dataset can be used for the AUROC)
+        self.train_dataset = CustomTensorDataset(tensors= (torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
+        self.val_dataset =  CustomTensorDataset(tensors = (torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels)),transform= self.test_transforms)
+        self.test_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)),transform = self.test_transforms)
+
+
     def visualise_data(self):
         #colors = cm.rainbow(np.linspace(0, 0.5,self.n_lines)) # Creates a list of numbers which represents colors
         #import ipdb; ipdb.set_trace()
@@ -80,21 +86,21 @@ class StraightLinesDataModule(LightningDataModule): # Data module for Two Moons 
 
     def train_dataloader(self):
         '''returns training dataloader'''
-        train_dataset = CustomTensorDataset(tensors= (torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
+        #train_dataset = CustomTensorDataset(tensors= (torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
         train_loader = DataLoader(train_dataset, batch_size = self.batch_size,shuffle =True, drop_last = True,num_workers = 8)
 
         return train_loader
 
     def val_dataloader(self):
         '''returns validation dataloader'''
-        val_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels)),transform= self.test_transforms)
+        #val_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels)),transform= self.test_transforms)
         val_loader = DataLoader(val_dataset,batch_size = self.batch_size, shuffle= False, drop_last = True,num_workers = 8) # Batch size is entire validataion set
 
         return val_loader
 
     def test_dataloader(self):
         '''returns test dataloader'''
-        test_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)),transform = self.test_transforms)
+        #test_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)),transform = self.test_transforms)
         test_loader = DataLoader(test_dataset, batch_size = self.batch_size, shuffle= False, drop_last= True,num_workers = 8)# Batch size is entire test set
         return test_loader
 

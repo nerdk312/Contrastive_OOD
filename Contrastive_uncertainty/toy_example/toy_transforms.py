@@ -2,8 +2,10 @@ import random
 import torch
 from torchvision import transforms
 
-mean = torch.tensor([0.57647171, 0.57647171])
-std = torch.tensor([0.28364347, 0.28364347])
+#mean = torch.tensor([0.57647171, 0.57647171])
+#std = torch.tensor([0.28364347, 0.28364347])
+mean = torch.tensor([1.77806405, 1.77806405])
+std = torch.tensor([1.12455573, 1.12455573])
 class ToyTrainDiagonalLinesTransforms:
     """
     Moco 2 augmentation:
