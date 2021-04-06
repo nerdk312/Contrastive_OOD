@@ -17,6 +17,7 @@ from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
 
 from Contrastive_uncertainty.Moco.hybrid_utils import OOD_conf_matrix
+from Contrastive_uncertainty.Moco.loss_functions import class_discrimination
 
 
 class ReliabiltyLogger(pl.Callback):
@@ -36,7 +37,7 @@ class ReliabiltyLogger(pl.Callback):
         # Make target centroids
         #one_hot_labels = F.one_hot(labels).float()
 
-        logits = pl_module.class_discrimination(imgs)
+        logits = class_discrimination(pl_module,imgs)
         y_pred = F.softmax(logits, dim=1)
         ece = self.make_model_diagrams(y_pred, labels, pl_module)# calculates ECE as well as makes reliability diagram
 
@@ -160,7 +161,7 @@ class ImagePredictionLogger(pl.Callback):
 
     def plot_examples(self,trainer,pl_module):
         imgs = self.imgs.to(device=pl_module.device)
-        y_pred = pl_module.class_discrimination(imgs) # Nawid - forward pass of all data( can be only training data , or training and noisy data)
+        y_pred = class_discrimination(pl_module,imgs) # Nawid - forward pass of all data( can be only training data , or training and noisy data)
     
         preds = torch.argmax(y_pred,-1).cpu() # Get the predictions from the model
 
@@ -201,7 +202,7 @@ class ImagePredictionLogger(pl.Callback):
 
         ood_imgs = self.ood_imgs.to(device=pl_module.device)
         ood_labels = self.ood_labels.to(device=pl_module.device)
-        y_pred = pl_module.class_discrimination(ood_imgs)
+        y_pred = class_discrimination(pl_module,ood_imgs)
         #_,y_pred = pl_module.online_encoder(ood_imgs,centroids) # Nawid - forward pass of all data( can be only training data , or training and noisy data)
         # Obtain the max scores
         confidence, preds = torch.max(y_pred,dim=1) # predictions and max scores
@@ -546,7 +547,7 @@ class OOD_ROC(pl.Callback):
                 target = target.to(pl_module.device)
 
                 # Nawid - distance which is the score as well as the prediciton for the accuracy is obtained
-                output = pl_module.class_discrimination(data)
+                output = class_discrimination(pl_module,data)
                 kernel_distance, pred = output.max(1) # The higher the kernel distance is, the more confident it is, so the lower the probability of an outlier
 
                 # Make array for the probability of being outlier and not being an outlier which is based on the confidence (kernel distance)
@@ -959,7 +960,7 @@ class OOD_confusion_matrix(pl.Callback):
                 OOD_data, *aug_data = OOD_data # Used to take into accoutn whether the data is a tuple of the different augmentations
 
             OOD_data = OOD_data.to(pl_module.device)
-            y_pred = pl_module.class_discrimination(OOD_data)
+            y_pred = class_discrimination(pl_module,OOD_data)
 
             OOD_preds.append(y_pred)
 

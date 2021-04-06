@@ -1,5 +1,11 @@
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
+
+from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.Moco.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
+
 
 def supervised_contrastive_forward(model, features, labels=None, mask=None):
     """Compute loss for model. If both `labels` and `mask` are None,
@@ -81,5 +87,117 @@ def supervised_contrastive_loss(model, batch, auxillary_data=None):
     features = model.encoder_q(imgs)
     ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
     features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
-    loss = supervised_contrastive_forward(features, labels)
-    return loss
+    loss = supervised_contrastive_forward(model, features, labels)
+    metrics = {'Supervised Contrastive Loss': loss}
+
+    return metrics
+
+
+
+
+
+def class_discrimination(model, x):
+    """
+    Input:
+        x: a batch of images for classification
+    Output:
+        logits
+    """
+    # compute query features
+    z = model.feature_vector(x) # Gets the feature map representations which I use for the purpose of pretraining
+    z = F.relu(model.encoder_q.class_fc1(z))
+    
+    if model.hparams.normalize:
+        z = nn.functional.normalize(z, dim=1)
+    
+    logits = model.encoder_q.class_fc2(z)
+    return logits
+
+
+def classification_loss(model, batch):
+    (img_1, img_2), labels = batch
+    logits = class_discrimination(model,img_1)
+    if model.hparams.label_smoothing:
+        loss = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
+        loss = torch.mean(loss)
+    else:
+        loss = F.cross_entropy(logits.float(), labels.long())
+    
+    class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
+    metrics = {'Class Loss': loss, 'Class Accuracy @ 1': class_acc1, 'Class Accuracy @ 5': class_acc5}
+
+    return metrics
+
+
+def moco_forward(model, img_q, img_k):
+    """
+    Input:
+        im_q: a batch of query images
+        im_k: a batch of key images
+    Output:
+        logits, targets
+    """
+    # compute query features
+    q = model.encoder_q(img_q)  # queries: NxC
+    q = nn.functional.normalize(q, dim=1)
+    # compute key features
+    with torch.no_grad():  # no gradient to keys
+        model._momentum_update_key_encoder()  # update the key encoder
+        k = model.encoder_k(img_k)  # keys: NxC
+        k = nn.functional.normalize(k, dim=1)
+    # compute logits
+    # Einstein sum is more intuitive
+    # positive logits: Nx1
+    l_pos = torch.einsum('nc,nc->n', [q, k]).unsqueeze(-1) # Nawid - dot product between query and queues
+    # negative logits: NxK
+    l_neg = torch.einsum('nc,ck->nk', [q, model.queue.clone().detach()])
+    # logits: Nx(1+K)
+    logits = torch.cat([l_pos, l_neg], dim=1)
+    # apply temperature
+    logits /= model.hparams.softmax_temperature
+    # labels: positive key indicators
+    labels = torch.zeros(logits.shape[0], dtype=torch.long) # Nawid - class zero is always the correct class, which corresponds to the postiive examples in the logit tensor (due to the positives being concatenated first)
+    labels = labels.type_as(logits)
+    # dequeue and enqueue
+    model._dequeue_and_enqueue(k)
+    return logits, labels
+
+def moco_loss(model, batch):
+    (img_1, img_2), labels = batch
+    output, target = moco_forward(model, img_q=img_1, img_k=img_2)
+    loss = F.cross_entropy(output, target.long())
+    acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
+    metrics = {'Instance Loss': loss, 'Instance Accuracy @ 1': acc1, 'Instance Accuracy @ 5': acc5}
+
+    return metrics
+
+
+
+
+
+def uniform_loss(model,x, t=2):
+    return torch.pdist(x, p=2).pow(2).mul(-t).exp().mean().log()
+    
+def align_loss(model,x, y, alpha=2):
+    return (x - y).norm(p=2, dim=1).pow(alpha).mean()
+    
+def class_align_loss(model,x,y,labels):
+    class_alignment_loss = torch.tensor([0.0],device = model.device)
+    full_data = torch.cat([x,y],dim=0) # concatenate the different augmented views
+    full_labels = torch.cat([labels,labels],dim=0) # Double the labels to represent the labels for each view
+    for i in range(model.hparams.num_classes):
+        class_data= full_data[full_labels==i] # mask to only get features corresponding only the particular class
+        class_dist = torch.pdist(class_data, p=2).pow(2).mean()
+        class_alignment_loss += class_dist
+    
+    return class_alignment_loss
+
+'''
+        f1,f2 = self.feature_vector_compressed(img_1), self.feature_vector_compressed(img_2)
+        align_loss = self.align_loss(f1,f2)
+        uniformity_loss = (self.uniform_loss(f1) + self.uniform_loss(f2))/2
+        loss = align_loss +uniformity_loss
+        self.log('Training Alignment Loss', align_loss.item(),on_epoch=True)
+        self.log('Training Uniformity Loss', uniformity_loss.item(),on_epoch=True)
+        self.log('Training U+A Loss', loss.item(),on_epoch=True)
+        '''

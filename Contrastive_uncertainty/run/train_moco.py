@@ -68,7 +68,7 @@ def train(params):
         num_classes = config['num_classes'],datamodule = datamodule,num_channels = channels,
         classifier = config['classifier'],normalize = config['normalize'],contrastive = config['contrastive'],
         class_dict = class_names_dict,instance_encoder = config['instance_encoder'],pretrained_network = config['pretrained_network'],
-        label_smoothing=config['label_smoothing'])
+        label_smoothing=config['label_smoothing'],supervised_contrastive = config['supervised_contrastive'])
 
 
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients

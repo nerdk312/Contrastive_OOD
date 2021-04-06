@@ -20,7 +20,8 @@ OOD_dataset = 'MNIST',
 
 classifier = False,
 normalize = False,
-contrastive = True,
+contrastive = False,
+supervised_contrastive = True,
 use_mlp = True,
 
 # Miscellaneous arguments
