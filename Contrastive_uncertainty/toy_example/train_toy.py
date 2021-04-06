@@ -48,7 +48,7 @@ def train(params):
     #model = Toy(encoder, datamodule=datamodule)
 
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    desired_callbacks = [callback_dict['ROC']]
+    desired_callbacks = [callback_dict['ROC'],callback_dict['Mahalanobis']]
     model = SoftmaxToy(datamodule = datamodule)
     
     visualiser = data_visualisation(datamodule, OOD_datamodule)

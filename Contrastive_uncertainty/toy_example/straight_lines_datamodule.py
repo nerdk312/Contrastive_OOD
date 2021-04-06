@@ -23,7 +23,7 @@ class StraightLinesDataModule(LightningDataModule): # Data module for Two Moons 
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
         self.n_lines = 4
-        self.ppline = 100
+        self.ppline = 10000
         self.intervals = [(0.1, 0.3), (0.35,0.55), (0.6, 0.8), (0.85, 1.05)]
     
     def setup(self):
@@ -87,21 +87,21 @@ class StraightLinesDataModule(LightningDataModule): # Data module for Two Moons 
     def train_dataloader(self):
         '''returns training dataloader'''
         #train_dataset = CustomTensorDataset(tensors= (torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
-        train_loader = DataLoader(train_dataset, batch_size = self.batch_size,shuffle =True, drop_last = True,num_workers = 8)
+        train_loader = DataLoader(self.train_dataset, batch_size = self.batch_size,shuffle =True, drop_last = True,num_workers = 8)
 
         return train_loader
 
     def val_dataloader(self):
         '''returns validation dataloader'''
         #val_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels)),transform= self.test_transforms)
-        val_loader = DataLoader(val_dataset,batch_size = self.batch_size, shuffle= False, drop_last = True,num_workers = 8) # Batch size is entire validataion set
+        val_loader = DataLoader(self.val_dataset,batch_size = self.batch_size, shuffle= False, drop_last = True,num_workers = 8) # Batch size is entire validataion set
 
         return val_loader
 
     def test_dataloader(self):
         '''returns test dataloader'''
         #test_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)),transform = self.test_transforms)
-        test_loader = DataLoader(test_dataset, batch_size = self.batch_size, shuffle= False, drop_last= True,num_workers = 8)# Batch size is entire test set
+        test_loader = DataLoader(self.test_dataset, batch_size = self.batch_size, shuffle= False, drop_last= True,num_workers = 8)# Batch size is entire test set
         return test_loader
 
 # Use to apply transforms to the tensordataset  https://stackoverflow.com/questions/55588201/pytorch-transforms-on-tensordataset
