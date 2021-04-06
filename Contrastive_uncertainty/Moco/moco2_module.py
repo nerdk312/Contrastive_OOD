@@ -16,6 +16,8 @@ from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_re
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
 from Contrastive_uncertainty.Moco.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
 
+from Contrastive_uncertainty.Moco.loss_functions import supervised_contrastive_loss
+
 
 
 class MocoV2(pl.LightningModule):
@@ -466,7 +468,7 @@ class MocoV2(pl.LightningModule):
         return (x - y).norm(p=2, dim=1).pow(alpha).mean()
     
     def class_align_loss(self,x,y,labels):
-        class_alignment_loss = torch.tensor([0])
+        class_alignment_loss = torch.tensor([0.0],device = self.device)
         full_data = torch.cat([x,y],dim=0) # concatenate the different augmented views
         full_labels = torch.cat([labels,labels],dim=0) # Double the labels to represent the labels for each view
         for i in range(self.hparams.num_classes):
@@ -475,6 +477,7 @@ class MocoV2(pl.LightningModule):
             class_alignment_loss += class_dist
         
         return class_alignment_loss
+
         
 
 
