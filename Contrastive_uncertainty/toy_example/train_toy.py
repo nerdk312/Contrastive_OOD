@@ -11,7 +11,8 @@ from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.toy_example.diagonal_lines_datamodule import DiagonalLinesDataModule
 from Contrastive_uncertainty.toy_example.straight_lines_datamodule import StraightLinesDataModule
-from Contrastive_uncertainty.toy_example.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms
+from Contrastive_uncertainty.toy_example.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms, \
+                                                               ToyTrainTwoMoonsTransforms, ToyEvalTwoMoonsTransforms
 from Contrastive_uncertainty.toy_example.toy_callbacks import circular_visualisation, data_visualisation
 from Contrastive_uncertainty.toy_example.toy_run_setup import callback_dictionary
 
@@ -34,13 +35,18 @@ def train(params):
         
     # Run setup
     pl.seed_everything(config['seed'])
-
+    '''
     datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     datamodule.setup()
 
     OOD_datamodule = StraightLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     OOD_datamodule.setup()
+    '''
+    datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainTwoMoonsTransforms(),test_transforms=ToyEvalTwoMoonsTransforms())
+    datamodule.setup()
 
+    OOD_datamodule = StraightLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+    OOD_datamodule.setup()
     # Model for the task
     #encoder = MocoToy(config['hidden_dim'],config['embed_dim'])
     #encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
@@ -49,8 +55,8 @@ def train(params):
 
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     desired_callbacks = []#[callback_dict['ROC'],callback_dict['Mahalanobis']]
-    model = SoftmaxToy(datamodule = datamodule)
-    '''
+    #model = SoftmaxToy(datamodule = datamodule)
+    
     model = MocoToy(datamodule=datamodule,
                     optimizer= config['optimizer'],learning_rate= config['learning_rate'],
                     momentum=config['momentum'], weight_decay=config['weight_decay'],
@@ -59,7 +65,7 @@ def train(params):
                     softmax_temperature=config['softmax_temperature'],
                     pretrained_network=config['pretrained_network'], num_classes= config['num_classes'])
     
-    
+    '''
     model = SupConToy(datamodule=datamodule,
                     optimizer= config['optimizer'],learning_rate= config['learning_rate'],
                     momentum=config['momentum'], weight_decay=config['weight_decay'],
@@ -70,7 +76,7 @@ def train(params):
     visualiser = data_visualisation(datamodule, OOD_datamodule)
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
         
-    trainer = pl.Trainer(overfit_batches = 1,fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
+    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks)

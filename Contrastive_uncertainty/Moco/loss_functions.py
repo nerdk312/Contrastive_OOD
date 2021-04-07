@@ -74,8 +74,9 @@ def supervised_contrastive_forward(model, features, labels=None, mask=None):
     # compute mean of log-likelihood over positive
     mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
     # loss
-    loss = - 1 * mean_log_prob_pos
+    #loss = - 1 * mean_log_prob_pos
     #loss = - (model.hparams.softmax_temperature / model.hparams.base_temperature) * mean_log_prob_pos
+    loss = - (model.hparams.softmax_temperature / 0.07) * mean_log_prob_pos
     loss = loss.view(anchor_count, batch_size).mean()
     
     return loss
@@ -85,6 +86,7 @@ def supervised_contrastive_loss(model, batch, auxillary_data=None):
     imgs = torch.cat([img_1, img_2], dim=0)
     bsz = labels.shape[0]
     features = model.encoder_q(imgs)
+    features = nn.functional.normalize(features, dim=1)
     ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
     features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
     loss = supervised_contrastive_forward(model, features, labels)

@@ -45,6 +45,37 @@ class ToyEvalDiagonalLinesTransforms:
         return q, k
         
 
+class ToyTrainTwoMoonsTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        # image augmentation functions
+        self.train_transform = transforms.Compose([
+        ])
+
+    def __call__(self, inp):
+        q = self.train_transform(inp)
+        k = self.train_transform(inp)
+        return q, k
+
+
+class ToyEvalTwoMoonsTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        self.test_transform = transforms.Compose([
+        ])
+
+    def __call__(self, inp):
+        q = self.test_transform(inp)
+        k = self.test_transform(inp)
+        return q, k
+
+
 class GaussianNoise(object):
     """Gaussian Noise augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
 

@@ -330,7 +330,7 @@ class CustomResNet(ResNet):
         x = self.layer4(x)
 
         x = self.avgpool(x)
-        representation= torch.flatten(x, 1)
+        representation = torch.flatten(x, 1)
         return representation
     
     
