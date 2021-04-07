@@ -8,8 +8,8 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k
-from Contrastive_uncertainty.toy_example.toy_encoder import Backbone
-from Contrastive_uncertainty.toy_example.toy_module import Toy
+from Contrastive_uncertainty.toy_example.models.toy_encoder import Backbone
+from Contrastive_uncertainty.toy_example.models.toy_module import Toy
 
 class MocoToy(Toy):
     def __init__(self,
@@ -131,7 +131,7 @@ class MocoToy(Toy):
         
         loss = F.cross_entropy(output, target.long())
         acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
-        metrics = {'Loss':loss, 'Accuracy @ 1':acc1, 'Accuracy @5':acc5}
+        metrics = {'Loss': loss, 'Accuracy @ 1': acc1, 'Accuracy @5': acc5}
         return metrics
 
     def feature_vector(self, data):

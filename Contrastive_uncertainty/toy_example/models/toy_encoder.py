@@ -8,7 +8,6 @@ class Backbone(nn.Module):
         super().__init__()
         self.backbone = nn.Sequential(nn.Linear(2,hidden_dim), nn.ReLU(), 
                                       nn.Linear(hidden_dim,hidden_dim), nn.ReLU(),
-                                      nn.Linear(hidden_dim,hidden_dim), nn.ReLU(),
                                       nn.Linear(hidden_dim,emb_dim))
 
     def forward(self, x):

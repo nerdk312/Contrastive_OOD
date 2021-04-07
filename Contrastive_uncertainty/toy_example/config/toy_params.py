@@ -1,9 +1,9 @@
 toy_hparams = dict(
-hidden_dim = 128,
-emb_dim = 128,
-num_negatives = 256,
+hidden_dim = 20,
+emb_dim = 2,
+num_negatives = 64,
 encoder_momentum = 0.999,
-softmax_temperature = 1.0,#0.07,
+softmax_temperature = 0.07,
 num_classes = 4,
 
 # optimizer args
@@ -16,7 +16,7 @@ weight_decay = 1e-4,
 # Miscellaneous arguments
 seed = 42,
 epochs = 200,
-bsz = 256,
+bsz = 64,
 
 # Trainer configurations
 fast_run = False,

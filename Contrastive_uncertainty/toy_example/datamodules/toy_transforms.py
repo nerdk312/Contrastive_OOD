@@ -53,6 +53,7 @@ class ToyTrainTwoMoonsTransforms:
     def __init__(self, height=28):
         # image augmentation functions
         self.train_transform = transforms.Compose([
+            transforms.RandomApply([GaussianNoise([0.01, 0.02])], p=0.5),
         ])
 
     def __call__(self, inp):
@@ -79,16 +80,15 @@ class ToyEvalTwoMoonsTransforms:
 class GaussianNoise(object):
     """Gaussian Noise augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
 
-    def __init__(self, sigma=(0.1, 2.0)):
+    def __init__(self, sigma=(0.01, 0.02)):
         self.sigma = sigma
 
     def __call__(self, x):
-        
         sigma = random.uniform(self.sigma[0], self.sigma[1])
-        x = x #  + (sigma*torch.randn_like(x))  # adding zero mean gaussian noise 
+        x = x  + (sigma*torch.randn_like(x))  # adding zero mean gaussian noise
         #x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
         return x
-    
-def Normalize(x,mean,std):
-    x = (x -mean)/std
+
+def Normalize(x, mean, std):
+    x = (x - mean) / std
     return x

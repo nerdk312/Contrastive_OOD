@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from Contrastive_uncertainty.toy_example.toy_encoder import Backbone
+from Contrastive_uncertainty.toy_example.models.toy_encoder import Backbone
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k
-from Contrastive_uncertainty.toy_example.toy_module import Toy
+from Contrastive_uncertainty.toy_example.models.toy_module import Toy
 
 class SoftmaxToy(Toy):
     def __init__(self,

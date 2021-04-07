@@ -48,20 +48,20 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
 
     def train_dataloader(self):
         '''returns training dataloader'''
-        train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.X_train).float(), torch.from_numpy(self.y_train))
+        train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.X_train).float(), torch.from_numpy(self.y_train),transform = self.train_transforms)
         train_loader = DataLoader(train_dataset, batch_size = self.batch_size,shuffle =True, drop_last = True,num_workers = 8)
 
         return train_loader
 
     def val_dataloader(self):
         '''returns validation dataloader'''
-        val_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.X_val).float(),torch.from_numpy(self.y_val))
+        val_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.X_val).float(),torch.from_numpy(self.y_val), transform = self.test_transforms)
         val_loader = DataLoader(val_dataset,batch_size = self.X_val.shape[0], shuffle= False, drop_last = True,num_workers = 8) # Batch size is entire validataion set
 
         return val_loader
 
     def test_dataloader(self):
         '''returns test dataloader'''
-        test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.X_test).float(), torch.from_numpy(self.y_test))
-        test_loader = DataLoader(test_dataset,batch_size = self.X_test.shape[0], shuffle= False, drop_last= True,num_workers = 8)# Batch size is entire test set
+        test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(self.X_test).float(), torch.from_numpy(self.y_test), transform = self.test_transforms)
+        test_loader = DataLoader(test_dataset,batch_size = self.X_test.shape[0], shuffle= False, drop_last= True,num_workers = 8)  # Batch size is entire test set
         return test_loader
