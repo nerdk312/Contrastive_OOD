@@ -15,7 +15,7 @@ class SupConToy(Toy):
         emb_dim: int = 2,
         softmax_temperature = 0.07,
         base_temperature = 0.07,
-        contrast_mode = 'all',
+        num_classes :int = 4,
         ):
         super().__init__(datamodule, optimizer, learning_rate,
                          momentum, weight_decay)
@@ -31,6 +31,7 @@ class SupConToy(Toy):
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder= self.init_encoders()
+        self.classifier = nn.Linear(self.hparams.emb_dim, self.hparams.num_classes)
 
 
     def init_encoders(self):
@@ -38,6 +39,7 @@ class SupConToy(Toy):
         Override to add your own encoders
         """
         encoder = Backbone(self.hparams.hidden_dim, self.hparams.emb_dim)
+
         
         
         return encoder
@@ -79,6 +81,7 @@ class SupConToy(Toy):
 
         contrast_count = features.shape[1]
         contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)
+        '''
         if self.hparams.contrast_mode == 'one':
             anchor_feature = features[:, 0] # Nawid - anchor is only the index itself and only the single view
             anchor_count = 1 # Nawid - only one anchor
@@ -87,6 +90,10 @@ class SupConToy(Toy):
             anchor_count = contrast_count # Nawid - all the different views are the anchors
         else:
             raise ValueError('Unknown mode: {}'.format(self.hparams.contrast_mode))
+        '''
+        
+        anchor_feature = contrast_feature 
+        anchor_count = contrast_count # Nawid - all the different views are the anchors
 
         # compute logits
         anchor_dot_contrast = torch.div( # Nawid - similarity between the anchor and the contrast feature
@@ -128,9 +135,16 @@ class SupConToy(Toy):
         ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
         features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
         loss = self.forward(features, labels)
+        metrics = {'Loss':loss}
 
-        return loss
+        return metrics
 
     def feature_vector(self, data):
         z = self.encoder(data)
         return z
+    
+    def class_discrimination(self, data):
+        z = self.encoder(data)
+        z = F.relu(z)
+        logits = self.classifier(z)
+        return logits

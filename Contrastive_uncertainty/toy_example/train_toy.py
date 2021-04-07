@@ -35,10 +35,10 @@ def train(params):
     # Run setup
     pl.seed_everything(config['seed'])
 
-    datamodule = DiagonalLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+    datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     datamodule.setup()
 
-    OOD_datamodule = StraightLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+    OOD_datamodule = StraightLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     OOD_datamodule.setup()
 
     # Model for the task
@@ -48,13 +48,29 @@ def train(params):
     #model = Toy(encoder, datamodule=datamodule)
 
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    desired_callbacks = [callback_dict['ROC'],callback_dict['Mahalanobis']]
+    desired_callbacks = []#[callback_dict['ROC'],callback_dict['Mahalanobis']]
     model = SoftmaxToy(datamodule = datamodule)
+    '''
+    model = MocoToy(datamodule=datamodule,
+                    optimizer= config['optimizer'],learning_rate= config['learning_rate'],
+                    momentum=config['momentum'], weight_decay=config['weight_decay'],
+                    hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
+                    num_negatives=config['num_negatives'],encoder_momentum=config['encoder_momentum'],
+                    softmax_temperature=config['softmax_temperature'],
+                    pretrained_network=config['pretrained_network'], num_classes= config['num_classes'])
     
+    
+    model = SupConToy(datamodule=datamodule,
+                    optimizer= config['optimizer'],learning_rate= config['learning_rate'],
+                    momentum=config['momentum'], weight_decay=config['weight_decay'],
+                    hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
+                    softmax_temperature=config['softmax_temperature'],base_temperature=config['softmax_temperature'],
+                    num_classes= config['num_classes'])
+    '''
     visualiser = data_visualisation(datamodule, OOD_datamodule)
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
         
-    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
+    trainer = pl.Trainer(overfit_batches = 1,fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks)

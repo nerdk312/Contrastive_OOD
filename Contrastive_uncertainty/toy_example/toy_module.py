@@ -25,31 +25,25 @@ class Toy(pl.LightningModule):
         self.auxillary_data = None #self.aux_data() #self.on_train_epoch_start(self.datamodule)
 
     def training_step(self, batch, batch_idx):
-        loss = self.loss_function(batch, self.auxillary_data)
-        #print('loss',loss)
+        metrics = self.loss_function(batch, self.auxillary_data)
+        for k,v in metrics.items():
+                if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
+        loss = metrics['Loss']
         return loss
-        '''
-        loss, acc1, acc5 = self.model.loss_function(batch)
         
-        self.log('Training Instance Loss', loss.item(),on_epoch=True)
-        self.log('Training Instance Accuracy @ 1',acc1.item(),on_epoch = True)
-        self.log('Training Instance Accuracy @ 5',acc1.item(),on_epoch = True)
-        
-        return loss
-        '''
         #return {'loss': loss, 'log': log, 'progress_bar': log}
 
     def validation_step(self, batch, batch_idx):
-        loss = self.loss_function(batch,self.auxillary_data)
-        '''
-        loss, acc1, acc5 = self.model.loss_function(batch)
-            
-        self.log('Validation Instance Loss', loss.item(),on_epoch=True)
-        self.log('Validation Instance Accuracy @ 1',acc1.item(),on_epoch = True)
-        self.log('Validation Instance Accuracy @ 5',acc1.item(),on_epoch = True)        
-        '''
+        metrics = self.loss_function(batch, self.auxillary_data)
+        #import ipdb; ipdb.set_trace()
+        for k,v in metrics.items():
+                if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
+        
     def test_step(self, batch, batch_idx):
-        loss = self.loss_function(batch,self.auxillary_data)
+        metrics = self.loss_function(batch, self.auxillary_data)
+        for k,v in metrics.items():
+                if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
+
         '''
         loss, acc1, acc5 = self.model.loss_function(batch)
         

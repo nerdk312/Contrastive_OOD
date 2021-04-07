@@ -21,10 +21,10 @@ class ToyTrainDiagonalLinesTransforms:
         
         q = self.train_transform(inp)
         #print('pre normalised q',q)
-        q = Normalize(q,mean,std)
+        #q = Normalize(q,mean,std)
         #print('post normalised q',q)
         k = self.train_transform(inp)
-        k = Normalize(k,mean,std)
+        #k = Normalize(k,mean,std)
         return q, k
 
 
@@ -39,9 +39,9 @@ class ToyEvalDiagonalLinesTransforms:
 
     def __call__(self, inp):
         q = self.test_transform(inp)
-        q = Normalize(q, mean, std)
+        #q = Normalize(q, mean, std)
         k = self.test_transform(inp)
-        k = Normalize(k, mean, std)
+        #k = Normalize(k, mean, std)
         return q, k
         
 

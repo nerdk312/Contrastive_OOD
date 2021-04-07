@@ -24,7 +24,7 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
         self.test_transforms = test_transforms
         self.n_lines = 4
         self.subclusters = 2
-        self.ppline = 10000
+        self.ppline = 100000
         #self.intervals = [(0.1, 0.3), (0.35,0.55), (0.6, 0.8), (0.85, 1.05)]
         self.intervals = self.data_creation()
         #self.intervals = [(0.1, 0.3), (0.35,0.55), (0.6, 0.8), (0.85, 1.05), (1.1, 1.3), (1.35, 1.55), (1.6, 1.8), (1.85, 2.05)]

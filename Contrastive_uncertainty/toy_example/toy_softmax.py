@@ -42,18 +42,19 @@ class SoftmaxToy(Toy):
     def loss_function(self, batch, auxillary_data=None):
         
         (img_1, img_2), labels, indices = batch
-        loss = self.forward(img_1, labels)
-        return loss
+        logits = self.forward(img_1, labels)
+        loss = F.cross_entropy(logits, labels.long())
+        acc1, = precision_at_k(logits, labels)
+        #import ipdb; ipdb.set_trace()
+        metrics = {'Loss': loss, 'Accuracy @ 1': acc1}
+        return metrics
 
 
-    def forward(self, data,labels):
+    def forward(self, data, labels):
         z = self.encoder(data)
         z = F.relu(z)
         logits = self.classifier(z)
-        loss = F.cross_entropy(logits, labels.long())
-        acc1 = precision_at_k(logits, labels,)
-    
-        return loss 
+        return logits
     
     def feature_vector(self, data):
         z = self.encoder(data)

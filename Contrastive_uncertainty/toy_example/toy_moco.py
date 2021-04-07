@@ -20,10 +20,11 @@ class MocoToy(Toy):
         weight_decay: float = 1e-4,
         hidden_dim: int = 20,
         emb_dim: int = 2,
-        num_negatives: int = 512,
+        num_negatives: int = 65536,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
         pretrained_network = None,
+        num_classes:int = 4,
         ):
         super().__init__(datamodule, optimizer, learning_rate,
                          momentum, weight_decay)
@@ -33,6 +34,7 @@ class MocoToy(Toy):
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder_q, self.encoder_k = self.init_encoders()
+        self.classifier = nn.Linear(self.hparams.emb_dim, self.hparams.num_classes)
 
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
@@ -51,8 +53,8 @@ class MocoToy(Toy):
         """
         Override to add your own encoders
         """
-        encoder_q = Backbone(self.hparams.hidden_dim,self.hparams.emb_dim)
-        encoder_k = Backbone(self.hparams.hidden_dim,self.hparams.emb_dim)
+        encoder_q = Backbone(self.hparams.hidden_dim, self.hparams.emb_dim)
+        encoder_k = Backbone(self.hparams.hidden_dim, self.hparams.emb_dim)
         
         return encoder_q, encoder_k
 
@@ -129,8 +131,8 @@ class MocoToy(Toy):
         
         loss = F.cross_entropy(output, target.long())
         acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
-
-        return loss#, acc1, acc5
+        metrics = {'Loss':loss, 'Accuracy @ 1':acc1, 'Accuracy @5':acc5}
+        return metrics
 
     def feature_vector(self, data):
         z = self.encoder_q(data)
@@ -142,6 +144,12 @@ class MocoToy(Toy):
         checkpoint = torch.load(pretrained_network)
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
+    
+    def class_discrimination(self, data):
+        z = self.encoder_q(data)
+        z = F.relu(z)
+        logits = self.classifier(z)
+        return logits
 
     '''
     def on_train_epoch_start(self, datamodule):
