@@ -73,7 +73,7 @@ class MocoToy(Toy):
         batch_size = keys.shape[0]
 
         ptr = int(self.queue_ptr)
-        assert self.hparams.num_negatives % batch_size == 0  # for simplicity
+        assert self.hparams.num_negatives % batch_size == 0, "Likely using a small batch due to not dropping last"  # for simplicity
 
         # replace the keys at ptr (dequeue and enqueue)
         self.queue[:, ptr:ptr + batch_size] = keys.T # Nawid - add the keys to the queue

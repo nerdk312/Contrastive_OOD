@@ -11,6 +11,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.toy_example.datamodules.diagonal_lines_datamodule import DiagonalLinesDataModule
 from Contrastive_uncertainty.toy_example.datamodules.straight_lines_datamodule import StraightLinesDataModule
+from Contrastive_uncertainty.toy_example.datamodules.two_moons_datamodule import TwoMoonsDataModule
 from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms, \
                                                                ToyTrainTwoMoonsTransforms, ToyEvalTwoMoonsTransforms
 #from Contrastive_uncertainty.toy_example.callbacks.toy_visualisation_callbacks import circular_visualisation, data_visualisation
@@ -20,7 +21,7 @@ from Contrastive_uncertainty.toy_example.models.toy_moco import MocoToy
 from Contrastive_uncertainty.toy_example.models.toy_softmax import SoftmaxToy
 from Contrastive_uncertainty.toy_example.models.toy_PCL import PCLToy
 from Contrastive_uncertainty.toy_example.models.toy_supcon import SupConToy
-
+from Contrastive_uncertainty.toy_example.models.toy_ova import OVAToy
 
 
 
@@ -42,7 +43,10 @@ def training(params):
     OOD_datamodule = StraightLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     OOD_datamodule.setup()
     '''
-    datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainTwoMoonsTransforms(),test_transforms=ToyEvalTwoMoonsTransforms())
+    
+    #datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainTwoMoonsTransforms(),test_transforms=ToyEvalTwoMoonsTransforms())
+    #datamodule.setup()
+    datamodule = TwoMoonsDataModule(config['bsz'],0.1, train_transforms=ToyTrainTwoMoonsTransforms(), test_transforms=ToyEvalTwoMoonsTransforms())
     datamodule.setup()
 
     OOD_datamodule = StraightLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
@@ -56,14 +60,16 @@ def training(params):
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     desired_callbacks = []#[callback_dict['ROC'],callback_dict['Mahalanobis']]
     #model = SoftmaxToy(datamodule = datamodule)
-    
+    #model = OVAToy(datamodule=datamodule)
+     
     model = MocoToy(datamodule=datamodule,
-                    optimizer= config['optimizer'],learning_rate= config['learning_rate'],
+                    optimizer=config['optimizer'], learning_rate=config['learning_rate'],
                     momentum=config['momentum'], weight_decay=config['weight_decay'],
-                    hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                    num_negatives=config['num_negatives'],encoder_momentum=config['encoder_momentum'],
+                    hidden_dim=config['hidden_dim'], emb_dim=config['emb_dim'],
+                    num_negatives=config['num_negatives'], encoder_momentum=config['encoder_momentum'],
                     softmax_temperature=config['softmax_temperature'],
-                    pretrained_network=config['pretrained_network'], num_classes= config['num_classes'])
+                    pretrained_network=config['pretrained_network'], num_classes=config['num_classes'])
+    
     
     '''
     model = SupConToy(datamodule=datamodule,
