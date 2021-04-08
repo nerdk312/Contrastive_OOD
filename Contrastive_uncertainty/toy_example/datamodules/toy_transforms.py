@@ -51,7 +51,7 @@ class ToyTrainTwoMoonsTransforms:
     Moco 2 augmentation:
     https://arxiv.org/pdf/2003.04297.pdf
     """
-    def __init__(self, height=28):
+    def __init__(self):
         # image augmentation functions
         self.train_transform = transforms.Compose([
             transforms.RandomApply([GaussianNoise([0.01, 0.02])], p=0.5),
@@ -68,7 +68,67 @@ class ToyEvalTwoMoonsTransforms:
     Moco 2 augmentation:
     https://arxiv.org/pdf/2003.04297.pdf
     """
-    def __init__(self, height=28):
+    def __init__(self):
+        self.test_transform = transforms.Compose([
+        ])
+
+    def __call__(self, inp):
+        q = self.test_transform(inp)
+        k = self.test_transform(inp)
+        return q, k
+
+class ToyTrainGaussianBlobsTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self,lower_bound=0.01,upper_bound=0.05):
+        # image augmentation functions
+        self.train_transform = transforms.Compose([
+            transforms.RandomApply([GaussianNoise([lower_bound, upper_bound])], p=0.5),
+        ])
+
+    def __call__(self, inp):
+        q = self.train_transform(inp)
+        k = self.train_transform(inp)
+        return q, k
+
+class ToyEvalGaussianBlobsTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self):
+        self.test_transform = transforms.Compose([
+        ])
+
+    def __call__(self, inp):
+        q = self.test_transform(inp)
+        k = self.test_transform(inp)
+        return q, k
+
+class ToyTrainTwoGaussiansTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self,lower_bound=0.01,upper_bound=0.05):
+        # image augmentation functions
+        self.train_transform = transforms.Compose([
+            transforms.RandomApply([GaussianNoise([lower_bound, upper_bound])], p=0.5),
+        ])
+
+    def __call__(self, inp):
+        q = self.train_transform(inp)
+        k = self.train_transform(inp)
+        return q, k
+
+class ToyEvalTwoGaussiansTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self):
         self.test_transform = transforms.Compose([
         ])
 

@@ -12,8 +12,13 @@ from pytorch_lightning.loggers import WandbLogger
 from Contrastive_uncertainty.toy_example.datamodules.diagonal_lines_datamodule import DiagonalLinesDataModule
 from Contrastive_uncertainty.toy_example.datamodules.straight_lines_datamodule import StraightLinesDataModule
 from Contrastive_uncertainty.toy_example.datamodules.two_moons_datamodule import TwoMoonsDataModule
+from Contrastive_uncertainty.toy_example.datamodules.gaussian_blobs_datamodule import GaussianBlobs
+from Contrastive_uncertainty.toy_example.datamodules.two_gaussians_datamodule import TwoGaussians
 from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms, \
-                                                               ToyTrainTwoMoonsTransforms, ToyEvalTwoMoonsTransforms
+                                                               ToyTrainTwoMoonsTransforms, ToyEvalTwoMoonsTransforms, \
+                                                               ToyTrainGaussianBlobsTransforms, ToyEvalGaussianBlobsTransforms, \
+                                                               ToyTrainTwoGaussiansTransforms, ToyEvalTwoGaussiansTransforms
+
 #from Contrastive_uncertainty.toy_example.callbacks.toy_visualisation_callbacks import circular_visualisation, data_visualisation
 from Contrastive_uncertainty.toy_example.run.toy_run_setup  import callback_dictionary
 
@@ -46,7 +51,16 @@ def training(params):
     
     #datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainTwoMoonsTransforms(),test_transforms=ToyEvalTwoMoonsTransforms())
     #datamodule.setup()
+    '''
     datamodule = TwoMoonsDataModule(config['bsz'],0.1, train_transforms=ToyTrainTwoMoonsTransforms(), test_transforms=ToyEvalTwoMoonsTransforms())
+    datamodule.setup()
+    '''
+    
+    '''
+    datamodule = GaussianBlobs(config['bsz'],train_transforms=ToyTrainGaussianBlobsTransforms(), test_transforms=ToyEvalTwoGaussiansTransforms())
+    datamodule.setup()
+    '''
+    datamodule = TwoGaussians(config['bsz'],train_transforms=ToyTrainGaussianBlobsTransforms(), test_transforms=ToyEvalTwoGaussiansTransforms())
     datamodule.setup()
 
     OOD_datamodule = StraightLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
