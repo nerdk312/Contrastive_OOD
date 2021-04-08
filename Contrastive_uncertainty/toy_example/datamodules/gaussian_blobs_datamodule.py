@@ -19,7 +19,7 @@ class GaussianBlobs(LightningDataModule): # Data module for Two Moons dataset
         self.batch_size = batch_size
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
-        self.num_datapoints = 50
+        self.num_datapoints = 10000
         self.num_classes = 12
 
     def setup(self):    
@@ -40,7 +40,6 @@ class GaussianBlobs(LightningDataModule): # Data module for Two Moons dataset
         self.test_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)), transform=self.test_transforms)
 
     def visualise_data(self):
-       
         for i in range(self.num_classes):           
             loc = np.where(self.train_labels ==i)[0] # gets all the indices where the label has a certain index (this is correct I believe)
             plt.scatter(self.train_data[loc,0], self.train_data[loc,1])#, label= 'Train Cls {}'.format(i), s=40) #, color=list(colors[loc,:]), label='Train Cls {}'.format(i), s=40) # plotting the train data
@@ -62,6 +61,11 @@ class GaussianBlobs(LightningDataModule): # Data module for Two Moons dataset
         # change the list format to a numpy array format
         data = np.concatenate(data, axis=0)
         labels = np.concatenate(labels)
+
+        data_length = len(data)
+        idxs  = np.random.choice(data_length, data_length, replace=False)
+        # Shuffle the data before placing in different data to allow points in different datasets to be present
+        data, labels = data[idxs], labels[idxs]
 
         return data, labels
 

@@ -51,18 +51,18 @@ def training(params):
     
     #datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainTwoMoonsTransforms(),test_transforms=ToyEvalTwoMoonsTransforms())
     #datamodule.setup()
-    '''
+    
     datamodule = TwoMoonsDataModule(config['bsz'],0.1, train_transforms=ToyTrainTwoMoonsTransforms(), test_transforms=ToyEvalTwoMoonsTransforms())
     datamodule.setup()
-    '''
+    
     
     '''
     datamodule = GaussianBlobs(config['bsz'],train_transforms=ToyTrainGaussianBlobsTransforms(), test_transforms=ToyEvalTwoGaussiansTransforms())
     datamodule.setup()
-    '''
-    datamodule = TwoGaussians(config['bsz'],train_transforms=ToyTrainGaussianBlobsTransforms(), test_transforms=ToyEvalTwoGaussiansTransforms())
+    
+    datamodule = GaussianBlobs(config['bsz'],train_transforms=ToyTrainGaussianBlobsTransforms(), test_transforms=ToyEvalTwoGaussiansTransforms())
     datamodule.setup()
-
+    '''
     OOD_datamodule = StraightLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     OOD_datamodule.setup()
     # Model for the task
@@ -72,10 +72,11 @@ def training(params):
     #model = Toy(encoder, datamodule=datamodule)
 
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    desired_callbacks = []#[callback_dict['ROC'],callback_dict['Mahalanobis']]
+    desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
     #model = SoftmaxToy(datamodule = datamodule)
-    #model = OVAToy(datamodule=datamodule)
-     
+    model = OVAToy(datamodule=datamodule)
+
+    '''    
     model = MocoToy(datamodule=datamodule,
                     optimizer=config['optimizer'], learning_rate=config['learning_rate'],
                     momentum=config['momentum'], weight_decay=config['weight_decay'],
@@ -83,7 +84,7 @@ def training(params):
                     num_negatives=config['num_negatives'], encoder_momentum=config['encoder_momentum'],
                     softmax_temperature=config['softmax_temperature'],
                     pretrained_network=config['pretrained_network'], num_classes=config['num_classes'])
-    
+    '''
     
     '''
     model = SupConToy(datamodule=datamodule,

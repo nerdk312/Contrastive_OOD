@@ -14,9 +14,9 @@ weight_decay = 1e-4,
 
 
 # Miscellaneous arguments
-seed = 42,
-epochs = 200,
-bsz = 32,
+seed = 26,
+epochs = 10,
+bsz = 128,
 
 # Trainer configurations
 fast_run = False,
@@ -24,8 +24,8 @@ quick_callback = False,
 training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
-val_check = 5,
+val_check = 1,
 pretrained_network = None,
 
-project = 'toy'# evaluation, Moco_training
+project = 'toy'  # evaluation, Moco_training
 )

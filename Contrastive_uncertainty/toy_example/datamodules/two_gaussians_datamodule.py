@@ -19,7 +19,7 @@ class TwoGaussians(LightningDataModule): # Data module for Two Gaussians dataset
         self.batch_size = batch_size
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
-        self.num_datapoints = 160
+        self.num_datapoints = 1000
         self.num_classes = 2
 
     def setup(self):    
@@ -66,6 +66,11 @@ class TwoGaussians(LightningDataModule): # Data module for Two Gaussians dataset
         # change the list format to a numpy array format
         data = np.concatenate(data, axis=0)
         labels = np.concatenate(labels)
+        # Shuffle the data 
+        data_length = len(data)
+        idxs  = np.random.choice(data_length, data_length,replace=False)
+        # Shuffle the data before placing in different data to allow points in different datasets to be present
+        data, labels = data[idxs], labels[idxs]
 
         return data, labels
 
