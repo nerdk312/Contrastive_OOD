@@ -20,8 +20,7 @@ class OVAToy(Toy):
         super().__init__(datamodule, optimizer, learning_rate,
                          momentum, weight_decay)
         self.save_hyperparameters()
-        #import ipdb;ipdb.set_trace()
-
+        
         
         # Nawid - required to use for the fine tuning
         

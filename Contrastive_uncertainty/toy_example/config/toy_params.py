@@ -15,8 +15,8 @@ weight_decay = 1e-4,
 
 # Miscellaneous arguments
 seed = 26,
-epochs = 10,
-bsz = 128,
+epochs = 3,
+bsz = 32,
 
 # Trainer configurations
 fast_run = False,

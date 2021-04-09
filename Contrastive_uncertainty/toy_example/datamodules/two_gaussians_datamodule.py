@@ -21,6 +21,7 @@ class TwoGaussians(LightningDataModule): # Data module for Two Gaussians dataset
         self.test_transforms = test_transforms
         self.num_datapoints = 1000
         self.num_classes = 2
+        self.visualise_name ='two_gaussians'
 
     def setup(self):    
         # Make the datasets for the case where there is different values
@@ -46,8 +47,8 @@ class TwoGaussians(LightningDataModule): # Data module for Two Gaussians dataset
             loc = np.where(self.train_labels ==i)[0] # gets all the indices where the label has a certain index (this is correct I believe)
             plt.scatter(self.train_data[loc,0], self.train_data[loc,1])#, label= 'Train Cls {}'.format(i), s=40) #, color=list(colors[loc,:]), label='Train Cls {}'.format(i), s=40) # plotting the train data
 
-        plt.savefig('gaussian_practice.png')
-        plt.savefig('gaussian_practice.pdf')
+        plt.savefig('Images/' + self.visualise_name + '.png')
+        plt.savefig('Images/' + self.visualise_name + '.pdf')
         plt.close()
         
     def data_creation(self, num_datapoints):

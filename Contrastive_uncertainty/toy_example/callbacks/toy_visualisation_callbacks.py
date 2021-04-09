@@ -1,12 +1,18 @@
+import os
+import subprocess
 import numpy as np
 import torch
 import pytorch_lightning as pl
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.animation as animation
+
 import wandb
 from sklearn.metrics import roc_auc_score
 import sklearn.datasets
 
 
+import glob
 from Contrastive_uncertainty.Moco.moco_callbacks import quickloading, \
                                                          get_fpr, get_pr_sklearn, get_roc_sklearn
 
@@ -110,6 +116,7 @@ class UncertaintyVisualisation(pl.Callback):  # contains methods specifc for the
 
     def on_validation_epoch_end(self,trainer, pl_module):
         self.visualise_uncertainty(pl_module)
+    
 
     def outlier_grid(self): #  Generates the grid of points, outputs, x_lin and y_lin aswell as this is required for the uncertainty visualisation
         domain = 4
@@ -148,8 +155,14 @@ class UncertaintyVisualisation(pl.Callback):  # contains methods specifc for the
         wandb_uncertainty = 'uncertainty'
         wandb.log({wandb_uncertainty:wandb.Image(uncertainty_filename)})
         plt.close()
+    
+    def animate_uncertainty(self):
+        fig = plt.figure()
+        ani = animation.ArtistAnimation(fig, self.frames, interval=50, blit=True,
+                                repeat_delay=1000)
+        plt.show()
 
-
+#https://stackoverflow.com/questions/34975972/how-can-i-make-a-video-from-array-of-images-in-matplotlib - Used to produce videos from images
 class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two moons dataset
     def __init__(self,datamodule):
         super().__init__()
@@ -157,9 +170,13 @@ class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two
 
         self.X_vis, self.y_vis = sklearn.datasets.make_moons(n_samples=2500, noise=self.datamodule.noise) # Nawid - moon dataset
         self.X_vis = (self.X_vis - self.datamodule.mean)/self.datamodule.std # normalise data
+        self.frames = []
     
     def on_validation_epoch_end(self,trainer, pl_module):
-        self.visualise_uncertainty(pl_module)
+        self.visualise_uncertainty(trainer,pl_module)
+    
+    def on_test_epoch_end(self,tainer,pl_module):
+        self.generate_video()
 
     def outlier_grid(self): #  Generates the grid of points, outputs, x_lin and y_lin aswell as this is required for the uncertainty visualisation
         domain = 3
@@ -171,7 +188,7 @@ class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two
         X_grid = np.column_stack([xx.flatten(), yy.flatten()])
         return x_lin, y_lin, X_grid
 
-    def visualise_uncertainty(self,pl_module):
+    def visualise_uncertainty(self,trainer,pl_module):
         # Generates test outlier data
         x_lin, y_lin, X_grid = self.outlier_grid()
 
@@ -191,10 +208,25 @@ class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two
 
         plt.scatter(self.X_vis[mask,0], self.X_vis[mask,1])
         plt.scatter(self.X_vis[~mask,0], self.X_vis[~mask,1])
-
+        #import ipdb; ipdb.set_trace()
+        
+        video_image = 'Images/file%02d.png' % trainer.current_epoch
         uncertainty_filename = 'Images/uncertainty.png'
         plt.savefig(uncertainty_filename)
+        plt.savefig(video_image)
         wandb_uncertainty = 'uncertainty'
         wandb.log({wandb_uncertainty:wandb.Image(uncertainty_filename)})
+        # Add the image to the frames section to make a video
+        #import ipdb; ipdb.set_trace()
+        #self.frames.append(plt.show(block=False))
         plt.close()
+    
+    def generate_video(self):
+        os.chdir("Images")
+        subprocess.call([
+            'ffmpeg', '-framerate', '8', '-i', 'file%02d.png', '-r', '30', '-pix_fmt', 'yuv420p',
+            'video_name.mp4'
+        ])
+        for file_name in glob.glob("*.png"):
+            os.remove(file_name)
 

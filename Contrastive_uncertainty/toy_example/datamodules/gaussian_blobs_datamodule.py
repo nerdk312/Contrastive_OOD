@@ -21,6 +21,7 @@ class GaussianBlobs(LightningDataModule): # Data module for Two Moons dataset
         self.test_transforms = test_transforms
         self.num_datapoints = 10000
         self.num_classes = 12
+        self.visualise_name ='gaussian_blobs'
 
     def setup(self):    
         # Make the datasets for the case where there is different values
@@ -44,13 +45,15 @@ class GaussianBlobs(LightningDataModule): # Data module for Two Moons dataset
             loc = np.where(self.train_labels ==i)[0] # gets all the indices where the label has a certain index (this is correct I believe)
             plt.scatter(self.train_data[loc,0], self.train_data[loc,1])#, label= 'Train Cls {}'.format(i), s=40) #, color=list(colors[loc,:]), label='Train Cls {}'.format(i), s=40) # plotting the train data
 
-        plt.savefig('gaussian_practice.png')
-        plt.savefig('gaussian_practice.pdf')
+        
+        plt.savefig('Images/' + self.visualise_name + '.png')
+        plt.savefig('Images/' + self.visualise_name + '.pdf')
         plt.close()
+        
         
     def data_creation(self, num_datapoints):
         data = []
-        cov = [[2,0],[0,2]]
+        cov = [[1,0],[0,1]]
         # calculate different mean each time to get different samples for the data
         for i in range(self.num_classes):
             mean = [20*np.cos(i*np.pi/(2*np.pi)),20*np.sin(i*np.pi/(2*np.pi))]
