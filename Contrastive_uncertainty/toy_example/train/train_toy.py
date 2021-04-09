@@ -8,12 +8,12 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-
-from Contrastive_uncertainty.toy_example.datamodules.diagonal_lines_datamodule import DiagonalLinesDataModule
+from Contrastive_uncertainty.toy_example.datamodules.diagonal_lines_datamodule import DiagonalLinesDataModule,PCLDiagonalLines
 from Contrastive_uncertainty.toy_example.datamodules.straight_lines_datamodule import StraightLinesDataModule
-from Contrastive_uncertainty.toy_example.datamodules.two_moons_datamodule import TwoMoonsDataModule
-from Contrastive_uncertainty.toy_example.datamodules.gaussian_blobs_datamodule import GaussianBlobs
-from Contrastive_uncertainty.toy_example.datamodules.two_gaussians_datamodule import TwoGaussians
+from Contrastive_uncertainty.toy_example.datamodules.two_moons_datamodule import TwoMoonsDataModule,PCLTwoMoons
+from Contrastive_uncertainty.toy_example.datamodules.gaussian_blobs_datamodule import GaussianBlobs,PCLGaussianBlobs
+from Contrastive_uncertainty.toy_example.datamodules.two_gaussians_datamodule import TwoGaussians,PCLTwoGaussians
+
 from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms, \
                                                                ToyTrainTwoMoonsTransforms, ToyEvalTwoMoonsTransforms, \
                                                                ToyTrainGaussianBlobsTransforms, ToyEvalGaussianBlobsTransforms, \
@@ -27,7 +27,6 @@ from Contrastive_uncertainty.toy_example.models.toy_softmax import SoftmaxToy
 from Contrastive_uncertainty.toy_example.models.toy_PCL import PCLToy
 from Contrastive_uncertainty.toy_example.models.toy_supcon import SupConToy
 from Contrastive_uncertainty.toy_example.models.toy_ova import OVAToy
-
 
 
 def training(params):
@@ -49,9 +48,10 @@ def training(params):
     OOD_datamodule.setup()
     '''
     
-    datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainTwoMoonsTransforms(),test_transforms=ToyEvalTwoMoonsTransforms())
+    #datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainTwoMoonsTransforms(),test_transforms=ToyEvalTwoMoonsTransforms())
+    #datamodule.setup()
+    datamodule = PCLDiagonalLines(config['bsz'],train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     datamodule.setup()
-
     '''    
     datamodule = TwoMoonsDataModule(config['bsz'],0.1, train_transforms=ToyTrainTwoMoonsTransforms(), test_transforms=ToyEvalTwoMoonsTransforms())
     datamodule.setup()
@@ -65,7 +65,7 @@ def training(params):
     datamodule = GaussianBlobs(config['bsz'],train_transforms=ToyTrainGaussianBlobsTransforms(), test_transforms=ToyEvalTwoGaussiansTransforms())
     datamodule.setup()
     '''
-    OOD_datamodule = StraightLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
+    OOD_datamodule = StraightLinesDataModule(config['bsz'], train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms(),noise_perc=0.1)
     OOD_datamodule.setup()
     # Model for the task
     #encoder = MocoToy(config['hidden_dim'],config['embed_dim'])
@@ -74,7 +74,7 @@ def training(params):
     #model = Toy(encoder, datamodule=datamodule)
 
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    desired_callbacks = []#[callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
+    desired_callbacks = [] #[callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
     #model = SoftmaxToy(datamodule = datamodule)
     #model = OVAToy(datamodule=datamodule)
 

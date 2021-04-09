@@ -15,7 +15,7 @@ from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import ToyTr
 
 class StraightLinesDataModule(LightningDataModule): # Data module for Two Moons dataset
 
-    def __init__(self,batch_size=32,noise_perc = 0.9,train_transforms = None, test_transforms = None):
+    def __init__(self,batch_size=32,train_transforms = None, test_transforms = None,noise_perc=0.9):
         super().__init__()
         self.batch_size = batch_size
         self.noise_perc = noise_perc
@@ -59,7 +59,7 @@ class StraightLinesDataModule(LightningDataModule): # Data module for Two Moons 
         print('mean',mean)
         print('std',std)
         '''        
-        self.val_data, self.val_labels = self.data[int(0.4*data_length):int(0.8*data_length)], self.labels[int(0.4*data_length):int(0.8*data_length)]
+        self.val_data, self.val_labels = self.data[int(0.7*data_length):int(0.8*data_length)], self.labels[int(0.7*data_length):int(0.8*data_length)]
         self.test_data, self.test_labels = self.data[int(0.8*data_length):], self.labels[int(0.8*data_length):]
         
         # Making the separate datasets for the dataloaders (made it during setup so that the test dataset can be used for the AUROC)
@@ -127,11 +127,11 @@ class CustomTensorDataset(Dataset):
         return self.tensors[0].size(0)
 
 
-
+'''
 Datamodule = StraightLinesDataModule(32,0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
 Datamodule.setup()
 Datamodule.visualise_data()
-
+'''
 '''
 train_loader = Datamodule.train_dataloader()
 val_loader = Datamodule.val_dataloader()

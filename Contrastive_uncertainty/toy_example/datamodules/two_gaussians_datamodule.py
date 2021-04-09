@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, random_split,  Dataset, Subset
 import torchvision
 import pytorch_lightning as pl
 from pytorch_lightning import LightningDataModule
-from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms
+from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms,CustomTensorDataset
 
 class TwoGaussians(LightningDataModule): # Data module for Two Gaussians dataset
 
@@ -91,26 +91,21 @@ class TwoGaussians(LightningDataModule): # Data module for Two Gaussians dataset
         test_loader = DataLoader(self.test_dataset, batch_size = self.batch_size, shuffle= False, drop_last= True,num_workers = 8)# Batch size is entire test set
         return test_loader
 
-# Use to apply transforms to the tensordataset  https://stackoverflow.com/questions/55588201/pytorch-transforms-on-tensordataset
+class PCLTwoGaussians(TwoGaussians):
+    def __init__(self, batch_size=32, train_transforms=None, test_transforms=None):
+        super(PCLTwoGaussians, self).__init__(batch_size, train_transforms, test_transforms) 
+    
+    # updates the val dataset to be the same as the train dataset but uses a different augmentation for the particular task
+    def update_setup(self):
+        self.val_dataset = CustomTensorDataset(tensors=(torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)), transform= self.test_transforms)
+    
+    # Val dataloader which uses the train dataset with an eval augmentation for the task
+    def val_dataloader(self):
+        '''returns validation dataloader'''        
+        val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True,num_workers = 8) # Batch size is entire validataion set
+        return val_loader
 
-class CustomTensorDataset(Dataset):
-    """TensorDataset with support of transforms.
-    """
-    def __init__(self, tensors, transform=None):
-        assert all(tensors[0].size(0) == tensor.size(0) for tensor in tensors)
-        self.tensors = tensors
-        self.transform = transform
 
-    def __getitem__(self, index):
-        x = self.tensors[0][index]
-
-        if self.transform:
-            x = self.transform(x)
-        y = self.tensors[1][index]
-
-        return x, y, index # Added the return of index for the purpose of PCL
-    def __len__(self):
-        return self.tensors[0].size(0)
 
 Datamodule = TwoGaussians(32)
 Datamodule.setup()

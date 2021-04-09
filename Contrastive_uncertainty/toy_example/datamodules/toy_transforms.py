@@ -154,7 +154,7 @@ def Normalize(x, mean, std):
     x = (x - mean) / std
     return x
 
-
+# Use to apply transforms to the tensordataset  https://stackoverflow.com/questions/55588201/pytorch-transforms-on-tensordataset
 class CustomTensorDataset(Dataset):
     """TensorDataset with support of transforms.
     """

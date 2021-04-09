@@ -185,7 +185,7 @@ class PCLToy(Toy):
         #import ipdb;ipdb.set_trace()
         features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
         #import ipdb; ipdb.set_trace()
-        for i, (images,labels, indices) in enumerate(tqdm(dataloader)):
+        for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
                 images = images.to(self.device)
@@ -318,15 +318,21 @@ class PCLToy(Toy):
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
 
+    # https://pytorch-lightning.readthedocs.io/en/stable/_modules/pytorch_lightning/core/hooks.html#ModelHooks.on_validation_start 
+    #Do not currently need to obtain the auxillary data of the train dataloader as the val and train data are the same in PCL currently
+    '''
     def on_train_epoch_start(self):
         dataloader = self.datamodule.train_dataloader()
         self.auxillary_data = self.aux_data(dataloader)
         return self.auxillary_data
-    
+    '''
+        
     def on_validation_epoch_start(self):
         dataloader = self.datamodule.val_dataloader()
+        #import ipdb; ipdb.set_trace()
         self.auxillary_data = self.aux_data(dataloader)
         return self.auxillary_data
+    
     '''
     def train_epoch_start(self, outputs):
         import ipdb; ipdb.set_trace()

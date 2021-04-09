@@ -13,15 +13,14 @@ from pytorch_lightning import LightningDataModule
 from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms
 
 class GaussianBlobs(LightningDataModule): # Data module for Two Moons dataset
-
-    def __init__(self,batch_size=32,train_transforms = None, test_transforms = None):
+    def __init__(self, batch_size=32, train_transforms=None, test_transforms=None):
         super().__init__()
         self.batch_size = batch_size
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
         self.num_datapoints = 10000
         self.num_classes = 12
-        self.visualise_name ='gaussian_blobs'
+        self.visualise_name = 'gaussian_blobs'
 
     def setup(self):    
         # Make the datasets for the case where there is different values
@@ -106,8 +105,48 @@ class CustomTensorDataset(Dataset):
         y = self.tensors[1][index]
 
         return x, y, index # Added the return of index for the purpose of PCL
+
     def __len__(self):
         return self.tensors[0].size(0)
+
+
+# Only difference is that the code for the val dataset is different
+class PCLGaussianBlobs(GaussianBlobs):
+    def __init__(self, batch_size=32, train_transforms=None, test_transforms=None):
+        super(PCLDiagonalLines, self).__init__(batch_size, train_transforms, test_transforms) 
+    
+    # updates the val dataset to be the same as the train dataset but uses a different augmentation for the particular task
+    def setup(self):
+        # First ppline (100) points are generated from the network for each of the line intervals and then 0.15 percent of those points are chosen from each interval (choosing 15 points out of 100 for each interval)
+        lines = [np.stack([np.linspace(intv[0],intv[1],self.ppline), np.linspace(intv[0],intv[1],self.ppline)])[:,np.random.choice(self.ppline, int(self.ppline*self.noise_perc), replace=False)] for intv in self.intervals]
+        
+        cls   = [x*np.ones(int(self.subclusters*self.ppline*self.noise_perc)) for x in range(self.n_lines)] # Classes labels for each of the data points in lines
+        
+        self.data = np.concatenate(lines, axis=1).T
+        self.labels = np.concatenate(cls) # class labels
+        data_length = len(self.data)
+        idxs  = np.random.choice(data_length, data_length,replace=False)
+        # Shuffle the data before placing in different data to allow points in different datasets to be present
+        self.data, self.labels =self.data[idxs], self.labels[idxs]
+        
+        
+        self.train_data, self.train_labels = self.data[:int(0.7*data_length)], self.labels[:int(0.7*data_length)]
+        #print('train data',self.train_data)
+        '''
+        mean  = np.mean(self.train_data,axis = 0)
+        std = np.std(self.train_data,axis=0)
+        print('mean',mean)
+        print('std',std)
+        '''                
+        #self.val_data, self.val_labels = self.data[int(0.7*data_length):int(0.8*data_length)], self.labels[int(0.7*data_length):int(0.8*data_length)]
+        self.test_data, self.test_labels = self.data[int(0.8*data_length):], self.labels[int(0.8*data_length):]
+
+        # Val dataset is the same as the train dataset except that the transformation is different
+        self.train_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)), transform = self.train_transforms)
+        self.val_dataset =  CustomTensorDataset(tensors = (torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)), transform= self.test_transforms)
+        self.test_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)), transform = self.test_transforms)
+    
+    
 
 Datamodule = GaussianBlobs(32)
 Datamodule.setup()
