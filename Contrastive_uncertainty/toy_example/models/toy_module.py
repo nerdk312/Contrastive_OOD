@@ -35,6 +35,7 @@ class Toy(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         metrics = self.loss_function(batch, self.auxillary_data)
+        #import ipdb; ipdb.set_trace()
         for k,v in metrics.items():
                 if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
         

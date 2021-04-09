@@ -58,8 +58,7 @@ class PCLToy(Toy):
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
-        self.auxillary_data = self.aux_data()
-
+        
     def init_encoders(self):
         """
         Override to add your own encoders
@@ -149,7 +148,7 @@ class PCLToy(Toy):
             proto_labels = []
             proto_logits = []
             for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
-                
+                #import ipdb; ipdb.set_trace()
                 # get positive prototypes
                 pos_proto_id = im2cluster[index] # Nawid - get the true cluster assignment for each of the different samples
                 pos_prototypes = prototypes[pos_proto_id] # Nawid- prototypes is a kxd array of k , d dimensional clusters. Therefore this chooses the true clusters for the positive samples. Therefore this is a [B x d] matrix
@@ -158,6 +157,7 @@ class PCLToy(Toy):
                 all_proto_id = [i for i in range(im2cluster.max())] # Nawid - obtains all the cluster ids which were present
                 neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist()) # Nawid - all the negative clusters are the set of all prototypes minus the set of all the negative prototypes
                 neg_proto_id = sample(neg_proto_id, self.hparams.num_negatives) #sample r negative prototypes
+                #neg_proto_id = neg_proto_id.to(self.device)
                 neg_prototypes = prototypes[neg_proto_id] # Nawid - sample negative prototypes
 
                 proto_selected = torch.cat([pos_prototypes, neg_prototypes],dim=0) # Nawid - concatenate positive and negative prototypes, so this is  a [bxd] concatenated with [rxd] to make a [b + r xd]
@@ -169,7 +169,8 @@ class PCLToy(Toy):
                 labels_proto = torch.linspace(0, q.size(0)-1, steps=q.size(0),device = self.device).long()# Nawid - targets for the prototypes, this is a 1D vector with values from 0 to q-1 which represents that the value which shows that the diagonal should be the largest value
 
                 # scaling temperatures for the selected prototypes
-                temp_proto = density[torch.cat([pos_proto_id,torch.LongTensor(neg_proto_id)],dim=0)].to(self.device)
+                #import ipdb; ipdb.set_trace()
+                temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
                 logits_proto /= temp_proto
 
                 proto_labels.append(labels_proto)
@@ -183,7 +184,7 @@ class PCLToy(Toy):
         print('Computing features ...')
         #import ipdb;ipdb.set_trace()
         features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         for i, (images,labels, indices) in enumerate(tqdm(dataloader)):
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
@@ -286,6 +287,7 @@ class PCLToy(Toy):
 
 
     def loss_function(self,batch,cluster_result=None):
+        metrics = {}
         (img_1,img_2), labels,indices = batch
 
         # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
@@ -297,28 +299,43 @@ class PCLToy(Toy):
         # ProtoNCE loss
         if output_proto is not None:
             loss_proto = 0
-            for proto_out,proto_target in zip(output_proto, target_proto): # Nawid - I believe this goes through the results of the m different k clustering results
+            for index, (proto_out,proto_target) in enumerate(zip(output_proto, target_proto)): # Nawid - I believe this goes through the results of the m different k clustering results
                 loss_proto += F.cross_entropy(proto_out, proto_target) #
                 accp = precision_at_k(proto_out, proto_target)[0]
                # acc_proto.update(accp[0], images[0].size(0))
-
+                # Log accuracy for the specific case
+                proto_metrics = {'Accuracy @ 1 Cluster '+str(self.hparams.num_cluster[index]): accp}
+                metrics.update(proto_metrics)
             # average loss across all sets of prototypes
             loss_proto /= len(self.hparams.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
             loss += loss_proto # Nawid - increase the loss
 
-        return loss
+        additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
+        metrics.update(additional_metrics)
+        return metrics
 
-    def aux_data(self):
-        dataloader = self.datamodule.val_dataloader()
+    def aux_data(self,dataloader):
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
 
-    def on_train_epoch_end(self, outputs):
-        self.auxillary_data = self.aux_data()
+    def on_train_epoch_start(self):
+        dataloader = self.datamodule.train_dataloader()
+        self.auxillary_data = self.aux_data(dataloader)
+        return self.auxillary_data
+    
+    def on_validation_epoch_start(self):
+        dataloader = self.datamodule.val_dataloader()
+        self.auxillary_data = self.aux_data(dataloader)
         return self.auxillary_data
     '''
+    def train_epoch_start(self, outputs):
+        import ipdb; ipdb.set_trace()
+        self.auxillary_data = self.aux_data()
+        return self.auxillary_data
+    '''    
+    '''
     def train_epoch_start(self, epoch):
-
+        import ipdb; ipdb.set_trace()
         # update training progress in trainer
         self.trainer.current_epoch = epoch
 

@@ -174,9 +174,6 @@ def moco_loss(model, batch):
     return metrics
 
 
-
-
-
 def uniform_loss(model,x, t=2):
     return torch.pdist(x, p=2).pow(2).mul(-t).exp().mean().log()
     
