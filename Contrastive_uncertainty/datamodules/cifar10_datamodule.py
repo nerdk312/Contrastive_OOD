@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, random_split
 
 
 from Contrastive_uncertainty.datamodules.dataset_normalizations import cifar10_normalization
+from Contrastive_uncertainty.datamodules.datamodule_transforms import dataset_with_indices
 from warnings import warn
 
 
@@ -99,14 +100,14 @@ class CIFAR10DataModule(LightningDataModule):
         # Obtain class indices
         # Obtain class indices
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        dataset = self.DATASET(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
+        dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args))
         self.idx2class = {v:f'{i} - {k}'for i, (k, v) in zip(range(len(dataset.class_to_idx)),dataset.class_to_idx.items())}
         # Need to change key and value around to get in the correct order
         self.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}  
 
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        dataset = self.DATASET(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
+        dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args))
         train_length = len(dataset)
         self.train_dataset, _ = random_split(
             dataset,
@@ -127,7 +128,7 @@ class CIFAR10DataModule(LightningDataModule):
         )
         '''
         val_train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        val_train_dataset = self.DATASET(self.data_dir, train=True, download=False, transform=val_train_transforms, **self.extra_args)
+        val_train_dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=val_train_transforms, **self.extra_args))
 
         
         train_length = len(val_train_dataset)
@@ -138,7 +139,7 @@ class CIFAR10DataModule(LightningDataModule):
         )
 
         val_test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        val_test_dataset = self.DATASET(self.data_dir, train=True, download=False, transform=val_test_transforms, **self.extra_args)
+        val_test_dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=val_test_transforms, **self.extra_args))
         
         _, self.val_test_dataset = random_split(
             val_test_dataset,
@@ -148,7 +149,7 @@ class CIFAR10DataModule(LightningDataModule):
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        self.test_dataset = self.DATASET(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)
+        self.test_dataset = dataset_with_indices(self.DATASET(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args))
         if isinstance(self.test_dataset.targets, list):
             self.test_dataset.targets = torch.Tensor(self.test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
         elif isinstance(self.test_dataset.targets,np.ndarray):

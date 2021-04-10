@@ -207,7 +207,11 @@ class MocoV2(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         
         #(img_1, img_2), labels = batch
-         
+        #dataloader = self.datamodule.val_dataloader()
+        dataloader = self.datamodule.train_dataloader()
+        #import ipdb; ipdb.set_trace()
+        self.auxillary_data = aux_data(self, dataloader)
+
         loss = torch.tensor([0.0], device=self.device)
         if self.hparams.classifier:
             metrics = classification_loss(self,batch)
@@ -239,6 +243,10 @@ class MocoV2(pl.LightningModule):
         
 
     def validation_step(self, batch, batch_idx,dataset_idx):
+        #dataloader = self.datamodule.val_dataloader()
+        dataloader = self.datamodule.train_dataloader()
+        #import ipdb; ipdb.set_trace()
+        self.auxillary_data = aux_data(self, dataloader)
         loss = torch.tensor([0.0], device=self.device)
         if self.hparams.contrastive:
             metrics = moco_loss(self,batch)
@@ -356,6 +364,7 @@ class MocoV2(pl.LightningModule):
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
 
+    '''
     def on_train_epoch_start(self):
         #dataloader = self.datamodule.val_dataloader()
         dataloader = self.datamodule.train_dataloader()
@@ -368,6 +377,7 @@ class MocoV2(pl.LightningModule):
         dataloader = self.datamodule.train_dataloader()
         self.auxillary_data = aux_data(self, dataloader)
         return self.auxillary_data
+    '''    
     
     
 

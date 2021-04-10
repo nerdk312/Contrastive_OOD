@@ -4,7 +4,7 @@ emb_dim = 128,
 num_negatives = 65536,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
-num_cluster = [100],
+num_cluster = [100,200],
 instance_encoder = 'resnet50',
 
 # optimizer args

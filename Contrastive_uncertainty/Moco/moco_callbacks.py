@@ -23,7 +23,7 @@ from Contrastive_uncertainty.Moco.loss_functions import class_discrimination
 class ReliabiltyLogger(pl.Callback):
     def __init__(self,samples,num_samples=300):
         super().__init__()
-        self.imgs, self.labels = samples
+        self.imgs, self.labels, self.indices = samples
         if isinstance(self.imgs,tuple) or isinstance(self.imgs,list):
             self.imgs, *aug_imgs = self.imgs
 
@@ -142,10 +142,10 @@ class ImagePredictionLogger(pl.Callback):
     def __init__(self, samples,ood_samples, collated_samples=32):
         super().__init__()
         self.collated_samples = collated_samples # The number of samples to save
-        self.imgs, self.labels = samples
+        self.imgs, self.labels,self.indices = samples
 
 
-        self.ood_imgs, self.ood_labels = ood_samples
+        self.ood_imgs, self.ood_labels,self.ood_indices = ood_samples
         if isinstance(self.imgs,tuple) or isinstance(self.imgs,list):
             self.imgs ,*aug_imgs  = self.imgs
             self.ood_imgs, *aug_OOD_imgs= self.ood_imgs
@@ -341,7 +341,7 @@ class Uniformity(pl.Callback):
         features = []
         dataloader = self.datamodule.test_dataloader()
         loader = quickloading(self.quick_callback, dataloader)
-        for index, (img, label) in enumerate(loader):
+        for index, (img, label,indices) in enumerate(loader):
             if isinstance(img, tuple) or isinstance(img, list):
                     img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
             img = img.to(pl_module.device)
@@ -539,7 +539,7 @@ class OOD_ROC(pl.Callback):
             accuracies = []
             outputs = []
             #loader = quickloading(self.quick_callback,dataloader) # Used to get a single batch or used to get the entire dataset
-            for data, target in dataloader:
+            for data, target,indices in dataloader:
                 if isinstance(data, tuple) or isinstance(data, list):
                     data, *aug_data = data # Used to take into accoutn whether the data is a tuple of the different augmentations
 

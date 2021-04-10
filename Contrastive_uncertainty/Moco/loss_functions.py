@@ -83,7 +83,7 @@ def supervised_contrastive_forward(model, features, labels=None, mask=None):
     return loss
     
 def supervised_contrastive_loss(model, batch, auxillary_data=None):
-    (img_1, img_2), labels = batch
+    (img_1, img_2), labels,indices = batch
     imgs = torch.cat([img_1, img_2], dim=0)
     bsz = labels.shape[0]
     features = model.encoder_q(imgs)
@@ -116,7 +116,7 @@ def class_discrimination(model, x):
 
 
 def classification_loss(model, batch,auxillary_data = None):
-    (img_1, img_2), labels = batch
+    (img_1, img_2), labels,indices = batch
     logits = class_discrimination(model,img_1)
     if model.hparams.label_smoothing:
         loss = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
@@ -164,7 +164,7 @@ def moco_forward(model, img_q, img_k):
     return logits, labels
 
 def moco_loss(model, batch, auxillary_data= None):
-    (img_1, img_2), labels = batch
+    (img_1, img_2), labels,indices = batch
     output, target = moco_forward(model, img_q=img_1, img_k=img_2)
     loss = F.cross_entropy(output, target.long())
     acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
@@ -185,8 +185,10 @@ def PCL_forward(model, im_q, im_k=None, is_eval=False, cluster_result=None, inde
     Output:
         logits, targets, proto_logits, proto_targets
     """
+    #import ipdb; ipdb.set_trace()
     if is_eval: # Nawid - obtain key outputs
         k = model.encoder_k(im_q)
+        print('k')
         k = nn.functional.normalize(k, dim=1) # Nawid - return normalised momentum embedding
         return k
     # compute key features
@@ -247,12 +249,15 @@ def PCL_forward(model, im_q, im_k=None, is_eval=False, cluster_result=None, inde
 def compute_features(model, dataloader):
     print('Computing features ...')
     #import ipdb;ipdb.set_trace()
+    
     features = torch.zeros(len(dataloader.dataset), model.hparams.emb_dim, device = model.device)
-    #import ipdb; ipdb.set_trace()
     for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
+        assert len(dataloader)>0, 'Empty dataloader'
+        assert max(indices) < len(dataloader.dataset),'indices higher than indices in dataset' # Test for the code to work
         if isinstance(images, tuple) or isinstance(images, list):
             images, *aug_images = images
-            images = images.to(model.device)
+            #import ipdb; ipdb.set_trace()
+        images = images.to(model.device)
         feat = PCL_forward(model, images, is_eval=True)   # Nawid - obtain momentum features
         features[indices] = feat  # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
     return features.cpu()

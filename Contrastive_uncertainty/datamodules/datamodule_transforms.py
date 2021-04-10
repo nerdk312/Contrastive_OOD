@@ -185,3 +185,23 @@ class GaussianBlur(object):
         sigma = random.uniform(self.sigma[0], self.sigma[1])
         x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
         return x
+
+
+#https://discuss.pytorch.org/t/how-to-retrieve-the-sample-indices-of-a-mini-batch/7948/18
+def dataset_with_indices(cls):
+    """
+    Modifies the given Dataset class to return a tuple data, target, index
+    instead of just data, target.
+    """
+    #import ipdb; ipdb.set_trace()
+    def __getitem__(self, index):
+        data, target = cls.__getitem__(self, index)
+        return data, target, index
+    
+    return type(cls.__name__, (cls,), {
+        '__getitem__': __getitem__,
+    }) 
+    '''type(name,bases,dict)
+    name is the name of the class which corresponds to the __name__ attribute__
+    bases: tupe of clases from which corresponds to the __bases__ attribute
+    '''
