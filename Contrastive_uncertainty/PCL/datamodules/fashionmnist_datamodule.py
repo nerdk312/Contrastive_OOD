@@ -15,7 +15,6 @@ from Contrastive_uncertainty.datamodules.dataset_normalizations import fashionmn
 from Contrastive_uncertainty.datamodules.datamodule_transforms import dataset_with_indices
 
 
-
 class FashionMNISTDataModule(LightningDataModule):
 
     name = 'fashionmnist'
@@ -108,49 +107,15 @@ class FashionMNISTDataModule(LightningDataModule):
         # Need to change key and value around to get in the correct order
         self.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}   
 
-    
-    
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
-        train_length = len(dataset)
-        self.train_dataset, _ = random_split(
-            dataset,
-            [train_length - self.val_split, self.val_split],
-            generator=torch.Generator().manual_seed(self.seed)
-        )
+        self.train_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
+        
 
     def setup_val(self):
+        val_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
+        self.val_dataset_ = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=test_transforms, **self.extra_args)
         
-        '''
-        val_transforms = self.default_transforms() if self.val_transforms is None else self.val_transforms
-        dataset = self.DATASET(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
-        train_length = len(dataset)
-        _, self.val_dataset = random_split(
-            dataset,
-            [train_length - self.val_split, self.val_split],
-            generator=torch.Generator().manual_seed(self.seed)
-        )
-        '''
-        val_train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        val_train_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_train_transforms, **self.extra_args)
-
-        
-        train_length = len(val_train_dataset)
-        _, self.val_train_dataset = random_split(
-            val_train_dataset,
-            [train_length - self.val_split, self.val_split],
-            generator=torch.Generator().manual_seed(self.seed)
-        )
-        
-        val_test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        val_test_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_test_transforms, **self.extra_args)
-        
-        _, self.val_test_dataset = random_split(
-            val_test_dataset,
-            [train_length - self.val_split, self.val_split],
-            generator=torch.Generator().manual_seed(self.seed)
-        )
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
@@ -161,12 +126,10 @@ class FashionMNISTDataModule(LightningDataModule):
             self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
 
 
-
     def train_dataloader(self):
         """
         FashionMNIST train set removes a subset to use for validation
         """
-
         loader = DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -181,7 +144,6 @@ class FashionMNISTDataModule(LightningDataModule):
         """
         MNIST val set uses a subset of the training set for validation
         """
-        '''
         loader = DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
@@ -191,27 +153,6 @@ class FashionMNISTDataModule(LightningDataModule):
             drop_last=True
         )
         return loader
-        '''
-        val_train_loader = DataLoader(
-            self.val_train_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            pin_memory=True,
-            drop_last=True
-        )
-
-        val_test_loader = DataLoader(
-            self.val_test_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            pin_memory=True,
-            drop_last=True
-        )
-
-        return [val_train_loader, val_test_loader]
-        
 
     def test_dataloader(self):
         """

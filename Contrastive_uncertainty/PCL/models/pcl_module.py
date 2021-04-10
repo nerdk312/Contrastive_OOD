@@ -63,7 +63,7 @@ class base_module(pl.LightningModule):
 
 
 
-class PCL(base_module):
+class PCLModule(base_module):
     def __init__(self,
         datamodule,
         optimizer:str = 'sgd',
@@ -362,7 +362,6 @@ class PCL(base_module):
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
         return cluster_result
 
-
     def loss_function(self,batch,cluster_result=None):
         metrics = {}
         (img_1,img_2), labels,indices = batch
@@ -427,8 +426,6 @@ class PCL(base_module):
             "global_step": self.global_step
                   })
     '''    
-
-
     def aux_data(self,dataloader):
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
