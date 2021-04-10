@@ -4,6 +4,7 @@ emb_dim = 128,
 num_negatives = 65536,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
+num_cluster = [100],
 instance_encoder = 'resnet50',
 
 # optimizer args
@@ -12,16 +13,15 @@ learning_rate= 0.03,#3e-4,
 momentum= 0.9,
 weight_decay = 1e-4,
 
-
 bsz = 256,
-z_dim = 512,
 dataset = 'FashionMNIST',
 OOD_dataset = 'MNIST',
 
 classifier = False,
 normalize = False,
 contrastive = False,
-supervised_contrastive = True,
+supervised_contrastive = False,
+PCL = True,
 use_mlp = True,
 
 # Miscellaneous arguments

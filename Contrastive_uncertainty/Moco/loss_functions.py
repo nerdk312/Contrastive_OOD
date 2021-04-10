@@ -115,7 +115,7 @@ def class_discrimination(model, x):
     return logits
 
 
-def classification_loss(model, batch):
+def classification_loss(model, batch,auxillary_data = None):
     (img_1, img_2), labels = batch
     logits = class_discrimination(model,img_1)
     if model.hparams.label_smoothing:
@@ -163,7 +163,7 @@ def moco_forward(model, img_q, img_k):
     model._dequeue_and_enqueue(k)
     return logits, labels
 
-def moco_loss(model, batch):
+def moco_loss(model, batch, auxillary_data= None):
     (img_1, img_2), labels = batch
     output, target = moco_forward(model, img_q=img_1, img_k=img_2)
     loss = F.cross_entropy(output, target.long())
@@ -244,17 +244,17 @@ def PCL_forward(model, im_q, im_k=None, is_eval=False, cluster_result=None, inde
         return logits, labels, None, None
 
 @torch.no_grad()
-def compute_features(model,dataloader):
+def compute_features(model, dataloader):
     print('Computing features ...')
     #import ipdb;ipdb.set_trace()
-    features = torch.zeros(len(dataloader.dataset), model.hparams.emb_dim, device = self.device)
+    features = torch.zeros(len(dataloader.dataset), model.hparams.emb_dim, device = model.device)
     #import ipdb; ipdb.set_trace()
     for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
         if isinstance(images, tuple) or isinstance(images, list):
             images, *aug_images = images
             images = images.to(model.device)
-        feat = PCL_forward(model,images,is_eval=True)   # Nawid - obtain momentum features
-        features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
+        feat = PCL_forward(model, images, is_eval=True)   # Nawid - obtain momentum features
+        features[indices] = feat  # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
     return features.cpu()
 
 
@@ -316,7 +316,7 @@ def run_kmeans(model,x):
 
 
 def cluster_data(model,dataloader):
-    features = compute_features(dataloader)
+    features = compute_features(model,dataloader)
     # placeholder for clustering result
     cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
     for num_cluster in model.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
@@ -331,13 +331,16 @@ def cluster_data(model,dataloader):
     cluster_result = run_kmeans(features)  #run kmeans clustering on master node
     return cluster_result
 
-def loss_function(model,batch,cluster_result=None):
+def pcl_loss(model,batch,cluster_result=None):
     metrics = {}
     (img_1,img_2), labels,indices = batch
     # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
     output, target, output_proto, target_proto = PCL_forward(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
     # InfoNCE loss
     loss = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
+    acc_i = precision_at_k(output, target)[0]
+    instance_metrics = {'Instance Loss':loss,'Instance Accuracy @ 1': acc_i}
+    metrics.update(instance_metrics)
     # ProtoNCE loss
     if output_proto is not None:
         loss_proto = 0
@@ -351,14 +354,16 @@ def loss_function(model,batch,cluster_result=None):
         # average loss across all sets of prototypes
         loss_proto /= len(model.hparams.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
         loss += loss_proto # Nawid - increase the loss
-    additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
+    additional_metrics = {'PCL Loss':loss, 'ProtoLoss':loss_proto}
     metrics.update(additional_metrics)
     return metrics
 
-def aux_data(dataloader):
-    cluster_result = cluster_data(dataloader)
+def aux_data(model, dataloader):
+    if model.hparams.PCL: # Boolean to choose wheter to perform clustering or not
+        cluster_result = cluster_data(model,dataloader)
+    else:
+        cluster_result = None
     return cluster_result
-
 
 
 # Uniformity and alignment

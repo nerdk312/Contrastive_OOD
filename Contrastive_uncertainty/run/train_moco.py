@@ -61,14 +61,17 @@ def train(params):
     #desired_callbacks = [callback_dict['SupCon'],callback_dict['Uniformity']]
 
     model = MocoV2(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
-        encoder_momentum = config['encoder_momentum'], softmax_temperature = config['softmax_temperature'],
+        encoder_momentum = config['encoder_momentum'], 
+        softmax_temperature = config['softmax_temperature'], num_cluster=config['num_cluster'],
         optimizer = config['optimizer'],learning_rate = config['learning_rate'],
         momentum = config['momentum'], weight_decay = config['weight_decay'],
-        batch_size = config['bsz'],use_mlp = config['use_mlp'], z_dim = config['z_dim'],
+        batch_size = config['bsz'],use_mlp = config['use_mlp'],
         num_classes = config['num_classes'],datamodule = datamodule,num_channels = channels,
         classifier = config['classifier'],normalize = config['normalize'],contrastive = config['contrastive'],
-        class_dict = class_names_dict,instance_encoder = config['instance_encoder'],pretrained_network = config['pretrained_network'],
-        label_smoothing=config['label_smoothing'],supervised_contrastive = config['supervised_contrastive'])
+        supervised_contrastive = config['supervised_contrastive'],PCL=config['PCL'],
+        class_dict = class_names_dict,instance_encoder = config['instance_encoder'],
+        pretrained_network = config['pretrained_network'],label_smoothing=config['label_smoothing'])
+        
 
 
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients

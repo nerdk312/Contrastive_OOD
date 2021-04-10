@@ -17,7 +17,8 @@ from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_re
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
 from Contrastive_uncertainty.Moco.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
 
-from Contrastive_uncertainty.Moco.loss_functions import moco_loss, classification_loss, supervised_contrastive_loss
+from Contrastive_uncertainty.Moco.loss_functions import moco_loss, classification_loss, supervised_contrastive_loss, \
+                                                        pcl_loss, aux_data
 
 
 class MocoV2(pl.LightningModule):
@@ -26,21 +27,20 @@ class MocoV2(pl.LightningModule):
         num_negatives: int = 65536,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
+        num_cluster: list = [100],
         optimizer:str = 'sgd',
         learning_rate: float = 0.03,
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        data_dir: str = './',
         batch_size: int = 32,
         use_mlp: bool = False,
-        num_workers: int = 8,
         num_channels:int = 3, # number of channels for the specific dataset
-        z_dim:int = 512, # dimensionality of the output of the resnet 18 after the global average pooling layer
         num_classes:int = 10, # Attribute required for the finetuning value
         classifier: bool = False,
         contrastive: bool = True,
         supervised_contrastive: bool = False,
+        PCL: bool = False,
         normalize:bool = True,
         class_dict:dict = None,
         instance_encoder:str = 'resnet50',
@@ -50,7 +50,6 @@ class MocoV2(pl.LightningModule):
 
         super().__init__()
         # Nawid - required to use for the fine tuning
-        self.z_dim = z_dim
         self.num_classes = num_classes
         self.class_names = [v for k,v in class_dict.items()]
         self.save_hyperparameters()
@@ -58,7 +57,7 @@ class MocoV2(pl.LightningModule):
 
         # use CIFAR-10 by default if no datamodule passed in
         if datamodule is None:
-            datamodule = CIFAR10DataModule(data_dir,batch_size = self.hparams.batch_size)
+            datamodule = CIFAR10DataModule('./', batch_size=self.hparams.batch_size)
             datamodule.train_transforms = Moco2TrainCIFAR10Transforms()
             datamodule.val_transforms = Moco2EvalCIFAR10Transforms()
             datamodule.test_transforms = Moco2EvalCIFAR10Transforms()
@@ -210,23 +209,29 @@ class MocoV2(pl.LightningModule):
         #(img_1, img_2), labels = batch
          
         loss = torch.tensor([0.0], device=self.device)
+        if self.hparams.classifier:
+            metrics = classification_loss(self,batch)
+            for k,v in metrics.items():
+                if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
+            loss += metrics['Class Loss']
+
         if self.hparams.contrastive:
             metrics = moco_loss(self,batch)
             for k,v in metrics.items():
                 if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
             loss += metrics['Instance Loss']
         
-        if self.hparams.classifier:
-            metrics = classification_loss(self,batch)
-            for k,v in metrics.items():
-                if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
-            loss += metrics['Class Loss']
-        
         if self.hparams.supervised_contrastive:
             metrics = supervised_contrastive_loss(self,batch)
             for k,v in metrics.items():
                 if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
             loss += metrics['Supervised Contrastive Loss']
+        
+        if self.hparams.PCL:
+            metrics = pcl_loss(self,batch,self.auxillary_data)
+            for k,v in metrics.items():
+                if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
+            loss += metrics['PCL Loss']
 
         self.log('Training Total Loss', loss.item(),on_epoch=True)
 
@@ -252,6 +257,12 @@ class MocoV2(pl.LightningModule):
             for k,v in metrics.items():
                 if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
             loss += metrics['Supervised Contrastive Loss']
+        
+        if self.hparams.PCL:
+            metrics = pcl_loss(self,batch,self.auxillary_data)
+            for k,v in metrics.items():
+                if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
+            loss += metrics['PCL Loss']
 
         self.log('Validation Total Loss', loss.item(),on_epoch=True)
 
@@ -281,13 +292,18 @@ class MocoV2(pl.LightningModule):
         if self.hparams.supervised_contrastive:
             metrics = supervised_contrastive_loss(self,batch)
             for k,v in metrics.items():
-                if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
+                if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
             loss += metrics['Supervised Contrastive Loss']
 
+        if self.hparams.PCL:
+            metrics = pcl_loss(self,batch,self.auxillary_data)
+            for k,v in metrics.items():
+                if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
+            loss += metrics['PCL Loss']
         
         metrics = classification_loss(self,batch)
         for k,v in metrics.items():
-            if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
+            if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
         loss += metrics['Class Loss']
 
 
@@ -340,8 +356,21 @@ class MocoV2(pl.LightningModule):
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
 
+    def on_train_epoch_start(self):
+        #dataloader = self.datamodule.val_dataloader()
+        dataloader = self.datamodule.train_dataloader()
+        #import ipdb; ipdb.set_trace()
+        self.auxillary_data = aux_data(self, dataloader)
+        return self.auxillary_data
+
+    def on_validation_epoch_start(self):
+        #dataloader = self.datamodule.val_dataloader()
+        dataloader = self.datamodule.train_dataloader()
+        self.auxillary_data = aux_data(self, dataloader)
+        return self.auxillary_data
     
     
+
 # utils
 @torch.no_grad()
 def concat_all_gather(tensor):
