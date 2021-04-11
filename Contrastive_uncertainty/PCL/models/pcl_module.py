@@ -270,7 +270,7 @@ class PCLModule(base_module):
                 images, *aug_images = images
                 #import ipdb; ipdb.set_trace()
                 images = images.to(self.device)
-
+            
             feat = self(images,is_eval=True)   # Nawid - obtain momentum features
             features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()

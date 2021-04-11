@@ -18,7 +18,7 @@ from sklearn.metrics import roc_auc_score
 
 from Contrastive_uncertainty.Moco.hybrid_utils import OOD_conf_matrix
 from Contrastive_uncertainty.Moco.loss_functions import class_discrimination
-
+from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
 
 # Used to log input images and predictions of the dataset
 
@@ -149,7 +149,8 @@ class OOD_confusion_matrix(pl.Callback):
             OOD_test_dataset, batch_size=self.Datamodule.batch_size, shuffle=False, num_workers=6, pin_memory=False,
         )
         OOD_preds = []
-        for (OOD_data, _) in OOD_test_dataloader:
+        for (OOD_data, _,_) in OOD_test_dataloader:
+            assert len(OOD_test_dataloader) >0, 'dataloader is empty'
             if isinstance(OOD_data, tuple) or isinstance(OOD_data, list):
                 OOD_data, *aug_data = OOD_data # Used to take into accoutn whether the data is a tuple of the different augmentations
 
@@ -219,6 +220,7 @@ class OOD_ROC(pl.Callback):
             outputs = []
             #loader = quickloading(self.quick_callback,dataloader) # Used to get a single batch or used to get the entire dataset
             for data, target,indices in dataloader:
+                assert len(dataloader)>0, 'loader is empty'
                 if isinstance(data, tuple) or isinstance(data, list):
                     data, *aug_data = data # Used to take into accoutn whether the data is a tuple of the different augmentations
 
@@ -384,7 +386,8 @@ class Mahalanobis_OOD(pl.Callback):
         features, labels = [], []
         total = 0
         loader = quickloading(self.quick_callback,dataloader)
-        for index, (img, label) in enumerate(loader):
+        for index, (img, label,indices) in enumerate(loader):
+            assert len(loader)>0, 'loader is empty'
             if isinstance(img, tuple) or isinstance(img, list):
                     img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
 
@@ -542,7 +545,8 @@ class Mahalanobis_OOD_compressed(Mahalanobis_OOD):
         features, labels = [], []
         total = 0
         loader = quickloading(self.quick_callback,dataloader)
-        for index, (img, label) in enumerate(loader):
+        for index, (img, label,indices) in enumerate(loader):
+            assert len(loader)>0, 'loader is empty'
             if isinstance(img, tuple) or isinstance(img, list):
                     img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
 

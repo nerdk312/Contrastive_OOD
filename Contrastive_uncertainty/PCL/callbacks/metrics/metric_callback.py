@@ -69,7 +69,7 @@ def select(metricname, pl_module):
         return dists.Metric(mode)
     elif 'rho_spectrum' in metricname:
         mode = int(metricname.split('@')[-1])
-        embed_dim = pl_module.hparams.z_dim
+        embed_dim = 512 #pl_module.hparams.z_dim
         return rho_spectrum.Metric(embed_dim, mode=mode)
     elif 'uniformity' in metricname:
         t = 2

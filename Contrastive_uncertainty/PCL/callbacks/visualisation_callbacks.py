@@ -89,7 +89,8 @@ class Visualisation(pl.Callback): # General class for visualisation
     def compute_representations(self, pl_module, loader):
         features = []
         collated_labels = []
-        for i, (images, labels) in enumerate(tqdm(loader)): # Obtain data and labels from dataloader
+        for i, (images, labels, indices) in enumerate(tqdm(loader)): # Obtain data and labels from dataloader
+            assert len(loader)>0, 'loader is empty'
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_imgs = images
             

@@ -206,7 +206,8 @@ class MMD_distance(pl.Callback):
             uniform_distribution = torch.distributions.uniform.Uniform(low,high) # causes all samples to be on the correct device when obtainig smaples https://stackoverflow.com/questions/59179609/how-to-make-a-pytorch-distribution-on-gpu
             #uniform_distribution =  torch.distributions.uniform.Uniform(-1,1).sample(output.shape)
             loader = quickloading(self.quick_callback,dataloader) # Used to get a single batch or used to get the entire dataset
-            for data, target in loader:
+            for data, target,indices in loader:
+                assert len(loader)>0, 'loader is empty'
                 if isinstance(data, tuple) or isinstance(data, list):
                     data, *aug_data = data # Used to take into accoutn whether the data is a tuple of the different augmentations
 
@@ -252,6 +253,7 @@ class Uniformity(pl.Callback):
         dataloader = self.datamodule.test_dataloader()
         loader = quickloading(self.quick_callback, dataloader)
         for index, (img, label,indices) in enumerate(loader):
+            assert len(loader)>0, 'loader is empty'
             if isinstance(img, tuple) or isinstance(img, list):
                     img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
             img = img.to(pl_module.device)
@@ -315,7 +317,8 @@ class Centroid_distance(pl.Callback):
         loader = quickloading(self.quick_callback, test_loader)
         collated_distances = []
         collated_rbf_similarity = []
-        for step, (data,labels) in enumerate(loader):
+        for step, (data,labels,indices) in enumerate(loader):
+            assert len(loader) >0, 'dataloader is empty'
             if isinstance(data,tuple) or isinstance(data,list):
                 data, *aug_data = data
                 data, labels =  data.to(pl_module.device), labels.to(pl_module.device)
@@ -347,7 +350,8 @@ class Centroid_distance(pl.Callback):
         centroids_list = []
         test_loader = self.datamodule.test_dataloader()
         loader = quickloading(self.quick_callback, test_loader)
-        for step, (data,labels) in enumerate(loader):
+        for step, (data,labels,indices) in enumerate(loader):
+            assert len(loader)>0, 'loader is empty'
             if isinstance(data,tuple) or isinstance(data,list):
                 data, *aug_data = data
             data,labels = data.to(pl_module.device), labels.to(pl_module.device)
