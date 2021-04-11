@@ -12,7 +12,7 @@ from Contrastive_uncertainty.PCL.run.pcl_run_setup import run_name, Datamodule_s
 from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
 
 
-def train(params):
+def training(params):
     wandb.init(entity="nerdk312",config = params,project= params['project']) # Required to have access to wandb config, which is needed to set up a sweep
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     config = wandb.config
@@ -46,7 +46,7 @@ def train(params):
     class_dict=class_names_dict, emb_dim=config['emb_dim'],
     num_negatives=config['num_negatives'],
     encoder_momentum=config['encoder_momentum'],softmax_temperature=config['softmax_temperature'],
-    num_cluster=config['num_cluster'], use_mlp=coonfig['use_mlp'],
+    num_cluster=config['num_cluster'], use_mlp=config['use_mlp'],
     num_channels=channels, classifier=config['classifier'],
     normalize=config['normalize'], instance_encoder=config['instance_encoder'],
     pretrained_network=config['pretrained_network'])

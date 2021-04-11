@@ -111,8 +111,9 @@ class MNISTDataModule(LightningDataModule):
         
 
     def setup_val(self):
+        # val transforms use the test transforms in this case
         val_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        self.val_dataset_ = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=test_transforms, **self.extra_args)
+        self.val_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
         
 
     def setup_test(self):

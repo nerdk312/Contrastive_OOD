@@ -1,10 +1,11 @@
-from Contrastive_uncertainty.pcl.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.PCL.datamodules.datamodule_dict import dataset_dict
 from Contrastive_uncertainty.PCL.callbacks.general_callbacks import ModelSaving, ReliabiltyLogger, \
                                                                     MMD_distance, Uniformity, \
                                                                     Centroid_distance, SupConLoss
 
 from Contrastive_uncertainty.PCL.callbacks.ood_callbacks import ImagePredictionLogger, OOD_confusion_matrix, \
-                                                                OOD_ROC, Mahalanobis_OOD, Mahalanobis_OOD_compressed
+                                                                OOD_ROC, Mahalanobis_OOD, Mahalanobis_OOD_compressed, \
+                                                                Euclidean_OOD
 
 from Contrastive_uncertainty.PCL.callbacks.visualisation_callbacks import Visualisation
 from Contrastive_uncertainty.PCL.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
@@ -34,16 +35,16 @@ def Channel_selection(dataset):
 
 
 def callback_dictionary(Datamodule,OOD_Datamodule,config):
-    val_train_loader, val_test_loader = Datamodule.val_dataloader() # Used for metric logger callback also
-    samples = next(iter(val_test_loader))
+    val_loader= Datamodule.val_dataloader() # Used for metric logger callback also
+    samples = next(iter(val_loader))
     sample_size = config['bsz']
 
-    OOD_val_train_loader, OOD_val_test_loader = OOD_Datamodule.val_dataloader()
+    OOD_val_loader = OOD_Datamodule.val_dataloader()
 
-    OOD_samples = next(iter(OOD_val_test_loader))
+    OOD_samples = next(iter(OOD_val_loader))
 
     callback_dict = {'Model_saving':ModelSaving(config['model_saving']), 'Confusion_matrix':OOD_confusion_matrix(Datamodule,OOD_Datamodule),'ROC':OOD_ROC(Datamodule,OOD_Datamodule),
-                'Reliability': ReliabiltyLogger(samples,sample_size), 'Metrics': MetricLogger(evaluation_metrics,val_test_loader,evaltypes,config['quick_callback']),'Image_prediction':ImagePredictionLogger(samples,OOD_samples,sample_size),
+                'Reliability': ReliabiltyLogger(samples,sample_size), 'Metrics': MetricLogger(evaluation_metrics,val_loader,evaltypes,config['quick_callback']),'Image_prediction':ImagePredictionLogger(samples,OOD_samples,sample_size),
                 
                 'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule, config['quick_callback']), 'Mahalanobis_compressed': Mahalanobis_OOD_compressed(Datamodule,OOD_Datamodule,config['quick_callback']),
                 

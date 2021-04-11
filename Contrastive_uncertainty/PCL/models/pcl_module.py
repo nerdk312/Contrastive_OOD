@@ -1,13 +1,23 @@
+import numpy as np
+from random import sample
 import wandb
-import pytorch_lightning as pl
+
 import torch
 import torch.nn.functional as F
 from torch import nn
 import torchvision
+import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
+from tqdm import tqdm
+import faiss
+
+
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
+
+from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
 
 
 class base_module(pl.LightningModule):
@@ -28,7 +38,8 @@ class base_module(pl.LightningModule):
         
 
         self.auxillary_data = None #self.aux_data() #self.on_train_epoch_start(self.datamodule)
-
+        
+        
     def training_step(self, batch, batch_idx):
         metrics = self.loss_function(batch, self.auxillary_data)
         for k,v in metrics.items():
@@ -113,6 +124,11 @@ class PCLModule(base_module):
         self.queue = nn.functional.normalize(self.queue, dim=0)
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
+        
+        
+        
+        # Quick test of obtaining clusters (when using fast dev run)    
+        self.auxillary_data = self.aux_data(True)
         
     def init_encoders(self):
         """
@@ -240,11 +256,17 @@ class PCLModule(base_module):
 
     @torch.no_grad()
     def compute_features(self,dataloader):
+        #import ipdb; ipdb.set_trace()
         print('Computing features ...')
         #import ipdb;ipdb.set_trace()
-        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
+        if len(dataloader)==1:
+            features = torch.zeros(self.datamodule.batch_size, self.hparams.emb_dim, device = self.device)
+        else:
+            features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
+
         #import ipdb; ipdb.set_trace()
         for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
+            assert len(dataloader) >0, "dataloader is empty"
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
                 images = images.to(self.device)
@@ -351,7 +373,10 @@ class PCLModule(base_module):
         # placeholder for clustering result
         cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
         for num_cluster in self.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
-            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
+            if len(dataloader)==1:
+                cluster_result['im2cluster'].append(torch.zeros(self.datamodule.batch_size,dtype=torch.long,device = self.device))
+            else:
+                cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
             cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
             cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
         
@@ -426,19 +451,28 @@ class PCLModule(base_module):
             "global_step": self.global_step
                   })
     '''    
-    def aux_data(self,dataloader):
-        cluster_result = self.cluster_data(dataloader)
+    def aux_data(self,quick_run):        
+        dataloader = self.datamodule.val_dataloader()
+        # Use quickloading when training for the task
+        loader = quickloading(quick_run,dataloader)
+        cluster_result = self.cluster_data(loader)
         return cluster_result
 
     # https://pytorch-lightning.readthedocs.io/en/stable/_modules/pytorch_lightning/core/hooks.html#ModelHooks.on_validation_start 
     #Do not currently need to obtain the auxillary data of the train dataloader as the val and train data are the same in PCL currently
-        
+
+    def on_epoch_start(self):
+        import ipdb; ipdb.set_trace()
+        self.auxillary_data = self.aux_data(self.trainer.fast_dev_run)
+        return self.auxillary_data
+    
+    '''
     def on_validation_epoch_start(self):
         dataloader = self.datamodule.val_dataloader()
-        #import ipdb; ipdb.set_trace()
+        import ipdb; ipdb.set_trace()
         self.auxillary_data = self.aux_data(dataloader)
         return self.auxillary_data
-        
+    '''        
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):
         print('checkpoint loaded')

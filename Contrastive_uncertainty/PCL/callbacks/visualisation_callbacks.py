@@ -22,7 +22,7 @@ import torch.nn.functional as F
 import wandb
 from tqdm import tqdm
 
-from Contrastive_uncertainty.PCL.callbacks.pcl_general_callbacks import quickloading
+from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
 
 
 

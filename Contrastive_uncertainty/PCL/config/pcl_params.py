@@ -34,4 +34,4 @@ test_ratio = 1.0,
 val_check = 5,
 model_saving = 200, # Used to control how often the model is saved
 
-project = 'evaluation'# evaluation, Moco_training
+project = 'evaluation')  # evaluation
