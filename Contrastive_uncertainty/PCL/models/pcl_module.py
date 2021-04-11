@@ -20,6 +20,7 @@ from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_re
 from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
 
 
+
 class base_module(pl.LightningModule):
     def __init__(self,
         datamodule,
@@ -128,7 +129,7 @@ class PCLModule(base_module):
         
         
         # Quick test of obtaining clusters (when using fast dev run)    
-        self.auxillary_data = self.aux_data(True)
+        #self.auxillary_data = self.aux_data()
         
     def init_encoders(self):
         """
@@ -259,16 +260,15 @@ class PCLModule(base_module):
         #import ipdb; ipdb.set_trace()
         print('Computing features ...')
         #import ipdb;ipdb.set_trace()
-        if len(dataloader)==1:
-            features = torch.zeros(self.datamodule.batch_size, self.hparams.emb_dim, device = self.device)
-        else:
-            features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
+        
+        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
 
         #import ipdb; ipdb.set_trace()
         for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
             assert len(dataloader) >0, "dataloader is empty"
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
+                #import ipdb; ipdb.set_trace()
                 images = images.to(self.device)
 
             feat = self(images,is_eval=True)   # Nawid - obtain momentum features
@@ -298,6 +298,33 @@ class PCLModule(base_module):
         z = self.encoder_q.class_fc1(z)
         z = nn.functional.normalize(z, dim=1)
         return z
+    
+    def class_discrimination(self, x):
+        """
+        Input:
+            x: a batch of images for classification
+        Output:
+            logits
+        """
+        # compute query features
+        z = self.feature_vector(x) # Gets the feature map representations which I use for the purpose of pretraining
+        z = F.relu(self.encoder_q.class_fc1(z))
+
+        if self.hparams.normalize:
+            z = nn.functional.normalize(z, dim=1)
+
+        logits = self.encoder_q.class_fc2(z)
+        return logits
+
+
+    def classification_loss(self, batch,auxillary_data = None):
+        (img_1, img_2), labels,indices = batch
+        logits = self.class_discrimination(img_1)
+        loss = F.cross_entropy(logits.float(), labels.long())
+        class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
+        metrics = {'Class Loss': loss, 'Class Accuracy @ 1': class_acc1, 'Class Accuracy @ 5': class_acc5}
+
+        return metrics
 
     def run_kmeans(self,x):
         """
@@ -373,10 +400,7 @@ class PCLModule(base_module):
         # placeholder for clustering result
         cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
         for num_cluster in self.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
-            if len(dataloader)==1:
-                cluster_result['im2cluster'].append(torch.zeros(self.datamodule.batch_size,dtype=torch.long,device = self.device))
-            else:
-                cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
+            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
             cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
             cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
         
@@ -419,12 +443,12 @@ class PCLModule(base_module):
     def test_step(self, batch, batch_idx):
         loss = torch.tensor([0.0], device=self.device)
 
-        metrics = loss_function(batch,self.auxillary_data)
+        metrics = self.loss_function(batch,self.auxillary_data)
         for k,v in metrics.items():
             if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
         loss += metrics['Loss']
         
-        metrics = classification_loss(self,batch)
+        metrics = self.classification_loss(batch)
         for k,v in metrics.items():
             if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
         loss += metrics['Class Loss']
@@ -451,28 +475,27 @@ class PCLModule(base_module):
             "global_step": self.global_step
                   })
     '''    
-    def aux_data(self,quick_run):        
+    def aux_data(self):        
         dataloader = self.datamodule.val_dataloader()
-        # Use quickloading when training for the task
-        loader = quickloading(quick_run,dataloader)
-        cluster_result = self.cluster_data(loader)
+        cluster_result = self.cluster_data(dataloader)
         return cluster_result
 
     # https://pytorch-lightning.readthedocs.io/en/stable/_modules/pytorch_lightning/core/hooks.html#ModelHooks.on_validation_start 
     #Do not currently need to obtain the auxillary data of the train dataloader as the val and train data are the same in PCL currently
-
-    def on_epoch_start(self):
-        import ipdb; ipdb.set_trace()
-        self.auxillary_data = self.aux_data(self.trainer.fast_dev_run)
-        return self.auxillary_data
-    
     '''
-    def on_validation_epoch_start(self):
-        dataloader = self.datamodule.val_dataloader()
-        import ipdb; ipdb.set_trace()
-        self.auxillary_data = self.aux_data(dataloader)
+    def on_epoch_start(self):
+        self.auxillary_data = self.aux_data()
         return self.auxillary_data
-    '''        
+    '''    
+    
+    def on_train_epoch_start(self):
+        self.auxillary_data = self.aux_data()
+        return self.auxillary_data
+
+    def on_validation_epoch_start(self):
+        self.auxillary_data = self.aux_data()
+        return self.auxillary_data
+            
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):
         print('checkpoint loaded')

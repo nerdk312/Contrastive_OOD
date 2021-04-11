@@ -3,7 +3,7 @@ from Contrastive_uncertainty.PCL.config.pcl_params import pcl_hparams
 
 
 pcl_hparams['bsz'] = 128
-pcl_hparams['num_cluster'] = [100]
+pcl_hparams['num_cluster'] = [1000]
 pcl_hparams['instance_encoder'] = 'resnet18'
 pcl_hparams['epochs'] = 1
 pcl_hparams['fast_run'] = False
