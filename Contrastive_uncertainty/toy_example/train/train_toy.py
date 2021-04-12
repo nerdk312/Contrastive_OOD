@@ -8,19 +8,9 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.toy_example.datamodules.diagonal_lines_datamodule import DiagonalLinesDataModule,PCLDiagonalLines
-from Contrastive_uncertainty.toy_example.datamodules.straight_lines_datamodule import StraightLinesDataModule
-from Contrastive_uncertainty.toy_example.datamodules.two_moons_datamodule import TwoMoonsDataModule,PCLTwoMoons
-from Contrastive_uncertainty.toy_example.datamodules.gaussian_blobs_datamodule import GaussianBlobs,PCLGaussianBlobs
-from Contrastive_uncertainty.toy_example.datamodules.two_gaussians_datamodule import TwoGaussians,PCLTwoGaussians
-
-from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import ToyTrainDiagonalLinesTransforms, ToyEvalDiagonalLinesTransforms, \
-                                                               ToyTrainTwoMoonsTransforms, ToyEvalTwoMoonsTransforms, \
-                                                               ToyTrainGaussianBlobsTransforms, ToyEvalGaussianBlobsTransforms, \
-                                                               ToyTrainTwoGaussiansTransforms, ToyEvalTwoGaussiansTransforms
 
 #from Contrastive_uncertainty.toy_example.callbacks.toy_visualisation_callbacks import circular_visualisation, data_visualisation
-from Contrastive_uncertainty.toy_example.run.toy_run_setup  import callback_dictionary
+from Contrastive_uncertainty.toy_example.run.toy_run_setup  import callback_dictionary, Datamodule_selection, Model_selection
 
 from Contrastive_uncertainty.toy_example.models.toy_moco import MocoToy
 from Contrastive_uncertainty.toy_example.models.toy_softmax import SoftmaxToy
@@ -40,45 +30,21 @@ def training(params):
         
     # Run setup
     pl.seed_everything(config['seed'])
-    '''
-    datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
-    datamodule.setup()
+    
+    datamodule = Datamodule_selection(config['dataset'],config)
+    OOD_datamodule = Datamodule_selection(config['OOD_dataset'],config)
+    datamodule.setup(), OOD_datamodule.setup()
 
-    OOD_datamodule = StraightLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
-    OOD_datamodule.setup()
-    '''
-    
-    #datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainTwoMoonsTransforms(),test_transforms=ToyEvalTwoMoonsTransforms())
-    #datamodule.setup()
-    '''
-    datamodule = PCLDiagonalLines(config['bsz'],train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
-    datamodule.setup()
-    '''    
-    datamodule = TwoMoonsDataModule(config['bsz'],train_transforms=ToyTrainTwoMoonsTransforms(), test_transforms=ToyEvalTwoMoonsTransforms())
-    datamodule.setup()
-    
-    
-    
-    '''
-    datamodule = GaussianBlobs(config['bsz'],train_transforms=ToyTrainGaussianBlobsTransforms(), test_transforms=ToyEvalTwoGaussiansTransforms())
-    datamodule.setup()
-    
-    datamodule = GaussianBlobs(config['bsz'],train_transforms=ToyTrainGaussianBlobsTransforms(), test_transforms=ToyEvalTwoGaussiansTransforms())
-    datamodule.setup()
-    '''
-    OOD_datamodule = StraightLinesDataModule(config['bsz'], train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms(),noise_perc=0.1)
-    OOD_datamodule.setup()
     # Model for the task
     #encoder = MocoToy(config['hidden_dim'],config['embed_dim'])
     #encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
     #model = PCLToy(datamodule= datamodule)
     #model = Toy(encoder, datamodule=datamodule)
 
-    callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
-    #model = SoftmaxToy(datamodule = datamodule)
-    model = OVAToy(datamodule=datamodule)
 
+    #model = SoftmaxToy(datamodule = datamodule)
+    #model = OVAToy(datamodule=datamodule)
+    model = Model_selection(datamodule, config)
     '''    
     model = MocoToy(datamodule=datamodule,
                     optimizer=config['optimizer'], learning_rate=config['learning_rate'],
@@ -97,7 +63,9 @@ def training(params):
                     softmax_temperature=config['softmax_temperature'],base_temperature=config['softmax_temperature'],
                     num_classes= config['num_classes'])
     '''
-    #visualiser = data_visualisation(datamodule, OOD_datamodule)
+    callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
+    desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
+
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
         
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
