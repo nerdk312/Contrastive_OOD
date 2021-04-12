@@ -50,12 +50,13 @@ def training(params):
     
     #datamodule = DiagonalLinesDataModule(config['bsz'], 0.1,train_transforms=ToyTrainTwoMoonsTransforms(),test_transforms=ToyEvalTwoMoonsTransforms())
     #datamodule.setup()
+    '''
     datamodule = PCLDiagonalLines(config['bsz'],train_transforms=ToyTrainDiagonalLinesTransforms(),test_transforms=ToyEvalDiagonalLinesTransforms())
     datamodule.setup()
     '''    
-    datamodule = TwoMoonsDataModule(config['bsz'],0.1, train_transforms=ToyTrainTwoMoonsTransforms(), test_transforms=ToyEvalTwoMoonsTransforms())
+    datamodule = TwoMoonsDataModule(config['bsz'],train_transforms=ToyTrainTwoMoonsTransforms(), test_transforms=ToyEvalTwoMoonsTransforms())
     datamodule.setup()
-    '''
+    
     
     
     '''
@@ -70,13 +71,13 @@ def training(params):
     # Model for the task
     #encoder = MocoToy(config['hidden_dim'],config['embed_dim'])
     #encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
-    model = PCLToy(datamodule= datamodule)
+    #model = PCLToy(datamodule= datamodule)
     #model = Toy(encoder, datamodule=datamodule)
 
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    desired_callbacks = [] #[callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
+    desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
     #model = SoftmaxToy(datamodule = datamodule)
-    #model = OVAToy(datamodule=datamodule)
+    model = OVAToy(datamodule=datamodule)
 
     '''    
     model = MocoToy(datamodule=datamodule,

@@ -33,20 +33,20 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         # we set up only relevant datasets when stage is specified (automatically set by Pytorch-Lightning)
         if stage == 'fit' or stage is None:
             self.train_data, self.train_labels = sklearn.datasets.make_moons(n_samples=1500, noise=self.noise)
-            self.mean, self.std = np.mean(self.X_train,axis = 0), np.std(self.X_train,axis = 0) # calculate the mean and std along a particular dimension
+            self.mean, self.std = np.mean(self.train_data,axis = 0), np.std(self.train_data,axis = 0) # calculate the mean and std along a particular dimension
 
             self.train_data = (self.train_data - self.mean)/self.std #  Normalise the data
 
             self.val_data, self.val_labels = sklearn.datasets.make_moons(n_samples=300, noise=self.noise)
-            self.val_data = (self.val_labels - self.mean)/self.std
+            self.val_data = (self.val_data - self.mean)/self.std
 
         if stage == 'test' or stage is None:
             self.test_data, self.test_labels = sklearn.datasets.make_moons(n_samples=200, noise=self.noise)
             self.test_data = (self.test_data - self.mean)/self.std
 
-        self.train_dataset = CustomTensorDataset((torch.from_numpy(self.X_train).float(), torch.from_numpy(self.y_train)),transform = self.train_transforms)
-        self.val_dataset = CustomTensorDataset((torch.from_numpy(self.X_val).float(),torch.from_numpy(self.y_val)), transform = self.test_transforms)
-        self.test_dataset = CustomTensorDataset((torch.from_numpy(self.X_test).float(), torch.from_numpy(self.y_test)), transform = self.test_transforms)
+        self.train_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
+        self.val_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(),torch.from_numpy(self.val_labels)), transform = self.test_transforms)
+        self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)), transform = self.test_transforms)
 
         #self.idx2class = {v: k for k, v in Dataset.class_to_idx.items()}
         self.idx2class  = {0:'0 - orange',1:'1 - blue'} # Dict for two moons
@@ -95,8 +95,8 @@ class PCLTwoMoons(TwoMoonsDataModule):
             self.test_data = (self.test_data - self.mean)/self.std
 
         # Change the data for the dataloaders
-        self.train_dataset = CustomTensorDataset((torch.from_numpy(self.X_train).float(), torch.from_numpy(self.y_train)),transform = self.train_transforms)
-        self.val_dataset = CustomTensorDataset((torch.from_numpy(self.X_train).float(),torch.from_numpy(self.y_train)), transform = self.test_transforms)
+        self.train_dataset = CustomTensorDataset((torch.from_numpy(self.X_train).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
+        self.val_dataset = CustomTensorDataset((torch.from_numpy(self.X_train).float(),torch.from_numpy(self.train_labels)), transform = self.test_transforms)
         self.test_dataset = CustomTensorDataset((torch.from_numpy(self.X_test).float(), torch.from_numpy(self.y_test)), transform = self.test_transforms)
 
         #self.idx2class = {v: k for k, v in Dataset.class_to_idx.items()}
