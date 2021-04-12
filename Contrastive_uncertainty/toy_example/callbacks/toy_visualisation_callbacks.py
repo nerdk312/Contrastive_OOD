@@ -222,11 +222,14 @@ class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two
         plt.close()
     
     def generate_video(self):
+        # Changes the directory
         os.chdir("Images")
         subprocess.call([
-            'ffmpeg', '-framerate', '8', '-i', 'file%02d.png', '-r', '30', '-pix_fmt', 'yuv420p',
-            'video_name.mp4'
+            'ffmpeg', '-framerate', '4', '-i', 'file%02d.png', '-r', '30', '-pix_fmt', 'yuv420p',
+            'Two_moons_uncertainty.mp4'
         ])
+        # Logs the video onto wandb
+        wandb.log({"Uncertainty visualisation": wandb.Video('Two_moons_uncertainty.mp4', fps=4, format="mp4")})
         for file_name in glob.glob("*.png"):
             os.remove(file_name)
 

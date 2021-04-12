@@ -155,3 +155,41 @@ class MocoToy(Toy):
     def on_train_epoch_start(self, datamodule):
         return None
     '''
+    @torch.no_grad()
+    def update_embeddings(self, x, labels): # Assume y is one hot encoder
+        z = self.feature_vector(x)  # (batch,features)
+        y = F.one_hot(labels.long(), num_classes=self.hparams.num_classes).float()
+        # compute sum of embeddings on class by class basis
+
+        #features_sum = torch.einsum('ij,ik->kj',z,y) # (batch, features) , (batch, num classes) to get (num classes,features)
+        #y = y.float() # Need to change into a float to be able to use it for the matrix multiplication
+        features_sum = torch.matmul(y.T,z) # (num_classes,batch) (batch,features) to get (num_class, features)
+
+        #features_sum = torch.matmul(z.T, y) # (batch,features) (batch,num_classes) to get (features,num_classes)
+        
+
+        embeddings = features_sum.T / y.sum(0) # Nawid - divide each of the feature sum by the number of instances present in the class (need to transpose to get into shape which can divide column wise) shape : (features,num_classes
+        embeddings = embeddings.T # Turn back into shape (num_classes,features)
+        return embeddings
+    
+    
+    def euclidean_dist(self, x, y):  # Calculates the difference
+        n = x.size(0)
+        m = y.size(0)
+        d = x.size(1)
+        assert d == y.size(1)
+
+        x = x.unsqueeze(1).expand(n, m, d)
+        y = y.unsqueeze(0).expand(n, m, d)
+        diff = x - y
+        distances = -torch.pow(diff, 2).sum(2)  # Need to get the negative distance
+        return distances
+    
+    def centroid_confidence(self, x,centroids):
+        z = self.feature_vector(x)
+        distances = self.euclidean_dist(z, centroids)
+    
+        return distances  # shape: (batch, num classes)
+        
+
+    

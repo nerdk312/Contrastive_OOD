@@ -338,70 +338,24 @@ class PCLToy(Toy):
         import ipdb; ipdb.set_trace()
         self.auxillary_data = self.aux_data()
         return self.auxillary_data
-    '''    
     '''
-    def train_epoch_start(self, epoch):
-        import ipdb; ipdb.set_trace()
-        # update training progress in trainer
-        self.trainer.current_epoch = epoch
-
-        model = self.trainer.lightning_module
-
-        # reset train dataloader
-        if epoch != 0 and self.trainer.reload_dataloaders_every_epoch:
-            self.trainer.reset_train_dataloader(model)
-
-        # todo: specify the possible exception
-        with suppress(Exception):
-            # set seed for distributed sampler (enables shuffling for each epoch)
-            self.trainer.train_dataloader.sampler.set_epoch(epoch)
-
-        # changing gradient according accumulation_scheduler
-        self.trainer.accumulation_scheduler.on_epoch_start(self.trainer, self.trainer.lightning_module)
-
-        # stores accumulated grad fractions per batch
-        self.accumulated_loss = TensorRunningAccum(window_length=self.trainer.accumulate_grad_batches)
-
-        # structured result accumulators for callbacks
-        self.early_stopping_accumulator = Accumulator()
-        self.checkpoint_accumulator = Accumulator()
-
-        # hook
-        self.trainer.call_hook("on_epoch_start")
-        self.trainer.call_hook("on_train_epoch_start")
-
-        self.auxillary_data = self.aux_data()
-    '''
-    '''
-    def on_train_epoch_start(self):
-        # update training progress in trainer
-        self.trainer.current_epoch = epoch
-
-        model = self.trainer.lightning_module
-
-        # reset train dataloader
-        if epoch != 0 and self.trainer.reload_dataloaders_every_epoch:
-            self.trainer.reset_train_dataloader(model)
-
-        # todo: specify the possible exception
-        with suppress(Exception):
-            # set seed for distributed sampler (enables shuffling for each epoch)
-            self.trainer.train_dataloader.sampler.set_epoch(epoch)
-
-        # changing gradient according accumulation_scheduler
-        self.trainer.accumulation_scheduler.on_train_epoch_start(self.trainer, self.trainer.lightning_module)
-
-        # stores accumulated grad fractions per batch
-        self.accumulated_loss = TensorRunningAccum(window_length=self.trainer.accumulate_grad_batches)
-
-        # hook
-        self.trainer.call_hook("on_epoch_start")
-        self.trainer.call_hook("on_train_epoch_start")
-
-        #  (The only part that I added) - Used to call the cluster results for the case of the prototypical 
-        self.auxillary_data = self.aux_data()
         
-    '''
+    @torch.no_grad()
+    def update_embeddings(self, x, labels): # Assume y is one hot encoder
+        z = self.feature_vector(x)  # (batch,features)
+        y = F.one_hot(labels.long(), num_classes=self.hparams.num_classes).float()
+        # compute sum of embeddings on class by class basis
+
+        #features_sum = torch.einsum('ij,ik->kj',z,y) # (batch, features) , (batch, num classes) to get (num classes,features)
+        #y = y.float() # Need to change into a float to be able to use it for the matrix multiplication
+        features_sum = torch.matmul(y.T,z) # (num_classes,batch) (batch,features) to get (num_class, features)
+
+        #features_sum = torch.matmul(z.T, y) # (batch,features) (batch,num_classes) to get (features,num_classes)
+        
+
+        embeddings = features_sum.T / y.sum(0) # Nawid - divide each of the feature sum by the number of instances present in the class (need to transpose to get into shape which can divide column wise) shape : (features,num_classes
+        embeddings = embeddings.T # Turn back into shape (num_classes,features)
+        return embeddings
     
 
 

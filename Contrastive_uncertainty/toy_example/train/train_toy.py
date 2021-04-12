@@ -35,34 +35,8 @@ def training(params):
     OOD_datamodule = Datamodule_selection(config['OOD_dataset'],config)
     datamodule.setup(), OOD_datamodule.setup()
 
-    # Model for the task
-    #encoder = MocoToy(config['hidden_dim'],config['embed_dim'])
-    #encoder = SoftmaxToy(config['hidden_dim'],config['embed_dim'])
-    #model = PCLToy(datamodule= datamodule)
-    #model = Toy(encoder, datamodule=datamodule)
-
-
-    #model = SoftmaxToy(datamodule = datamodule)
-    #model = OVAToy(datamodule=datamodule)
-    model = Model_selection(datamodule, config)
-    '''    
-    model = MocoToy(datamodule=datamodule,
-                    optimizer=config['optimizer'], learning_rate=config['learning_rate'],
-                    momentum=config['momentum'], weight_decay=config['weight_decay'],
-                    hidden_dim=config['hidden_dim'], emb_dim=config['emb_dim'],
-                    num_negatives=config['num_negatives'], encoder_momentum=config['encoder_momentum'],
-                    softmax_temperature=config['softmax_temperature'],
-                    pretrained_network=config['pretrained_network'], num_classes=config['num_classes'])
-    '''
     
-    '''
-    model = SupConToy(datamodule=datamodule,
-                    optimizer= config['optimizer'],learning_rate= config['learning_rate'],
-                    momentum=config['momentum'], weight_decay=config['weight_decay'],
-                    hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                    softmax_temperature=config['softmax_temperature'],base_temperature=config['softmax_temperature'],
-                    num_classes= config['num_classes'])
-    '''
+    model = Model_selection(datamodule, config)
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
 

@@ -70,16 +70,20 @@ class OVAToy(Toy):
     def class_discrimination(self, x, centroids): # same as forward
         y_pred = self(x,centroids)
     
+    def centroid_confidence(self, x, centroids): # same as forward
+        y_pred = self(x,centroids)
+    
+    
     def euclidean_dist(self, x, y):  # Calculates the difference
         n = x.size(0)
         m = y.size(0)
         d = x.size(1)
         assert d == y.size(1)
 
-        x = x.unsqueeze(1).expand(n, m, d)
-        y = y.unsqueeze(0).expand(n, m, d)
+        x = x.unsqueeze(1).expand(n, m, d)  # shape (batch,num class, features)
+        y = y.unsqueeze(0).expand(n, m, d)  # shape (batch,num class, features)
         diff = x - y
-        distances = -torch.pow(diff, 2).sum(2)  # Need to get the negative distance
+        distances = -torch.pow(diff, 2).sum(2)  # Need to get the negative distance , SHAPE (batch, num class)
         return distances
     
     @torch.no_grad()
