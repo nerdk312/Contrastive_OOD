@@ -196,7 +196,8 @@ class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two
         centroids = pl_module.update_embeddings(torch.from_numpy(self.X_vis).float().to(pl_module.device),torch.from_numpy(self.y_vis).to(pl_module.device))
         #embeddings = self.model.embedding_encoder.update_embeddings(torch.from_numpy(self.X_vis).float().cuda(),torch.from_numpy(self.y_vis).cuda())
         with torch.no_grad():
-            output = pl_module(torch.from_numpy(X_grid).float().to(pl_module.device),centroids)
+            output = pl_module.centroid_confidence(torch.from_numpy(X_grid).float().to(pl_module.device),centroids)
+            #output = pl_module(torch.from_numpy(X_grid).float().to(pl_module.device),centroids)
             confidence = output.max(1)[0].cpu().numpy()
 
         # z = confidence.reshape(xx.shape) # Original version, replaced with x_lin shape[0] since I placed xx in a function
@@ -224,12 +225,15 @@ class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two
     def generate_video(self):
         # Changes the directory
         os.chdir("Images")
+        video_filename = 'Two_moons_uncertainty.mp4' 
         subprocess.call([
             'ffmpeg', '-framerate', '4', '-i', 'file%02d.png', '-r', '30', '-pix_fmt', 'yuv420p',
-            'Two_moons_uncertainty.mp4'
+            video_filename
         ])
         # Logs the video onto wandb
-        wandb.log({"Uncertainty visualisation": wandb.Video('Two_moons_uncertainty.mp4', fps=4, format="mp4")})
+        wandb.log({"Uncertainty visualisation": wandb.Video(video_filename, fps=4, format="mp4")})
         for file_name in glob.glob("*.png"):
             os.remove(file_name)
+        
+        #os.remove(video_filename)
 

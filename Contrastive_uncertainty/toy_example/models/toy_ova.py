@@ -55,7 +55,7 @@ class OVAToy(Toy):
 
     def feature_vector(self, x): # Obtain feature vector
         x = self.encoder(x)
-        x = nn.functional.normalize(x, dim=1)
+        #x = nn.functional.normalize(x, dim=1)
         return x
 
     def forward(self, x, centroids): # obtain predictions
@@ -69,10 +69,11 @@ class OVAToy(Toy):
 
     def class_discrimination(self, x, centroids): # same as forward
         y_pred = self(x,centroids)
+        return y_pred
     
     def centroid_confidence(self, x, centroids): # same as forward
         y_pred = self(x,centroids)
-    
+        return y_pred
     
     def euclidean_dist(self, x, y):  # Calculates the difference
         n = x.size(0)

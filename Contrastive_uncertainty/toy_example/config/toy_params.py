@@ -1,10 +1,11 @@
 toy_hparams = dict(
 hidden_dim = 20,
-emb_dim = 2,
-num_negatives = 32,
+emb_dim = 20,
+num_negatives = 128,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
 num_classes = 2,
+
 
 # optimizer args
 optimizer = 'sgd',
@@ -15,11 +16,11 @@ weight_decay = 1e-4,
 
 # Miscellaneous arguments
 seed = 26,
-epochs = 3,
-bsz = 32,
+epochs = 50,
+bsz = 128,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
-model = 'OVA',
+model = 'NNCL',
 
 # Trainer configurations
 fast_run = False,

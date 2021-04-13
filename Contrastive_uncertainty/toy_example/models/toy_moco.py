@@ -185,7 +185,7 @@ class MocoToy(Toy):
         distances = -torch.pow(diff, 2).sum(2)  # Need to get the negative distance
         return distances
     
-    def centroid_confidence(self, x,centroids):
+    def centroid_confidence(self, x, centroids):
         z = self.feature_vector(x)
         distances = self.euclidean_dist(z, centroids)
     

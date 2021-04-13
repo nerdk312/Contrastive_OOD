@@ -6,7 +6,7 @@ from Contrastive_uncertainty.toy_example.models.toy_encoder import Backbone
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k
 from Contrastive_uncertainty.toy_example.models.toy_module import Toy
 
-class SoftmaxToy(Toy):
+class AlignmentUniformityToy(Toy):
     def __init__(self,
         datamodule,
         optimizer:str = 'sgd',
@@ -42,19 +42,20 @@ class SoftmaxToy(Toy):
     def loss_function(self, batch, auxillary_data=None):
         
         (img_1, img_2), labels, indices = batch
-        logits = self.forward(img_1, labels)
-        loss = F.cross_entropy(logits, labels.long())
-        acc1, = precision_at_k(logits, labels)
-        #import ipdb; ipdb.set_trace()
-        metrics = {'Loss': loss, 'Accuracy @ 1': acc1}
+        z1,z2 =  self.feature_vector(img_1),self.feature_vector(img_2) 
+        uniformity_loss = self.uniform_loss(z1)
+        alignment_loss =self.align_loss(z1, z2)
+        loss = uniformity_loss +alignment_loss
+        metrics = {'Loss': loss,'Uniformity Loss':uniformity_loss, 'Alignment Loss':alignment_loss}
         return metrics
 
 
-    def forward(self, data, labels):
-        z = self.encoder(data)
-        z = F.relu(z)
-        logits = self.classifier(z)
-        return logits
+    # Uniformity and alignment
+    def uniform_loss(self,x, t=2):
+        return torch.pdist(x, p=2).pow(2).mul(-t).exp().mean().log()
+    
+    def align_loss(self,x, y, alpha=2):
+        return (x - y).norm(p=2, dim=1).pow(alpha).mean()
     
     def feature_vector(self, data):
         z = self.encoder(data)
@@ -101,8 +102,3 @@ class SoftmaxToy(Toy):
     
         return distances  # shape: (batch, num classes)
         
-        
-    '''
-    def on_init(self, datamodule):
-        return None
-    '''
