@@ -67,10 +67,16 @@ class NNCLToy(Toy):
         return z
 
     def cluster_data(self,data):
+        pseudo_labels = []
         features = self.compute_features(data)
-        pseudo_labels = self.get_clusters(features, 10)
-        pseudo_labels = torch.from_numpy(pseudo_labels).to(self.device) 
+        for i in [10,20]:
+            pseudo = self.get_clusters(features, i)
+            pseudo = torch.from_numpy(pseudo).to(self.device)
+            pseudo_labels.append(pseudo)
+      
         return pseudo_labels
+
+
     # https://github.com/HobbitLong/SupContrast/blob/master/main_supcon.py
     # https://github.com/HobbitLong/SupContrast/blob/8d0963a7dbb1cd28accb067f5144d61f18a77588/losses.py#L11
     def forward(self, features, labels=None, mask=None):
@@ -164,14 +170,18 @@ class NNCLToy(Toy):
 
     def loss_function(self, batch, cluster_result=None):
         metrics = {}
+        loss = 0 
         (img_1,img_2), labels,indices = batch
+        # pseudo labels is a list of the values in the tensor
         pseudo_labels_1, pseudo_labels_2 = self.cluster_data(img_1), self.cluster_data(img_2)
         imgs = torch.cat([img_1, img_2], dim=0)
         bsz = labels.shape[0]
         features = self.encoder(imgs)
         ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
         features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
-        loss = (self.forward(features, pseudo_labels_1) + self.forward(features, pseudo_labels_2))/2
+        # go through all the labels for the different clustering results
+        for i in range(len(pseudo_labels_1)):
+            loss += (self.forward(features, pseudo_labels_1[i]) + self.forward(features, pseudo_labels_2[i]))/2
         metrics = {'Loss': loss}
   
         #import ipdb; ipdb.set_trace()

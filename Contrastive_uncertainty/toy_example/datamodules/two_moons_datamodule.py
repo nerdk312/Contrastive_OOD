@@ -37,7 +37,7 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
 
             self.train_data = (self.train_data - self.mean)/self.std #  Normalise the data
 
-            self.val_data, self.val_labels = sklearn.datasets.make_moons(n_samples=1000, noise=self.noise)
+            self.val_data, self.val_labels = sklearn.datasets.make_moons(n_samples=2000, noise=self.noise)
             self.val_data = (self.val_data - self.mean)/self.std
 
         if stage == 'test' or stage is None:
