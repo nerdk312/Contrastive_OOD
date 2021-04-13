@@ -10,7 +10,7 @@ from Contrastive_uncertainty.PCL.callbacks.ood_callbacks import ImagePredictionL
 from Contrastive_uncertainty.PCL.callbacks.visualisation_callbacks import Visualisation
 from Contrastive_uncertainty.PCL.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 def run_name(config):
-    run_name = 'Epochs:'+ str(config['epochs']) +  '_lr:' + f"{config['learning_rate']:.3e}" + '_bsz:' + str(config['bsz']) +  '_classifier:' +str(config['classifier']) + '_seed:' +str(config['seed'])  
+    run_name = 'Epochs:'+ str(config['epochs']) +  '_lr:' + f"{config['learning_rate']:.3e}" + '_bsz:' + str(config['bsz']) + '_seed:' +str(config['seed'])  
     return run_name
 
 def Evaluation_run_name(config):

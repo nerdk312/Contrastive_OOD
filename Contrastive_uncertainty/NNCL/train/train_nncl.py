@@ -30,15 +30,15 @@ def training(params):
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
-    
+    ''' 
     desired_callbacks = [callback_dict['Confusion_matrix'],callback_dict['ROC'],
                         callback_dict['Reliability'],callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean'],
                         callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Centroid'],callback_dict['Uniformity'],
                         callback_dict['SupCon']]
+    '''
     
-    
-    #desired_callbacks = []
+    desired_callbacks = []
 
     model = NNCLModule(datamodule=datamodule,optimizer=config['optimizer'],
     learning_rate=config['learning_rate'],momentum=config['momentum'],
@@ -47,8 +47,7 @@ def training(params):
     num_negatives=config['num_negatives'],
     encoder_momentum=config['encoder_momentum'],softmax_temperature=config['softmax_temperature'],
     num_cluster=config['num_cluster'], use_mlp=config['use_mlp'],
-    num_channels=channels, classifier=config['classifier'],
-    normalize=config['normalize'], instance_encoder=config['instance_encoder'],
+    num_channels=channels, instance_encoder=config['instance_encoder'],
     pretrained_network=config['pretrained_network'])
         
 

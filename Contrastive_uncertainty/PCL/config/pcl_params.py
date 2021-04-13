@@ -1,4 +1,4 @@
-pcl_hparams = dict(
+nncl_hparams = dict(
 # optimizer args
 optimizer = 'sgd',
 learning_rate= 0.03,#3e-4,

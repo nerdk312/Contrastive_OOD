@@ -3,4 +3,4 @@ from Contrastive_uncertainty.NNCL.config.nncl_params import nncl_hparams
 
 
 # calls the function
-training(pcl_hparams)
+training(nncl_hparams)

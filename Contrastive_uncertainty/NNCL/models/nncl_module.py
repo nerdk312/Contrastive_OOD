@@ -15,7 +15,7 @@ import faiss
 
 
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.NNCL.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
+from Contrastive_uncertainty.NNCL.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 
 from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
 
@@ -37,24 +37,22 @@ class base_module(pl.LightningModule):
         self.class_names = [v for k,v in class_dict.items()]
         self.datamodule = datamodule # Used for the purpose of obtaining data loader for the case of epoch starting
         
-
-        
-        
+                
     def training_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
+        metrics = self.loss_function(batch)
         for k,v in metrics.items():
                 if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
         loss = metrics['Loss']
         return loss
         
     def validation_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
+        metrics = self.loss_function(batch)
         #import ipdb; ipdb.set_trace()
         for k,v in metrics.items():
                 if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
         
     def test_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
+        metrics = self.loss_function(batch)
         for k,v in metrics.items():
                 if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
 
@@ -170,7 +168,7 @@ class NNCLModule(base_module):
     def compute_features(self, data): # features for clustering
         features = self.encoder_k.group_forward(data) # vector for group clustering
         features = nn.functional.normalize(features, dim=1)
-        features = features.cpu().numpy() # numpy required for clustering
+        features = features.cpu() # numpy required for clustering
         return features
     
     
@@ -260,7 +258,7 @@ class NNCLModule(base_module):
         # placeholder for clustering result
         cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
         for num_cluster in self.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
-            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
+            cluster_result['im2cluster'].append(torch.zeros(features.shape[0],dtype=torch.long,device = self.device))
             cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
             cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
         
@@ -328,11 +326,11 @@ class NNCLModule(base_module):
 
         for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
             similarity = torch.mm(features, prototypes.t()) # Measure similarity between features from online encoder and prototypes from the other encoder
-            proto_loss = nn.CrossEntropyLoss()(similarity,im2_cluster)
+            proto_loss = nn.CrossEntropyLoss()(similarity,im2cluster)
 
             loss_proto += proto_loss
         
-        loss_proto = loss_proto/(len(num_cluster))
+        loss_proto = loss_proto/(len(self.hparams.num_cluster))
         return loss_proto
 
         '''
@@ -361,7 +359,7 @@ class NNCLModule(base_module):
 
         return proto_logits, proto_labels
         '''
-    def loss_function(self,batch,cluster_result=None):
+    def loss_function(self,batch):
         #metrics = {}
         (img_1,img_2), labels,indices = batch
         # obtains cluster centroids information for the first view and the second view
