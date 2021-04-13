@@ -17,7 +17,7 @@ weight_decay = 1e-4,
 # Miscellaneous arguments
 seed = 26,
 epochs = 50,
-bsz = 128,
+bsz = 512,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
 model = 'NNCL',

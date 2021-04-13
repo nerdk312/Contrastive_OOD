@@ -162,28 +162,17 @@ class NNCLToy(Toy):
         _, ypred = kmeans.assign(ftrain)
         return ypred
 
-    def loss_function(self,batch,cluster_result=None):
+    def loss_function(self, batch, cluster_result=None):
         metrics = {}
         (img_1,img_2), labels,indices = batch
-        pseudo_labels = self.cluster_data(img_1)
+        pseudo_labels_1, pseudo_labels_2 = self.cluster_data(img_1), self.cluster_data(img_2)
         imgs = torch.cat([img_1, img_2], dim=0)
         bsz = labels.shape[0]
         features = self.encoder(imgs)
         ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
         features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
-        loss = self.forward(features, pseudo_labels)
-        
-        import ipdb; ipdb.set_trace()
-        return metrics
-
-    def loss_function(self, batch ,auxillary_data=None):
-        (img_1, img_2), labels, indices = batch
-        imgs = torch.cat([img_1, img_2], dim=0)
-        bsz = labels.shape[0]
-        features = self.encoder(imgs)
-        ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
-        features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
-        loss = self.forward(features, labels)
-        metrics = {'Loss':loss}
-
+        loss = (self.forward(features, pseudo_labels_1) + self.forward(features, pseudo_labels_2))/2
+        metrics = {'Loss': loss}
+  
+        #import ipdb; ipdb.set_trace()
         return metrics
