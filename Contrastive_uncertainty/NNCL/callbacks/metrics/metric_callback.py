@@ -69,7 +69,7 @@ def select(metricname, pl_module):
         return dists.Metric(mode)
     elif 'rho_spectrum' in metricname:
         mode = int(metricname.split('@')[-1])
-        embed_dim = 512 #pl_module.hparams.z_dim
+        embed_dim = pl_module.hparams.emb_dim  #pl_module.hparams.z_dim
         return rho_spectrum.Metric(embed_dim, mode=mode)
     elif 'uniformity' in metricname:
         t = 2
@@ -81,7 +81,7 @@ def select(metricname, pl_module):
 class MetricLogger(pl.Callback):
     def __init__(self, metric_names,dataloader,evaltypes,quick_callback):
         super().__init__()
-        self.metric_names    = metric_names # Nawid - names of the metrics to compute
+        self.metric_names = metric_names  # Nawid - names of the metrics to compute
         self.dataloader = dataloader
         self.evaltypes = evaltypes
         self.quick_callback = quick_callback
@@ -112,7 +112,7 @@ class MetricLogger(pl.Callback):
                 target_labels.extend(target.numpy().tolist()) # Nawid- obtain labels
                 #embeddings = model.embedding_encoder.update_embeddings(input_img.to(self.pars['device']),target.to(self.pars['device']))
                 #out = model.online_encoder(input_img.to(self.pars['device']),embeddings) # Nawid - Obtain output
-                out = pl_module.feature_vector(input_img.to(pl_module.device)) # Nawid - Need to use instance embed for DUQP due to outputtng a 3D tensor
+                out = pl_module.callback_vector(input_img.to(pl_module.device)) # Nawid - Need to use instance embed for DUQP due to outputtng a 3D tensor
                 if isinstance(out, tuple): out, *aux_f = out #  Nawid - if the output is a tuple, separate the output
 
                 ### Include embeddings of all output features

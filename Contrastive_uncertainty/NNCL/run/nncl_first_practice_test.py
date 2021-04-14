@@ -2,8 +2,8 @@ from Contrastive_uncertainty.NNCL.train.train_nncl import training
 from Contrastive_uncertainty.NNCL.config.nncl_params import nncl_hparams
 
 
-nncl_hparams['bsz'] = 128
-nncl_hparams['num_cluster'] = [10]
+nncl_hparams['bsz'] = 512
+nncl_hparams['num_cluster'] = [10,20]
 nncl_hparams['instance_encoder'] = 'resnet18'
 nncl_hparams['epochs'] = 1
 nncl_hparams['fast_run'] = False

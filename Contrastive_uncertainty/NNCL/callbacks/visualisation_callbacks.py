@@ -95,7 +95,7 @@ class Visualisation(pl.Callback): # General class for visualisation
                 images, *aug_imgs = images
             
             images = images.to(pl_module.device)  # cuda(non_blocking=True)
-            features.append(pl_module.feature_vector(images))  # Obtain features
+            features.append(pl_module.callback_vector(images))  # Obtain features
             collated_labels.append(labels)
 
         features = torch.cat(features)

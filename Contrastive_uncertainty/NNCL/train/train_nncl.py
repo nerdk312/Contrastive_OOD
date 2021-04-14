@@ -37,8 +37,11 @@ def training(params):
                         callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Centroid'],callback_dict['Uniformity'],
                         callback_dict['SupCon']]
     '''
+    desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
+                        callback_dict['Mahalanobis'],callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']]
     
-    desired_callbacks = []
+    
+    #desired_callbacks = []
 
     model = NNCLModule(datamodule=datamodule,optimizer=config['optimizer'],
     learning_rate=config['learning_rate'],momentum=config['momentum'],

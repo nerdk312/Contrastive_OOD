@@ -214,7 +214,7 @@ class MMD_distance(pl.Callback):
                 data = data.to(pl_module.device)
 
                 # Nawid - distance which is the score as well as the prediciton for the accuracy is obtained
-                output = pl_module.feature_vector(data) # representation of the data
+                output = pl_module.callback_vector(data) # representation of the data
                 
                 uniform_samples = uniform_distribution.sample(output.shape)
                 uniform_samples = torch.nn.functional.normalize(uniform_samples,dim=1) # obtain normalized representaitons on a hypersphere
@@ -257,7 +257,7 @@ class Uniformity(pl.Callback):
             if isinstance(img, tuple) or isinstance(img, list):
                     img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
             img = img.to(pl_module.device)
-            features.append(pl_module.feature_vector(img))
+            features.append(pl_module.callback_vector(img))
         
         features = torch.cat(features) # Obtaint the features for the representation
         return features
@@ -322,7 +322,7 @@ class Centroid_distance(pl.Callback):
             if isinstance(data,tuple) or isinstance(data,list):
                 data, *aug_data = data
                 data, labels =  data.to(pl_module.device), labels.to(pl_module.device)
-                latent_vector = pl_module.feature_vector(data)
+                latent_vector = pl_module.callback_vector(data)
 
             distances = self.distance(pl_module,latent_vector,optimal_centroids)
             #import ipdb;ipdb.set_trace()
@@ -365,7 +365,7 @@ class Centroid_distance(pl.Callback):
 
     @torch.no_grad()
     def update_embeddings(self, pl_module, x, labels): # Assume y is one hot encoder
-        z = pl_module.feature_vector(x) # (batch,features)
+        z = pl_module.callback_vector(x) # (batch,features)
         y = F.one_hot(labels,num_classes = pl_module.num_classes).float()
         # compute sum of embeddings on class by class basis
 

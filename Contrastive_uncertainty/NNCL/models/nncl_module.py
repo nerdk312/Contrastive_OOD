@@ -39,6 +39,7 @@ class base_module(pl.LightningModule):
         
                 
     def training_step(self, batch, batch_idx):
+        self._momentum_update_key_encoder()
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
                 if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
@@ -56,7 +57,7 @@ class base_module(pl.LightningModule):
         for k,v in metrics.items():
                 if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
 
-    def loss_function(self, batch, auxillary_data=None):
+    def loss_function(self, batch):
         raise NotImplementedError
 
     def configure_optimizers(self):
@@ -69,6 +70,8 @@ class base_module(pl.LightningModule):
                                         weight_decay=self.hparams.weight_decay)
         return optimizer
 
+    def _momentum_update_key_encoder(self):
+        raise NotImplementedError
 
 
 
@@ -181,6 +184,10 @@ class NNCLModule(base_module):
         """
         z = self.encoder_q.representation_output(x)
         #z = nn.functional.normalize(z, dim=1)
+        return z
+    
+    def callback_vector(self,x): # Vector method which should be used in the callbacks
+        z = self.encoder_k.group_forward(x)
         return z
     
 
@@ -314,7 +321,7 @@ class NNCLModule(base_module):
         # dequeue and enqueue
         self._dequeue_and_enqueue(k) # Nawid - queue values
         return logits, labels
-
+    '''
     def group_discrimination(self,img, cluster_result):
         proto_labels = []
         proto_logits = []
@@ -325,7 +332,11 @@ class NNCLModule(base_module):
 
 
         for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+            # shape of prototypes is (cluster_num,embedding size)
+            # (im2cluster :shape [batch], numbers from 0 to clunster num)
             similarity = torch.mm(features, prototypes.t()) # Measure similarity between features from online encoder and prototypes from the other encoder
+            # similarity shape (batch size, cluster num)
+            
             proto_loss = nn.CrossEntropyLoss()(similarity,im2cluster)
 
             loss_proto += proto_loss
@@ -333,32 +344,6 @@ class NNCLModule(base_module):
         loss_proto = loss_proto/(len(self.hparams.num_cluster))
         return loss_proto
 
-        '''
-
-            # get positive prototypes
-            pos_proto_id = im2cluster[index] # Nawid - get the true cluster assignment for each of the different samples
-            pos_prototypes = prototypes[pos_proto_id] # Nawid- prototypes is a kxd array of k , d dimensional clusters. Therefore this chooses the true clusters for the positive samples. Therefore this is a [B x d] matrix
-            # sample negative prototypes
-            all_proto_id = [i for i in range(im2cluster.max())] # Nawid - obtains all the cluster ids which were present
-            neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist()) # Nawid - all the negative clusters are the set of all prototypes minus the set of all the negative prototypes
-            neg_proto_id = sample(neg_proto_id, self.hparams.num_negatives) #sample r negative prototypes
-            #neg_proto_id = neg_proto_id.to(self.device)
-            neg_prototypes = prototypes[neg_proto_id] # Nawid - sample negative prototypes
-            proto_selected = torch.cat([pos_prototypes, neg_prototypes],dim=0) # Nawid - concatenate positive and negative prototypes, so this is  a [bxd] concatenated with [rxd] to make a [b + r xd]
-            # compute prototypical logits
-            logits_proto = torch.mm(q,proto_selected.t().to(self.device)) # Nawid - dot product between query and the prototypes (where the selected prototypes are transposed). The matrix multiplication is  [b x d] . [dx b +r] to make a [b x b +r]
-            # targets for prototype assignment
-            labels_proto = torch.linspace(0, q.size(0)-1, steps=q.size(0),device = self.device).long()# Nawid - targets for the prototypes, this is a 1D vector with values from 0 to q-1 which represents that the value which shows that the diagonal should be the largest value
-            # scaling temperatures for the selected prototypes
-            #import ipdb; ipdb.set_trace()
-            temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
-            logits_proto /= temp_proto
-            proto_labels.append(labels_proto)
-            proto_logits.append(logits_proto)
-
-
-        return proto_logits, proto_labels
-        '''
     def loss_function(self,batch):
         #metrics = {}
         (img_1,img_2), labels,indices = batch
@@ -379,4 +364,67 @@ class NNCLModule(base_module):
         
         metrics = {'Loss' : loss, 'Instance Loss' : loss_instance, 'Proto Loss' : loss_proto}
         return metrics
+    '''
+    
+    def group_discrimination(self,img, cluster_result):
+        proto_labels = []
+        proto_logits = []
+
+        features = self.encoder_q.group_forward(img)
+        features = nn.functional.normalize(features, dim=1)
+
+
+        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+            # shape of prototypes is (cluster_num,embedding size)
+            # (im2cluster :shape [batch], numbers from 0 to clunster num)
+            similarity = torch.mm(features, prototypes.t()) # Measure similarity between features from online encoder and prototypes from the other encoder
+            # similarity shape (batch size, cluster num)
+            
+            proto_labels.append(im2cluster)
+            proto_logits.append(similarity)
         
+        return proto_logits, proto_labels
+
+    def loss_function(self,batch):
+        metrics = {}
+        (img_1,img_2), labels,indices = batch
+        # obtains cluster centroids information for the first view and the second view
+        cluster_view_1,cluster_view_2 = self.cluster_data(img_1), self.cluster_data(img_2)
+
+        output, target = self.instance_discrimination(im_q=img_1,im_k=img_2)
+        proto_logits_1, proto_labels_1 = self.group_discrimination(img_2, cluster_view_1)
+        proto_logits_2, proto_labels_2 = self.group_discrimination(img_1, cluster_view_2)
+
+        # InfoNCE loss
+        loss_instance = F.cross_entropy(output, target) # Nawid - instance based info NCE loss 
+        acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
+        instance_metrics = {'Instance Accuracy @ 1': acc1, 'Instance Accuracy @ 5':acc5}
+        metrics.update(instance_metrics)
+
+        loss_proto = 0
+        loss_proto_view_1 = 0
+        loss_proto_view_2 = 0
+        for index, (proto_out_1, proto_target_1,proto_out_2,proto_target_2) in enumerate(zip(proto_logits_1,proto_labels_1,proto_logits_2,proto_labels_2)):
+            # Calculate loss and accuracy for view 1
+            loss_proto_view_1 += F.cross_entropy(proto_out_1,proto_target_1)
+            accp_view_1 = precision_at_k(proto_out_1, proto_target_1)[0]
+            # Calculate loss and accuracy for view 2
+            loss_proto_view_2 += F.cross_entropy(proto_out_2,proto_target_2)
+            accp_view_2 = precision_at_k(proto_out_2, proto_target_2)[0]
+            # Calculate avg accuracy across views
+            avg_accp = (accp_view_1 + accp_view_2)/2
+
+            proto_metrics = {'Accuracy @ 1 '+str(self.hparams.num_cluster[index]): avg_accp}
+            metrics.update(proto_metrics)
+
+        # Find average of each view across the different clusterings
+        loss_proto_view_1 /= len(self.hparams.num_cluster)
+        loss_proto_view_2 /= len(self.hparams.num_cluster)
+
+        loss_proto = (loss_proto_view_1 + loss_proto_view_2)/2
+        loss = loss_instance + loss_proto
+
+        loss_metrics = {'Loss' : loss, 'Instance Loss' : loss_instance, 'Proto Loss' : loss_proto}
+        metrics.update(loss_metrics)
+        
+        return metrics

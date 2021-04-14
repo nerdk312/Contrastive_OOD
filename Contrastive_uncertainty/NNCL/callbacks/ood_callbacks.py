@@ -397,7 +397,7 @@ class Mahalanobis_OOD(pl.Callback):
             
             img, label = img.to(pl_module.device), label.to(pl_module.device)
 
-            features += list(pl_module.feature_vector(img).data.cpu().numpy())
+            features += list(pl_module.callback_vector(img).data.cpu().numpy())
             labels += list(label.data.cpu().numpy())
 
             if verbose and not index % 50:
