@@ -38,7 +38,7 @@ def training(params):
     
     model = Model_selection(datamodule, config)
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    desired_callbacks = []#[callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
+    desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
 
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
         

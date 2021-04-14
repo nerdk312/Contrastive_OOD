@@ -48,7 +48,7 @@ class OVAUniformityToy(Toy):
 
         z =  self.feature_vector(img_1)
         uniformity_loss = self.uniform_loss(z)
-        loss = 0.9*distance_loss + 0.1*uniformity_loss
+        loss = 0.8*distance_loss + 0.2*uniformity_loss
         '''
         correct = torch.argmax(y_pred[:original_xs_length].detach(),dim=1).view(original_xs_length,-1) == labels # look at calculating the correct values only for the case of the true data
         accuracy = torch.mean(correct.float())

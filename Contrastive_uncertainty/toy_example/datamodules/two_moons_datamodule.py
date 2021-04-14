@@ -32,16 +32,16 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         '''called one each GPU separately - stage defines if we are at fit or test step'''
         # we set up only relevant datasets when stage is specified (automatically set by Pytorch-Lightning)
         if stage == 'fit' or stage is None:
-            self.train_data, self.train_labels = sklearn.datasets.make_moons(n_samples=7000, noise=self.noise)
+            self.train_data, self.train_labels = sklearn.datasets.make_moons(n_samples=1000, noise=self.noise)
             self.mean, self.std = np.mean(self.train_data,axis = 0), np.std(self.train_data,axis = 0) # calculate the mean and std along a particular dimension
 
             self.train_data = (self.train_data - self.mean)/self.std #  Normalise the data
 
-            self.val_data, self.val_labels = sklearn.datasets.make_moons(n_samples=2000, noise=self.noise)
+            self.val_data, self.val_labels = sklearn.datasets.make_moons(n_samples=600, noise=self.noise)
             self.val_data = (self.val_data - self.mean)/self.std
 
         if stage == 'test' or stage is None:
-            self.test_data, self.test_labels = sklearn.datasets.make_moons(n_samples=2000, noise=self.noise)
+            self.test_data, self.test_labels = sklearn.datasets.make_moons(n_samples=600, noise=self.noise)
             self.test_data = (self.test_data - self.mean)/self.std
 
         self.train_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)

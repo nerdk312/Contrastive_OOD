@@ -1,9 +1,9 @@
 toy_hparams = dict(
 hidden_dim = 20,
-emb_dim = 20,
-num_negatives = 128,
+emb_dim = 2,
+num_negatives = 1024,
 encoder_momentum = 0.999,
-softmax_temperature = 0.07,
+softmax_temperature = 1.0,#0.07,
 num_classes = 2,
 
 
@@ -16,11 +16,11 @@ weight_decay = 1e-4,
 
 # Miscellaneous arguments
 seed = 26,
-epochs = 50,
-bsz = 1024,
+epochs = 25,
+bsz = 128,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
-model = 'NNCL',
+model = 'OVAUniform',
 
 # Trainer configurations
 fast_run = False,

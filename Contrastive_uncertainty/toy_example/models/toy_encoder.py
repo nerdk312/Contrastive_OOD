@@ -24,7 +24,7 @@ class Backbone(nn.Module):
         '''        
         self.fc1 = nn.Linear(2, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, emb_dim)
         
         #self.apply(weight_init)
         

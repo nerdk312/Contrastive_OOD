@@ -15,7 +15,7 @@ use_mlp = True,
 instance_encoder = 'resnet50',
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
-bsz = 128,
+bsz = 256,
 dataset = 'FashionMNIST',
 OOD_dataset = 'MNIST',
 
