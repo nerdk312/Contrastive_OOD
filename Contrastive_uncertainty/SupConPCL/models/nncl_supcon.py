@@ -72,7 +72,7 @@ class base_module(pl.LightningModule):
 
 
 
-class NNCLModule(base_module):
+class SupConPCLModule(base_module):
     def __init__(self,
         datamodule,
         optimizer:str = 'sgd',
@@ -169,8 +169,25 @@ class NNCLModule(base_module):
 
         self.queue_ptr[0] = ptr
 
+    def forward(self,img_1,img_2,pseudo_labels):
+         # compute query features
+        q = self.encoder_q(img_q)  # queries: NxC
+        q = nn.functional.normalize(q, dim=1)
+        # compute key features
+        with torch.no_grad():  # no gradient to keys
+            self._momentum_update_key_encoder()  # update the key encoder
+            k = self.encoder_k(img_k)  # keys: NxC
+            k = nn.functional.normalize(k, dim=1)
+
+
+        
         
 
+
+        
+        
+
+    '''
 
     # https://github.com/HobbitLong/SupContrast/blob/master/main_supcon.py
     # https://github.com/HobbitLong/SupContrast/blob/8d0963a7dbb1cd28accb067f5144d61f18a77588/losses.py#L11
@@ -208,16 +225,16 @@ class NNCLModule(base_module):
 
         contrast_count = features.shape[1]
         contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)
-        '''
-        if self.hparams.contrast_mode == 'one':
-            anchor_feature = features[:, 0] # Nawid - anchor is only the index itself and only the single view
-            anchor_count = 1 # Nawid - only one anchor
-        elif self.hparams.contrast_mode == 'all':
-            anchor_feature = contrast_feature 
-            anchor_count = contrast_count # Nawid - all the different views are the anchors
-        else:
-            raise ValueError('Unknown mode: {}'.format(self.hparams.contrast_mode))
-        '''
+        
+        #if self.hparams.contrast_mode == 'one':
+        #    anchor_feature = features[:, 0] # Nawid - anchor is only the index itself and only the single view
+        #    anchor_count = 1 # Nawid - only one anchor
+        #elif self.hparams.contrast_mode == 'all':
+        #    anchor_feature = contrast_feature 
+        #    anchor_count = contrast_count # Nawid - all the different views are the anchors
+        #else:
+        #    raise ValueError('Unknown mode: {}'.format(self.hparams.contrast_mode))
+        #
         
         anchor_feature = contrast_feature 
         anchor_count = contrast_count # Nawid - all the different views are the anchors
@@ -253,7 +270,41 @@ class NNCLModule(base_module):
         loss = loss.view(anchor_count, batch_size).mean()
         
         return loss
-    
+    '''
+    '''
+    def moco_forward(model, img_q, img_k):
+    """
+    Input:
+        im_q: a batch of query images
+        im_k: a batch of key images
+    Output:
+        logits, targets
+    """
+    # compute query features
+    q = model.encoder_q(img_q)  # queries: NxC
+    q = nn.functional.normalize(q, dim=1)
+    # compute key features
+    with torch.no_grad():  # no gradient to keys
+        model._momentum_update_key_encoder()  # update the key encoder
+        k = model.encoder_k(img_k)  # keys: NxC
+        k = nn.functional.normalize(k, dim=1)
+    # compute logits
+    # Einstein sum is more intuitive
+    # positive logits: Nx1
+    l_pos = torch.einsum('nc,nc->n', [q, k]).unsqueeze(-1) # Nawid - dot product between query and queues
+    # negative logits: NxK
+    l_neg = torch.einsum('nc,ck->nk', [q, model.queue.clone().detach()])
+    # logits: Nx(1+K)
+    logits = torch.cat([l_pos, l_neg], dim=1)
+    # apply temperature
+    logits /= model.hparams.softmax_temperature
+    # labels: positive key indicators
+    labels = torch.zeros(logits.shape[0], dtype=torch.long) # Nawid - class zero is always the correct class, which corresponds to the postiive examples in the logit tensor (due to the positives being concatenated first)
+    labels = labels.type_as(logits)
+    # dequeue and enqueue
+    model._dequeue_and_enqueue(k)
+    return logits, labels
+    '''
     
 
     
@@ -268,31 +319,7 @@ class NNCLModule(base_module):
         #z = nn.functional.normalize(z, dim=1)
         return z
     
-    def class_vector(self, x):
-        """
-        Input:
-            x: a batch of images for classification
-        Output:
-            z: feature vector for the clustering
-        """
-        # compute query features
-        z = self.feature_vector(x) # Gets the feature map representations which I use for the purpose of pretraining
-        z = F.relu(self.encoder_q.class_fc1(z))
-        
-        z = self.encoder_q.class_fc2(z)
-        z = nn.functional.normalize(z, dim=1)
-        return z
     
-    def instance_vector(self, x):
-        """
-        Input:
-            x: a batch of images for classification
-        Output:
-            z: feature vector for the clustering
-        """
-        # compute query features
-        z = self.encoder(x) # feature vector for instance discrimination task
-        return z
 
 
     @torch.no_grad()
@@ -305,6 +332,7 @@ class NNCLModule(base_module):
             images = images.to(self.device)
 
             feat = self.encoder_k(images)  # Nawid - obtain features for the task
+            feat = nn.normalize(feat, dim=1) # Obtain 12 normalised features for clustering
             features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
 
@@ -393,10 +421,12 @@ class NNCLModule(base_module):
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
         return cluster_result
 
-    '''
+    
     def loss_function(self,batch,cluster_result=None):
-        metrics = {}
         (img_1,img_2), labels,indices = batch
+
+
+
 
         # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
         output, target, output_proto, target_proto = self(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
@@ -421,7 +451,7 @@ class NNCLModule(base_module):
         additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
         metrics.update(additional_metrics)
         return metrics
-        '''
+        
     
 
     def on_train_epoch_start(self):

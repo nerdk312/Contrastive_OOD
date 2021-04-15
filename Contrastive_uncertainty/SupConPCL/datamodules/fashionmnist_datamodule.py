@@ -23,7 +23,7 @@ class FashionMNISTDataModule(LightningDataModule):
     def __init__(
             self,
             data_dir: str = None,
-            val_split: int = 5000,
+            val_split: int = 34400,#5000,
             num_workers: int = 16,
             batch_size: int = 32,
             seed: int = 42,
@@ -110,23 +110,30 @@ class FashionMNISTDataModule(LightningDataModule):
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
+        
         train_length = len(dataset)
         self.train_dataset, _ = random_split(
             dataset,
             [train_length - self.val_split, self.val_split],
             generator=torch.Generator().manual_seed(self.seed)
         )
+        
+        self.datasize =train_length - self.val_split
+        
 
     def setup_val(self):
         # val transforms use the test transforms in this case
         val_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
+        
+        
         train_length = len(dataset)
-        _, self.val_dataset = random_split(
+        self.val_dataset, _ = random_split(
             dataset,
             [train_length - self.val_split, self.val_split],
             generator=torch.Generator().manual_seed(self.seed)
         )
+        
         
 
     def setup_test(self):
@@ -164,6 +171,7 @@ class FashionMNISTDataModule(LightningDataModule):
             pin_memory=True,
             drop_last=True
         )
+        #import ipdb; ipdb.set_trace()
         return loader
 
     def test_dataloader(self):

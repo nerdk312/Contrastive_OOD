@@ -313,10 +313,11 @@ class CustomResNet(ResNet):
         self.maxpool = nn.Identity()
         # Branch for the case of instance discrimination
         self.fc = nn.Linear(512 * block.expansion, latent_size)
+        '''
         # Branch for the case of group discrimination
         self.group_fc1 = nn.Linear(512 * block.expansion, latent_size)
         self.group_fc2 = nn.Linear(latent_size,latent_size)
-        
+        '''        
 
     # Nawid - made new function to obtain the representation of the data
     def representation_output(self,x:Tensor)-> Tensor:
@@ -333,7 +334,7 @@ class CustomResNet(ResNet):
         x = self.avgpool(x)
         representation = torch.flatten(x, 1)
         return representation
-    
+    '''
     # Output obtains the representation for a specific group task
     def group_forward(self, x: Tensor) -> Tensor:
         x = self.representation_output(x) # Gets the feature map representations which I use for the purpose of pretraining
@@ -342,6 +343,7 @@ class CustomResNet(ResNet):
 
         return z 
     '''
+    '''
     def class_forward(self,x: Tensor) -> Tensor:
         x = self.representation_output(x) # Gets the feature map representations which I use for the purpose of pretraining
         x = F.relu(self.class_fc1(x))
@@ -349,6 +351,7 @@ class CustomResNet(ResNet):
 
         return logits 
     '''
+
 def _custom_resnet(
     arch: str,
     latent_size:int,

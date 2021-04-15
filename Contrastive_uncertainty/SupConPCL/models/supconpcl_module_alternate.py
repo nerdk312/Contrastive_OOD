@@ -15,9 +15,9 @@ import faiss
 
 
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
+from Contrastive_uncertainty.SupConPCL.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 
-from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
+from Contrastive_uncertainty.SupConPCL.callbacks.general_callbacks import quickloading
 
 
 
@@ -37,26 +37,27 @@ class base_module(pl.LightningModule):
         self.class_names = [v for k,v in class_dict.items()]
         self.datamodule = datamodule # Used for the purpose of obtaining data loader for the case of epoch starting
         
-        
+                
     def training_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
+        self._momentum_update_key_encoder()
+        metrics = self.loss_function(batch)
         for k,v in metrics.items():
                 if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
         loss = metrics['Loss']
         return loss
         
     def validation_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
+        metrics = self.loss_function(batch)
         #import ipdb; ipdb.set_trace()
         for k,v in metrics.items():
                 if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
         
     def test_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
+        metrics = self.loss_function(batch)
         for k,v in metrics.items():
                 if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
 
-    def loss_function(self, batch, auxillary_data=None):
+    def loss_function(self, batch):
         raise NotImplementedError
 
     def configure_optimizers(self):
@@ -69,10 +70,12 @@ class base_module(pl.LightningModule):
                                         weight_decay=self.hparams.weight_decay)
         return optimizer
 
+    def _momentum_update_key_encoder(self):
+        raise NotImplementedError
 
 
 
-class SupConPCLModule(base_module):
+class NNCLModule(base_module):
     def __init__(self,
         datamodule,
         optimizer:str = 'sgd',
@@ -82,7 +85,7 @@ class SupConPCLModule(base_module):
         num_classes:int = 10,
         class_dict:dict = None,
         emb_dim: int = 128,
-        num_negatives: int = 65536,
+        num_negatives: int = 65536, # 4096
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
         num_cluster: list = [100],
@@ -101,35 +104,30 @@ class SupConPCLModule(base_module):
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder_q, self.encoder_k = self.init_encoders()
-
         if use_mlp:  # hack: brute-force replacement
             dim_mlp = self.encoder_q.fc.weight.shape[1]
             self.encoder_q.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_q.fc)
             self.encoder_k.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_k.fc)
-        
+
+        if self.hparams.pretrained_network is not None:
+            self.encoder_loading(self.hparams.pretrained_network)
+
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
             param_k.data.copy_(param_q.data)  # initialize
             # Double checking if the training of the model was done correctly
             #param_q.requires_grad = False
             param_k.requires_grad = False  # not update by gradient
 
-        
         # create the queue
-        dataset_size = datamodule.datasize
-        self.register_buffer("queue", torch.randn(emb_dim,dataset_size))
-        self.queue = nn.functional.normalize(self.queue, dim=0)
-        import ipdb; ipdb.set_trace()
-        #print('queue', self.queue.size())
-        '''
         self.register_buffer("queue", torch.randn(emb_dim, num_negatives))
         self.queue = nn.functional.normalize(self.queue, dim=0)
-        '''
-        # ptr shows the position in the queue for the data
-        self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
-        # Added index to show the label of the value in the queue, several dimensions to represent the value it is placed in all the clusters
-        self.register_buffer("queue_index", torch.zeros(len(self.hparams.num_cluster),num_negatives, dtype=torch.long))
+        self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
         
+        
+        
+        # Quick test of obtaining clusters (when using fast dev run)    
+        #self.auxillary_data = self.aux_data()
         
     def init_encoders(self):
         """
@@ -143,9 +141,9 @@ class SupConPCLModule(base_module):
             print('using resnet50')
             encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
             encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
-
+        
         return encoder_q, encoder_k
-    
+
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
         """
@@ -154,164 +152,28 @@ class SupConPCLModule(base_module):
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
             em = self.hparams.encoder_momentum
             param_k.data = param_k.data * em + param_q.data * (1. - em)
-    
-    @torch.no_grad()
-    def _dequeue_and_enqueue(self, keys,key_indices):
-        # gather keys before updating queue
 
+    @torch.no_grad()
+    def _dequeue_and_enqueue(self, keys):
+        # gather keys before updating queue
         batch_size = keys.shape[0]
 
         ptr = int(self.queue_ptr)
-        assert self.hparams.num_negatives % batch_size == 0  # for simplicity , num negatives is divisible by batch size
+        assert self.hparams.num_negatives % batch_size == 0  # for simplicity
 
         # replace the keys at ptr (dequeue and enqueue)
         self.queue[:, ptr:ptr + batch_size] = keys.T # Nawid - add the keys to the queue
-        
-        # Place the cluster assignments for the particular samples, # pos values im2cluster[index] gives [batch,1], which I could concatenate to get [batch, self.hparams.num_cluster] then concatenate to get num cluster 
-        self.queue_index[:, ptr:ptr + batch_size] = key_indices.T
-
         ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
 
         self.queue_ptr[0] = ptr
 
-    def forward(self,img_1,img_2,pseudo_labels):
-         # compute query features
-        q = self.encoder_q(img_q)  # queries: NxC
-        q = nn.functional.normalize(q, dim=1)
-        # compute key features
-        with torch.no_grad():  # no gradient to keys
-            self._momentum_update_key_encoder()  # update the key encoder
-            k = self.encoder_k(img_k)  # keys: NxC
-            k = nn.functional.normalize(k, dim=1)
-
-
-        
-        
-
-
-        
-        
-
-    '''
-
-    # https://github.com/HobbitLong/SupContrast/blob/master/main_supcon.py
-    # https://github.com/HobbitLong/SupContrast/blob/8d0963a7dbb1cd28accb067f5144d61f18a77588/losses.py#L11
-    def forward(self, features, labels=None, mask=None):
-        """Compute loss for model. If both `labels` and `mask` are None,
-        it degenerates to SimCLR unsupervised loss:
-        https://arxiv.org/pdf/2002.05709.pdf
-        Args:
-            features: hidden vector of shape [bsz, n_views, ...].
-            labels: ground truth of shape [bsz].
-            mask: contrastive mask of shape [bsz, bsz], mask_{i,j}=1 if sample j
-                has the same class as sample i. Can be asymmetric.
-        Returns:
-            A loss scalar.
-        """
-
-        if len(features.shape) < 3:
-            raise ValueError('`features` needs to be [bsz, n_views, ...],'
-                             'at least 3 dimensions are required')
-        if len(features.shape) > 3:
-            features = features.view(features.shape[0], features.shape[1], -1)
-
-        batch_size = features.shape[0]
-        if labels is not None and mask is not None:
-            raise ValueError('Cannot define both `labels` and `mask`')
-        elif labels is None and mask is None:
-            mask = torch.eye(batch_size, dtype=torch.float32, device = self.device)
-        elif labels is not None:
-            labels = labels.contiguous().view(-1, 1)
-            if labels.shape[0] != batch_size:
-                raise ValueError('Num of labels does not match num of features')
-            mask = torch.eq(labels, labels.T).float().to(self.device)
-        else:
-            mask = mask.float().to(self.device)
-
-        contrast_count = features.shape[1]
-        contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)
-        
-        #if self.hparams.contrast_mode == 'one':
-        #    anchor_feature = features[:, 0] # Nawid - anchor is only the index itself and only the single view
-        #    anchor_count = 1 # Nawid - only one anchor
-        #elif self.hparams.contrast_mode == 'all':
-        #    anchor_feature = contrast_feature 
-        #    anchor_count = contrast_count # Nawid - all the different views are the anchors
-        #else:
-        #    raise ValueError('Unknown mode: {}'.format(self.hparams.contrast_mode))
-        #
-        
-        anchor_feature = contrast_feature 
-        anchor_count = contrast_count # Nawid - all the different views are the anchors
-
-        # compute logits
-        anchor_dot_contrast = torch.div( # Nawid - similarity between the anchor and the contrast feature
-            torch.matmul(anchor_feature, contrast_feature.T),
-            self.hparams.softmax_temperature)
-        # for numerical stability
-        logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
-        logits = anchor_dot_contrast - logits_max.detach()
-
-        # tile mask
-        mask = mask.repeat(anchor_count, contrast_count)
-        # mask-out self-contrast cases
-        logits_mask = torch.scatter(
-            torch.ones_like(mask),
-            1,
-            torch.arange(batch_size * anchor_count).view(-1, 1).to(self.device),
-            0
-        )
-        mask = mask * logits_mask
-
-        # compute log_prob
-        exp_logits = torch.exp(logits) * logits_mask
-        log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
-
-        # compute mean of log-likelihood over positive
-        mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
-
-        # loss
-        loss = - (self.hparams.softmax_temperature / self.hparams.softmax_temperature) * mean_log_prob_pos
-        loss = loss.view(anchor_count, batch_size).mean()
-        
-        return loss
-    '''
-    '''
-    def moco_forward(model, img_q, img_k):
-    """
-    Input:
-        im_q: a batch of query images
-        im_k: a batch of key images
-    Output:
-        logits, targets
-    """
-    # compute query features
-    q = model.encoder_q(img_q)  # queries: NxC
-    q = nn.functional.normalize(q, dim=1)
-    # compute key features
-    with torch.no_grad():  # no gradient to keys
-        model._momentum_update_key_encoder()  # update the key encoder
-        k = model.encoder_k(img_k)  # keys: NxC
-        k = nn.functional.normalize(k, dim=1)
-    # compute logits
-    # Einstein sum is more intuitive
-    # positive logits: Nx1
-    l_pos = torch.einsum('nc,nc->n', [q, k]).unsqueeze(-1) # Nawid - dot product between query and queues
-    # negative logits: NxK
-    l_neg = torch.einsum('nc,ck->nk', [q, model.queue.clone().detach()])
-    # logits: Nx(1+K)
-    logits = torch.cat([l_pos, l_neg], dim=1)
-    # apply temperature
-    logits /= model.hparams.softmax_temperature
-    # labels: positive key indicators
-    labels = torch.zeros(logits.shape[0], dtype=torch.long) # Nawid - class zero is always the correct class, which corresponds to the postiive examples in the logit tensor (due to the positives being concatenated first)
-    labels = labels.type_as(logits)
-    # dequeue and enqueue
-    model._dequeue_and_enqueue(k)
-    return logits, labels
-    '''
+    @torch.no_grad()
+    def compute_features(self, data): # features for clustering
+        features = self.encoder_k.group_forward(data) # vector for group clustering
+        features = nn.functional.normalize(features, dim=1)
+        features = features.cpu() # numpy required for clustering
+        return features
     
-
     
     def feature_vector(self,x): # vector for the representation before using separate branches for the task
         """
@@ -324,22 +186,10 @@ class SupConPCLModule(base_module):
         #z = nn.functional.normalize(z, dim=1)
         return z
     
+    def callback_vector(self,x): # Vector method which should be used in the callbacks
+        z = self.encoder_k.group_forward(x)
+        return z
     
-
-
-    @torch.no_grad()
-    def compute_features(self,dataloader):
-        print('Computing features ...')
-        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
-        for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
-            if isinstance(images, tuple) or isinstance(images, list):
-                images, *aug_images = images
-            images = images.to(self.device)
-
-            feat = self.encoder_k(images)  # Nawid - obtain features for the task
-            feat = nn.functional.normalize(feat, dim=1) # Obtain 12 normalised features for clustering
-            features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
-        return features.cpu()
 
     def run_kmeans(self,x):
         """
@@ -360,7 +210,7 @@ class SupConPCLModule(base_module):
             clus.nredo = 5 # Nawid - getter for nredo property
             clus.seed = seed # Nawid - getter for seed property of clustering
             clus.max_points_per_centroid = 1000
-            clus.min_points_per_centroid = 10
+            clus.min_points_per_centroid = 5
 
             res = faiss.StandardGpuResources()
             cfg = faiss.GpuIndexFlatConfig()
@@ -410,65 +260,171 @@ class SupConPCLModule(base_module):
 
         return results
 
-    def cluster_data(self,dataloader):
-        features = self.compute_features(dataloader)
+    def cluster_data(self,x):
+        features = self.compute_features(x) # Obtain features for a single batch of data
         # placeholder for clustering result
         cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
         for num_cluster in self.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
-            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
+            cluster_result['im2cluster'].append(torch.zeros(features.shape[0],dtype=torch.long,device = self.device))
             cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
             cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
         
          #if using a single gpuif args.gpu == 0:
-        features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
+        features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice 
         features = features.numpy()
         # Nawid - compute K-means
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
         return cluster_result
 
-    
-    def loss_function(self,batch,cluster_result=None):
+    def instance_discrimination(self,im_q,im_k):
+        """
+        Input:
+            im_q: a batch of query images
+            im_k: a batch of key images
+            is_eval: return momentum embeddings (used for clustering)
+            cluster_result: cluster assignments, centroids, and density
+            index: indices for training samples
+        Output:
+            logits, targets, proto_logits, proto_targets
+        """
+
+
+         # compute key features
+        with torch.no_grad():  # no gradient to keys
+            self._momentum_update_key_encoder()  # update the key encoder
+
+
+            k = self.encoder_k(im_k)  # keys: NxC
+            k = nn.functional.normalize(k, dim=1) # Nawid - normalised key embeddings
+
+        # compute query features
+        q = self.encoder_q(im_q)  # queries: NxC
+        q = nn.functional.normalize(q, dim=1) # Nawid - normalised query embeddings
+
+        # compute logits
+        # Einstein sum is more intuitive
+        # positive logits: Nx1
+        l_pos = torch.einsum('nc,nc->n', [q, k]).unsqueeze(-1) #Nawid - positive logit between output of key and query
+        # negative logits: Nxr
+        l_neg = torch.einsum('nc,ck->nk', [q, self.queue.clone().detach()]) # Nawid - negative logits (dot product between key and negative samples in a query bank)
+
+        # logits: Nx(1+r)
+        logits = torch.cat([l_pos, l_neg], dim=1) # Nawid - total logits - instance based loss to keep property of local smoothness
+
+        # apply temperature
+        logits /= self.hparams.softmax_temperature
+
+        # labels: positive key indicators
+        labels = torch.zeros(logits.shape[0], dtype=torch.long,device = self.device)
+        #labels = labels.type_as(logits)
+
+        # dequeue and enqueue
+        self._dequeue_and_enqueue(k) # Nawid - queue values
+        return logits, labels
+    '''
+    def group_discrimination(self,img, cluster_result):
+        proto_labels = []
+        proto_logits = []
+        loss_proto = 0
+
+        features = self.encoder_q.group_forward(img)
+        features = nn.functional.normalize(features, dim=1)
+
+
+        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+            # shape of prototypes is (cluster_num,embedding size)
+            # (im2cluster :shape [batch], numbers from 0 to clunster num)
+            similarity = torch.mm(features, prototypes.t()) # Measure similarity between features from online encoder and prototypes from the other encoder
+            # similarity shape (batch size, cluster num)
+            
+            proto_loss = nn.CrossEntropyLoss()(similarity,im2cluster)
+
+            loss_proto += proto_loss
+        
+        loss_proto = loss_proto/(len(self.hparams.num_cluster))
+        return loss_proto
+
+    def loss_function(self,batch):
+        #metrics = {}
         (img_1,img_2), labels,indices = batch
+        # obtains cluster centroids information for the first view and the second view
+        cluster_view_1,cluster_view_2 = self.cluster_data(img_1), self.cluster_data(img_2)
 
-
-
-
-        # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
-        output, target, output_proto, target_proto = self(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
+        output, target = self.instance_discrimination(im_q=img_1,im_k=img_2)
 
         # InfoNCE loss
-        loss = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
+        loss_instance = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
 
         # ProtoNCE loss
-        if output_proto is not None:
-            loss_proto = 0
-            for index, (proto_out,proto_target) in enumerate(zip(output_proto, target_proto)): # Nawid - I believe this goes through the results of the m different k clustering results
-                loss_proto += F.cross_entropy(proto_out, proto_target) #
-                accp = precision_at_k(proto_out, proto_target)[0]
-               # acc_proto.update(accp[0], images[0].size(0))
-                # Log accuracy for the specific case
-                proto_metrics = {'Accuracy @ 1 Cluster '+str(self.hparams.num_cluster[index]): accp}
-                metrics.update(proto_metrics)
-            # average loss across all sets of prototypes
-            loss_proto /= len(self.hparams.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
-            loss += loss_proto # Nawid - increase the loss
+        loss_proto_view_1 = self.group_discrimination(img_2,cluster_view_1)
+        loss_proto_view_2 = self.group_discrimination(img_1,cluster_view_2)
+        loss_proto = (loss_proto_view_1 + loss_proto_view_2)/2
 
-        additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
-        metrics.update(additional_metrics)
-        return metrics
+        loss = loss_instance  + loss_proto
         
+        metrics = {'Loss' : loss, 'Instance Loss' : loss_instance, 'Proto Loss' : loss_proto}
+        return metrics
+    '''
     
+    def group_discrimination(self,img, cluster_result):
+        proto_labels = []
+        proto_logits = []
 
-    def on_train_epoch_start(self):
-        dataloader = self.datamodule.val_dataloader()
-        self.auxillary_data = self.aux_data(dataloader)
-        return self.auxillary_data
+        features = self.encoder_q.group_forward(img)
+        features = nn.functional.normalize(features, dim=1)
 
-    def on_validation_epoch_start(self):
-        dataloader = self.datamodule.val_dataloader()
-        self.auxillary_data = self.aux_data(dataloader)
-        return self.auxillary_data
-    
-    def aux_data(self,dataloader):
-        cluster_result = self.cluster_data(dataloader)
-        return cluster_result
+
+        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+            # shape of prototypes is (cluster_num,embedding size)
+            # (im2cluster :shape [batch], numbers from 0 to clunster num)
+            similarity = torch.mm(features, prototypes.t()) # Measure similarity between features from online encoder and prototypes from the other encoder
+            # similarity shape (batch size, cluster num)
+            
+            proto_labels.append(im2cluster)
+            proto_logits.append(similarity)
+        
+        return proto_logits, proto_labels
+
+    def loss_function(self,batch):
+        metrics = {}
+        (img_1,img_2), labels,indices = batch
+        # obtains cluster centroids information for the first view and the second view
+        cluster_view_1,cluster_view_2 = self.cluster_data(img_1), self.cluster_data(img_2)
+
+        output, target = self.instance_discrimination(im_q=img_1,im_k=img_2)
+        proto_logits_1, proto_labels_1 = self.group_discrimination(img_2, cluster_view_1)
+        proto_logits_2, proto_labels_2 = self.group_discrimination(img_1, cluster_view_2)
+
+        # InfoNCE loss
+        loss_instance = F.cross_entropy(output, target) # Nawid - instance based info NCE loss 
+        acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
+        instance_metrics = {'Instance Accuracy @ 1': acc1, 'Instance Accuracy @ 5':acc5}
+        metrics.update(instance_metrics)
+
+        loss_proto = 0
+        loss_proto_view_1 = 0
+        loss_proto_view_2 = 0
+        for index, (proto_out_1, proto_target_1,proto_out_2,proto_target_2) in enumerate(zip(proto_logits_1,proto_labels_1,proto_logits_2,proto_labels_2)):
+            # Calculate loss and accuracy for view 1
+            loss_proto_view_1 += F.cross_entropy(proto_out_1,proto_target_1)
+            accp_view_1 = precision_at_k(proto_out_1, proto_target_1)[0]
+            # Calculate loss and accuracy for view 2
+            loss_proto_view_2 += F.cross_entropy(proto_out_2,proto_target_2)
+            accp_view_2 = precision_at_k(proto_out_2, proto_target_2)[0]
+            # Calculate avg accuracy across views
+            avg_accp = (accp_view_1 + accp_view_2)/2
+
+            proto_metrics = {'Accuracy @ 1 '+str(self.hparams.num_cluster[index]): avg_accp}
+            metrics.update(proto_metrics)
+
+        # Find average of each view across the different clusterings
+        loss_proto_view_1 /= len(self.hparams.num_cluster)
+        loss_proto_view_2 /= len(self.hparams.num_cluster)
+
+        loss_proto = (loss_proto_view_1 + loss_proto_view_2)/2
+        loss = loss_instance + loss_proto
+
+        loss_metrics = {'Loss' : loss, 'Instance Loss' : loss_instance, 'Proto Loss' : loss_proto}
+        metrics.update(loss_metrics)
+        
+        return metrics

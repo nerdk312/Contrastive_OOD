@@ -61,33 +61,33 @@ class SupConToy(Toy):
             A loss scalar.
         """
 
-        if len(features.shape) < 3:
+        if len(features.shape) < 3:  # Nawid - need to 3 dimensional tensor for the image
             raise ValueError('`features` needs to be [bsz, n_views, ...],'
                              'at least 3 dimensions are required')
-        if len(features.shape) > 3:
+        if len(features.shape) > 3:  # Nawid - changes the shape to make it 3D tensor which involves changing the map of the vector
             features = features.view(features.shape[0], features.shape[1], -1)
 
-        batch_size = features.shape[0]
+        batch_size = features.shape[0]  # Nawid - obtain batch size
         if labels is not None and mask is not None:
             raise ValueError('Cannot define both `labels` and `mask`')
         elif labels is None and mask is None:
             mask = torch.eye(batch_size, dtype=torch.float32, device = self.device)
         elif labels is not None:
-            labels = labels.contiguous().view(-1, 1)
+            labels = labels.contiguous().view(-1, 1)  # Nawid - Need to have the same labels across the different views
             if labels.shape[0] != batch_size:
                 raise ValueError('Num of labels does not match num of features')
-            mask = torch.eq(labels, labels.T).float().to(self.device)
+            mask = torch.eq(labels, labels.T).float().to(self.device)  # Nawid - i believe this makes a [bsz,bsz] mask of 1 and 0 to see which labels are the same 
         else:
             mask = mask.float().to(self.device)
 
-        contrast_count = features.shape[1]
-        contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)
+        contrast_count = features.shape[1] # Nawid - the number of different views
+        contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)  # Nawid -separates the different views and then concatenates them all along the feature dimension
         '''
         if self.hparams.contrast_mode == 'one':
-            anchor_feature = features[:, 0] # Nawid - anchor is only the index itself and only the single view
+            anchor_feature = features[:, 0] # Nawid - anchor is only the first view of the image
             anchor_count = 1 # Nawid - only one anchor
         elif self.hparams.contrast_mode == 'all':
-            anchor_feature = contrast_feature 
+            anchor_feature = contrast_feature   # Nawid - anchor is all views of the same image
             anchor_count = contrast_count # Nawid - all the different views are the anchors
         else:
             raise ValueError('Unknown mode: {}'.format(self.hparams.contrast_mode))
@@ -99,13 +99,13 @@ class SupConToy(Toy):
         # compute logits
         anchor_dot_contrast = torch.div( # Nawid - similarity between the anchor and the contrast feature
             torch.matmul(anchor_feature, contrast_feature.T),
-            self.hparams.softmax_temperature)
+            self.hparams.softmax_temperature)   #  Nawid - compute matrx [bsz*anchor_views,feature_dim], [feature_dim,bsz*n] = [batch_size*anchor_view, bsz*n] 
         # for numerical stability
         logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
         logits = anchor_dot_contrast - logits_max.detach()
 
         # tile mask
-        mask = mask.repeat(anchor_count, contrast_count)
+        mask = mask.repeat(anchor_count, contrast_count)  # Nawid- copy the [bsz,bsz] mask along dimensions, so becomes [bsz*anchor_count, bsz*contrast_count]
         # mask-out self-contrast cases
         logits_mask = torch.scatter(
             torch.ones_like(mask),
@@ -113,7 +113,7 @@ class SupConToy(Toy):
             torch.arange(batch_size * anchor_count).view(-1, 1).to(self.device),
             0
         )
-        mask = mask * logits_mask
+        mask = mask * logits_mask  # Nawid- used to mask out self-contrast samples I believe
 
         # compute log_prob
         exp_logits = torch.exp(logits) * logits_mask

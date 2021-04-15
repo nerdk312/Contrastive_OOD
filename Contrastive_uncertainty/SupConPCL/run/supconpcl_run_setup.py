@@ -1,4 +1,4 @@
-from Contrastive_uncertainty.PCL.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.SupConPCL.datamodules.datamodule_dict import dataset_dict
 from Contrastive_uncertainty.PCL.callbacks.general_callbacks import ModelSaving, ReliabiltyLogger, \
                                                                     MMD_distance, Uniformity, \
                                                                     Centroid_distance, SupConLoss

@@ -1,5 +1,5 @@
-from Contrastive_uncertainty.PCL.datamodules.fashionmnist_datamodule import FashionMNISTDataModule
-from Contrastive_uncertainty.PCL.datamodules.mnist_datamodule import MNISTDataModule
+from Contrastive_uncertainty.SupConPCL.datamodules.fashionmnist_datamodule import FashionMNISTDataModule
+from Contrastive_uncertainty.SupConPCL.datamodules.mnist_datamodule import MNISTDataModule
 
 
 from Contrastive_uncertainty.PCL.datamodules.datamodule_transforms import Moco2TrainCIFAR10Transforms, Moco2EvalCIFAR10Transforms,\

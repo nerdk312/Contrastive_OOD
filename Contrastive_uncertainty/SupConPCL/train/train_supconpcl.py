@@ -8,8 +8,8 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.NNCL.run.nncl_run_setup import run_name, Datamodule_selection, Channel_selection, callback_dictionary
-from Contrastive_uncertainty.NNCL.models.nncl_module import NNCLModule
+from Contrastive_uncertainty.SupConPCL.run.supconpcl_run_setup  import run_name, Datamodule_selection, Channel_selection, callback_dictionary
+from Contrastive_uncertainty.SupConPCL.models.supconpcl_module import SupConPCLModule
 
 
 def training(params):
@@ -44,7 +44,7 @@ def training(params):
     
     desired_callbacks = []
 
-    model = NNCLModule(datamodule=datamodule,optimizer=config['optimizer'],
+    model = SupConPCLModule(datamodule=datamodule,optimizer=config['optimizer'],
     learning_rate=config['learning_rate'],momentum=config['momentum'],
     weight_decay=config['weight_decay'],num_classes=config['num_classes'],
     class_dict=class_names_dict, emb_dim=config['emb_dim'],
