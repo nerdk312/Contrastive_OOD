@@ -115,10 +115,10 @@ class SupConPCLModule(base_module):
 
         
         # create the queue
-        dataset_size = datamodule.datasize
-        self.register_buffer("queue", torch.randn(emb_dim,dataset_size))
+        self.dataset_size = len(datamodule.val_dataloader().dataset)
+        self.register_buffer("queue", torch.randn(emb_dim,self.dataset_size))
         self.queue = nn.functional.normalize(self.queue, dim=0)
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         #print('queue', self.queue.size())
         '''
         self.register_buffer("queue", torch.randn(emb_dim, num_negatives))
@@ -128,7 +128,8 @@ class SupConPCLModule(base_module):
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
         # Added index to show the label of the value in the queue, several dimensions to represent the value it is placed in all the clusters
-        self.register_buffer("queue_index", torch.zeros(len(self.hparams.num_cluster),num_negatives, dtype=torch.long))
+        self.register_buffer("queue_index", torch.zeros(len(self.hparams.num_cluster),self.dataset_size, dtype=torch.long))
+        #self.register_buffer("queue_index", torch.zeros(len(self.hparams.num_cluster),num_negatives, dtype=torch.long))
         
         
     def init_encoders(self):
@@ -162,16 +163,17 @@ class SupConPCLModule(base_module):
         batch_size = keys.shape[0]
 
         ptr = int(self.queue_ptr)
-        assert self.hparams.num_negatives % batch_size == 0  # for simplicity , num negatives is divisible by batch size
-
+        
+        #assert self.hparams.num_negatives % batch_size == 0  # for simplicity , num negatives is divisible by batch size
+        assert self.dataset_size % batch_size ==0  # for simplicity, the number of samples in dataset is divisible by batch size
         # replace the keys at ptr (dequeue and enqueue)
         self.queue[:, ptr:ptr + batch_size] = keys.T # Nawid - add the keys to the queue
         
         # Place the cluster assignments for the particular samples, # pos values im2cluster[index] gives [batch,1], which I could concatenate to get [batch, self.hparams.num_cluster] then concatenate to get num cluster 
-        self.queue_index[:, ptr:ptr + batch_size] = key_indices.T
+        self.queue_index[:, ptr:ptr + batch_size] = key_indices  # Do not need to transpose for the index 
 
-        ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
-
+        #ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
+        ptr = (ptr + batch_size) % self.dataset_size  # move pointer  
         self.queue_ptr[0] = ptr
 
     def forward(self,img_1,img_2,pseudo_labels):
@@ -423,14 +425,17 @@ class SupConPCLModule(base_module):
         features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
         features = features.numpy()
         # Nawid - compute K-means
+        #import ipdb; ipdb.set_trace()
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
+        key_indices = torch.stack(cluster_result['im2cluster'])
+        print('key indices',key_indices.shape)
+
+        self._dequeue_and_enqueue(torch.from_numpy(features), key_indices)
         return cluster_result
 
     
     def loss_function(self,batch,cluster_result=None):
         (img_1,img_2), labels,indices = batch
-
-
 
 
         # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
