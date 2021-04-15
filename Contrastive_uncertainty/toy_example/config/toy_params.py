@@ -2,9 +2,10 @@ toy_hparams = dict(
 hidden_dim = 20,
 emb_dim = 2,
 num_negatives = 1024,
-encoder_momentum = 0.999,
+encoder_momentum = 0.0,#0.999,
 softmax_temperature = 1.0,#0.07,
 num_classes = 2,
+num_cluster = [10],
 
 
 # optimizer args
@@ -20,7 +21,7 @@ epochs = 25,
 bsz = 128,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
-model = 'OVAUniform',
+model = 'OVAUniformCluster',
 
 # Trainer configurations
 fast_run = False,

@@ -45,8 +45,10 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
             self.test_data = (self.test_data - self.mean)/self.std
 
         self.train_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
-        self.val_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(),torch.from_numpy(self.val_labels)), transform = self.test_transforms)
-        self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)), transform = self.test_transforms)
+        self.val_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)
+        self.test_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)
+        #self.val_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(),torch.from_numpy(self.val_labels)), transform = self.test_transforms)
+        #self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)), transform = self.test_transforms)
 
         #self.idx2class = {v: k for k, v in Dataset.class_to_idx.items()}
         self.idx2class  = {0:'0 - orange',1:'1 - blue'} # Dict for two moons

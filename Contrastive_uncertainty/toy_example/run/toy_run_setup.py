@@ -13,6 +13,7 @@ from Contrastive_uncertainty.toy_example.models.toy_align import AlignmentToy
 from Contrastive_uncertainty.toy_example.models.toy_align_uniform import AlignmentUniformityToy
 from Contrastive_uncertainty.toy_example.models.toy_ova_uniform import OVAUniformityToy
 from Contrastive_uncertainty.toy_example.models.toy_NNCL import NNCLToy
+from Contrastive_uncertainty.toy_example.models.toy_ova_uniform_cluster import OVAUniformClusterToy
 
 def Datamodule_selection(dataset, config):
     # Information regarding the configuration of the data module for the specific task
@@ -104,6 +105,15 @@ def Model_selection(datamodule,config):
                 momentum=config['momentum'], weight_decay=config['weight_decay'],
                 hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
                 num_classes = config['num_classes']),
+
+                'OVAUniformCluster': OVAUniformClusterToy(datamodule=datamodule,
+                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
+                momentum=config['momentum'], weight_decay=config['weight_decay'],
+                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
+                num_classes = config['num_classes'],encoder_momentum=config['encoder_momentum'],
+                softmax_temperature = config['softmax_temperature'],
+                num_cluster = config['num_cluster']),
+
     }
     
     return model_dict[config['model']]

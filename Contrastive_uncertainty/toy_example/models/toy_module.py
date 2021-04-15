@@ -25,6 +25,8 @@ class Toy(pl.LightningModule):
         self.auxillary_data = None #self.aux_data() #self.on_train_epoch_start(self.datamodule)
 
     def training_step(self, batch, batch_idx):
+        self._momentum_update_key_encoder()
+
         metrics = self.loss_function(batch, self.auxillary_data)
         for k,v in metrics.items():
                 if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
@@ -35,6 +37,7 @@ class Toy(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         metrics = self.loss_function(batch, self.auxillary_data)
+        
         #import ipdb; ipdb.set_trace()
         for k,v in metrics.items():
                 if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
@@ -53,6 +56,9 @@ class Toy(pl.LightningModule):
         '''
 
     def loss_function(self, batch, auxillary_data=None):
+        raise NotImplementedError
+
+    def _momentum_update_key_encoder(self):
         raise NotImplementedError
     
 

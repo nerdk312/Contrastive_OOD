@@ -1,6 +1,9 @@
-mport torch
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tqdm import tqdm
+import faiss
+import numpy as np
 
 from Contrastive_uncertainty.toy_example.models.toy_encoder import Backbone
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k
@@ -16,6 +19,9 @@ class OVAUniformClusterToy(Toy):
         hidden_dim: int =  20,
         emb_dim: int = 2,
         num_classes:int = 2,
+        encoder_momentum: float = 0.999,
+        softmax_temperature: float = 0.07,
+        num_cluster :list = [10],
         ):
         super().__init__(datamodule, optimizer, learning_rate,
                          momentum, weight_decay)
@@ -23,22 +29,35 @@ class OVAUniformClusterToy(Toy):
         
         
         # Nawid - required to use for the fine tuning
-        
 
         # create the encoders
         # num_classes is the output fc dimension
-        self.encoder= self.init_encoders()
+        self.encoder_q, self.encoder_k = self.init_encoders()
         self.classifier = nn.Linear(self.hparams.emb_dim, self.hparams.num_classes)
+
+        for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
+            param_k.data.copy_(param_q.data)  # initialize
+            param_k.requires_grad = False  # not update by gradient
 
     # Instantiate classifier
     def init_encoders(self):
         """
         Override to add your own encoders
         """
-        encoder = Backbone(self.hparams.hidden_dim, self.hparams.emb_dim)
-        return encoder
+        encoder_q = Backbone(self.hparams.hidden_dim, self.hparams.emb_dim)
+        encoder_k = Backbone(self.hparams.hidden_dim, self.hparams.emb_dim)
+        return encoder_q, encoder_k
     
-    def loss_function(self, batch, auxillary_data=None):
+    @torch.no_grad()
+    def _momentum_update_key_encoder(self):
+        """
+        Momentum update of the key encoder
+        """
+        for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
+            em = self.hparams.encoder_momentum
+            param_k.data = param_k.data * em + param_q.data * (1. - em)
+    
+    def loss_function(self, batch, auxillary_data):
         (img_1, img_2), labels, indices = batch
         one_hot_labels = F.one_hot(labels.long(), num_classes=self.hparams.num_classes).float()
         centroids = self.update_embeddings(img_1, labels)
@@ -46,21 +65,21 @@ class OVAUniformClusterToy(Toy):
         distance_loss = F.binary_cross_entropy(y_pred, one_hot_labels)
         acc1, = precision_at_k(y_pred, labels)
 
-        z =  self.feature_vector(img_1)
+        z =  self.encoder_q(img_1)
         uniformity_loss = self.uniform_loss(z)
 
-        cluster_result = self.cluster_data(img_1)
-        
-        proto_logits, proto_labels = self.group_discrimination(img_1, cluster_result=cluster_result)
+        #cluster_result = self.cluster_data(img_1)
+        #import ipdb; ipdb.set_trace()
+        proto_logits, proto_labels = self.group_discrimination(img_1, cluster_result=auxillary_data,index = indices)
         loss_proto = 0
         
-        for index, (proto_out, proto_target) in enumerate(zip(proto_logits,proto_labels)):
-            loss_proto += F.cross_entropy(proto_out,proto_target)
+        for index, (proto_out, proto_target) in enumerate(zip(proto_logits, proto_labels)):
+            loss_proto += F.cross_entropy(proto_out, proto_target)
 
         # Find average of each view across the different clusterings
         loss_proto /= len(self.hparams.num_cluster)
         
-        loss = 0.8*distance_loss + 0.1*uniformity_loss + 0.1*loss_proto
+        loss =  loss_proto  #0.8*distance_loss + 0.1*uniformity_loss + 1.0*loss_proto
 
         #loss = 0.8*distance_loss + 0.2*uniformity_loss
         
@@ -72,27 +91,27 @@ class OVAUniformClusterToy(Toy):
         return metrics
 
     def feature_vector(self, x): # Obtain feature vector
-        x = self.encoder(x)
+        x = self.encoder_k(x)
         #x = nn.functional.normalize(x, dim=1)
         return x
     
     # Uniformity and alignment
-    def uniform_loss(self,x, t=2):
+    def uniform_loss(self, x, t=2):
         return torch.pdist(x, p=2).pow(2).mul(-t).exp().mean().log()
 
-    def forward(self, x, centroids): # obtain predictions
-        z = self.feature_vector(x)
+    def forward(self, x, centroids):  # obtain predictions
+        z = self.encoder_q(x)
         distances = self.euclidean_dist(z, centroids)
         
         y_pred = 2*torch.sigmoid(distances)
         return y_pred  # shape (batch,num_classes)
 
     def class_discrimination(self, x, centroids): # same as forward
-        y_pred = self(x,centroids)
+        y_pred = self(x, centroids)
         return y_pred
     
     def centroid_confidence(self, x, centroids): # same as forward
-        y_pred = self(x,centroids)
+        y_pred = self(x, centroids)
         return y_pred
     
     def euclidean_dist(self, x, y):  # Calculates the difference
@@ -109,7 +128,7 @@ class OVAUniformClusterToy(Toy):
     
     @torch.no_grad()
     def update_embeddings(self, x, labels): # Assume y is one hot encoder
-        z = self.feature_vector(x)  # (batch,features)
+        z = self.encoder_k(x)  # (batch,features) # use momentum encoder to get features
         y = F.one_hot(labels.long(), num_classes=self.hparams.num_classes).float()
         # compute sum of embeddings on class by class basis
 
@@ -123,21 +142,41 @@ class OVAUniformClusterToy(Toy):
         embeddings = features_sum.T / y.sum(0) # Nawid - divide each of the feature sum by the number of instances present in the class (need to transpose to get into shape which can divide column wise) shape : (features,num_classes
         embeddings = embeddings.T # Turn back into shape (num_classes,features)
         return embeddings
-   
+    
+        
     @torch.no_grad()
     def compute_features(self,dataloader):
         print('Computing features ...')
         features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
-        for i, (data, labels, indices) in enumerate(tqdm(dataloader)):
+        for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
             images = images.to(self.device)
 
-            feat = self.feature_vector(data)  # Nawid - obtain features for the task
+            feat = self.encoder_k(images)  # Nawid - obtain features for the task
             features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
+    
+     
+    def cluster_data(self,dataloader):
+        features = self.compute_features(dataloader)
+        # placeholder for clustering result
+        cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
+        for num_cluster in self.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
+            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
+            cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
+            cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
+        
+         #if using a single gpuif args.gpu == 0:
+        features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
+        features = features.numpy()
+        # Nawid - compute K-means
+        cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
+        return cluster_result
+    
 
-    def run_kmeans(self,x):
+
+    def run_kmeans(self, x):
         """
         Args:
             x: data to be clustered
@@ -206,13 +245,64 @@ class OVAUniformClusterToy(Toy):
 
         return results
 
+    
+    
+    # Obtain the logits for a particular class for the network
+    def group_discrimination(self,img, cluster_result,index):
+        proto_labels = []
+        proto_logits = []
+
+        features = self.encoder_q(img)
+        features = nn.functional.normalize(features, dim=1)
+
+        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+            # shape of prototypes is (cluster_num,embedding size)
+            # (im2cluster :shape [batch], numbers from 0 to clunster num)
+            #prototypes = prototypes[index] # Obtain the class prototypes only for the specific data points
+            similarity = torch.mm(features, prototypes.t()) # Measure similarity between features from online encoder and prototypes from the other encoder
+            # similarity shape (batch size, cluster num)
+            similarity /= self.hparams.softmax_temperature
+
+            proto_labels.append(im2cluster[index]) # Obtain the labels for the specific indices of the dataset
+            proto_logits.append(similarity)
+        
+        return proto_logits, proto_labels
+    
+    def on_validation_epoch_start(self):
+        dataloader = self.datamodule.val_dataloader()
+        #import ipdb; ipdb.set_trace()
+        self.auxillary_data = self.aux_data(dataloader)
+        return self.auxillary_data
+    
+    def aux_data(self,dataloader):
+        cluster_result = self.cluster_data(dataloader)
+        return cluster_result
+     
+   
+    '''
+    @torch.no_grad()
+    def compute_features(self,dataloader):
+        print('Computing features ...')
+        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
+        for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
+            if isinstance(images, tuple) or isinstance(images, list):
+                images, *aug_images = images
+            images = images.to(self.device)
+
+            feat = self.encoder_k(images)  # Nawid - obtain features for the task
+            features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
+        return features.cpu()
+    '''
+
+
+    '''
 
     def cluster_data(self,dataloader):
         features = self.compute_features(dataloader)
         # placeholder for clustering result
         cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
         for num_cluster in self.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
-            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
+            cluster_result['im2cluster'].append(torch.zeros(features.shape[0],dtype=torch.long,device = self.device))
             cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
             cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
         
@@ -223,23 +313,13 @@ class OVAUniformClusterToy(Toy):
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
         return cluster_result
     
-    # Obtain the logits for a particular class for the network
-    def group_discrimination(self,img, cluster_result):
-        proto_labels = []
-        proto_logits = []
 
-        features = self.feature_vector(img)
+
+     @torch.no_grad()
+    def compute_features(self, data): # features for clustering
+        features = self.encoder_k(data) # vector for group clustering
         features = nn.functional.normalize(features, dim=1)
+        features = features.cpu() # numpy required for clustering
+        return features
 
-        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
-            # shape of prototypes is (cluster_num,embedding size)
-            # (im2cluster :shape [batch], numbers from 0 to clunster num)
-            similarity = torch.mm(features, prototypes.t()) # Measure similarity between features from online encoder and prototypes from the other encoder
-            # similarity shape (batch size, cluster num)
-            
-            proto_labels.append(im2cluster)
-            proto_logits.append(similarity)
-        
-        return proto_logits, proto_labels
-    
-    
+    '''
