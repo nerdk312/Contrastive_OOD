@@ -3,8 +3,8 @@ from typing import Optional, Sequence
 import numpy as np
 import torch
 from pytorch_lightning import LightningDataModule
-from torch.utils.data import DataLoader, random_split
-
+from torch.utils.data import DataLoader, random_split, Subset
+import math
 
 
 from warnings import warn
@@ -70,10 +70,23 @@ class FashionMNISTDataModule(LightningDataModule):
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size
+        
         self.seed = seed
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
         
+        #self.full_train_samples = 60000
+        #self.full_test_samples = 10000
+    
+    def split_size(self, samples): # obtains a dataset size for the k-means based on the batch size
+        batch_size = self.batch_size
+
+        batch_num = math.floor(samples/batch_size)
+        
+        new_dataset_size = batch_num * batch_size
+        #split = samples - new_dataset_size
+        return int(new_dataset_size)
+
 
     @property
     def num_classes(self):
@@ -109,9 +122,15 @@ class FashionMNISTDataModule(LightningDataModule):
 
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        self.train_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
-        '''
+        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
+        
         train_length = len(dataset)
+        new_dataset_size = self.split_size(train_length)
+        indices = range(new_dataset_size)
+
+        self.train_dataset = Subset(dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
+
+        '''
         self.train_dataset, _ = random_split(
             dataset,
             [train_length - self.val_split, self.val_split],
@@ -124,8 +143,13 @@ class FashionMNISTDataModule(LightningDataModule):
     def setup_val(self):
         # val transforms use the test transforms in this case
         val_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        self.val_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
+        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
         
+        train_length = len(dataset)
+        new_dataset_size = self.split_size(train_length)
+        indices = range(new_dataset_size)
+
+        self.val_dataset = Subset(dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
         '''
         train_length = len(dataset)
         self.val_dataset, _ = random_split(
@@ -134,8 +158,6 @@ class FashionMNISTDataModule(LightningDataModule):
             generator=torch.Generator().manual_seed(self.seed)
         )
         '''
-        
-        
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
@@ -144,8 +166,21 @@ class FashionMNISTDataModule(LightningDataModule):
             self.test_dataset.targets = torch.Tensor(self.test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
         elif isinstance(self.test_dataset.targets,np.ndarray):
             self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
+        
 
+        test_length = len(self.test_dataset)
+        new_dataset_size = self.split_size(test_length)
+        indices = range(new_dataset_size)
 
+        self.test_dataset = Subset(self.test_dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
+        
+        '''       
+        self.test_dataset, _ = random_split(
+            self.test_dataset,
+            [test_length - test_split, test_split],
+            generator=torch.Generator().manual_seed(self.seed)
+        )
+        '''
     def train_dataloader(self):
         """
         FashionMNIST train set removes a subset to use for validation
