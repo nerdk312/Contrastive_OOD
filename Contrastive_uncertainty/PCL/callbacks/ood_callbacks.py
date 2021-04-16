@@ -206,7 +206,7 @@ class OOD_ROC(pl.Callback):
         concat_datasets = torch.utils.data.ConcatDataset(datasets)
         # Dataset becomes transformed as it passes through the datalodaer I believe
         dataloader = torch.utils.data.DataLoader(
-            concat_datasets, batch_size=100, shuffle=False, num_workers=6, pin_memory=False,
+            concat_datasets, batch_size=self.Datamodule.batch_Size, shuffle=False, num_workers=6, pin_memory=False,
         )
 
         return dataloader, anomaly_targets # Nawid -contains the data for the true data and the false data aswell as values which indicate whether it is an anomaly or not
@@ -397,7 +397,7 @@ class Mahalanobis_OOD(pl.Callback):
             
             img, label = img.to(pl_module.device), label.to(pl_module.device)
 
-            features += list(pl_module.feature_vector(img).data.cpu().numpy())
+            features += list(pl_module.callback_vector(img).data.cpu().numpy())
             labels += list(label.data.cpu().numpy())
 
             if verbose and not index % 50:

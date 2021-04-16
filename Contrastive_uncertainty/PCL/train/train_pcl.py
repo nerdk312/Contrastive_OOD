@@ -30,15 +30,20 @@ def training(params):
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
-    
+    '''    
     desired_callbacks = [callback_dict['Confusion_matrix'],callback_dict['ROC'],
                         callback_dict['Reliability'],callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['Mahalanobis'], callback_dict['Mahalanobis_compressed'],callback_dict['Euclidean'],
                         callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Centroid'],callback_dict['Uniformity'],
                         callback_dict['SupCon']]
+    '''
     
+    desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
+                        callback_dict['Mahalanobis'],callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']]
     
+
     #desired_callbacks = []
+    
 
     model = PCLModule(datamodule=datamodule,optimizer=config['optimizer'],
     learning_rate=config['learning_rate'],momentum=config['momentum'],
@@ -54,7 +59,7 @@ def training(params):
 
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
 
-    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
+    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,precision = 16,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks)#,auto_lr_find = True)

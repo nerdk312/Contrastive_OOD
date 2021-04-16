@@ -12,6 +12,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from tqdm import tqdm
 import faiss
+import math
 
 
 from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
@@ -168,6 +169,15 @@ class PCLModule(base_module):
         ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
 
         self.queue_ptr[0] = ptr
+    
+    def datasize(self, dataloader): # obtains a dataset size for the k-means based on the batch size
+        batch_size = self.datamodule.batch_size
+        dataset_size = len(dataloader.dataset)
+
+        batch_num = math.floor(dataset_size/batch_size)
+        new_dataset_size = batch_num * batch_size
+
+        return int(new_dataset_size)
 
     
     def forward(self, im_q, im_k=None, is_eval=False, cluster_result=None, index=None):
@@ -257,74 +267,29 @@ class PCLModule(base_module):
 
     @torch.no_grad()
     def compute_features(self,dataloader):
-        #import ipdb; ipdb.set_trace()
         print('Computing features ...')
-        #import ipdb;ipdb.set_trace()
-        
-        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
-
-        #import ipdb; ipdb.set_trace()
+        features = torch.zeros(self.datasize(dataloader), self.hparams.emb_dim, device = self.device)
         for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
-            assert len(dataloader) >0, "dataloader is empty"
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
-                #import ipdb; ipdb.set_trace()
-                images = images.to(self.device)
-            
-            feat = self(images,is_eval=True)   # Nawid - obtain momentum features
+            images = images.to(self.device)
+
+            feat = self.encoder_k(images)  # Nawid - obtain features for the task
+            feat = nn.functional.normalize(feat, dim=1) # Obtain 12 normalised features for clustering
             features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
     
-    def feature_vector(self,x):
+    def callback_vector(self,x): # vector for the representation before using separate branches for the task
         """
         Input:
             x: a batch of images for classification
         Output:
             z: latent vector
         """
-        z = self.encoder_q.representation_output(x)
+        z = self.encoder_k(x)
         z = nn.functional.normalize(z, dim=1)
         return z
     
-    def feature_vector_compressed(self,x):
-        """
-        Input:
-            x: a batch of images for classification
-        Output:
-            logits
-        """
-        # compute query features
-        z = self.feature_vector(x) # Gets the feature map representations which I use for the purpose of pretraining
-        z = self.encoder_q.class_fc1(z)
-        z = nn.functional.normalize(z, dim=1)
-        return z
-    
-    def class_discrimination(self, x):
-        """
-        Input:
-            x: a batch of images for classification
-        Output:
-            logits
-        """
-        # compute query features
-        z = self.feature_vector(x) # Gets the feature map representations which I use for the purpose of pretraining
-        z = F.relu(self.encoder_q.class_fc1(z))
-
-        if self.hparams.normalize:
-            z = nn.functional.normalize(z, dim=1)
-
-        logits = self.encoder_q.class_fc2(z)
-        return logits
-
-
-    def classification_loss(self, batch,auxillary_data = None):
-        (img_1, img_2), labels,indices = batch
-        logits = self.class_discrimination(img_1)
-        loss = F.cross_entropy(logits.float(), labels.long())
-        class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
-        metrics = {'Class Loss': loss, 'Class Accuracy @ 1': class_acc1, 'Class Accuracy @ 5': class_acc5}
-
-        return metrics
 
     def run_kmeans(self,x):
         """
@@ -349,7 +314,7 @@ class PCLModule(base_module):
 
             res = faiss.StandardGpuResources()
             cfg = faiss.GpuIndexFlatConfig()
-            cfg.useFloat16 = False
+            cfg.useFloat16 = True  # False
             cfg.device = 0 # gpu device number zero
             index = faiss.GpuIndexFlatL2(res, d, cfg)
 
@@ -400,11 +365,12 @@ class PCLModule(base_module):
         # placeholder for clustering result
         cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
         for num_cluster in self.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
-            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
+            cluster_result['im2cluster'].append(torch.zeros(self.datasize(dataloader),dtype=torch.long,device = self.device))
             cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
             cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
         
          #if using a single gpuif args.gpu == 0:
+        #import ipdb; ipdb.set_trace() 
         features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
         features = features.numpy()
         # Nawid - compute K-means
@@ -419,11 +385,14 @@ class PCLModule(base_module):
         output, target, output_proto, target_proto = self(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
 
         # InfoNCE loss
-        loss = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
-
+        loss_instance = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
+        acc_1, acc_5 = precision_at_k(output, target,top_k=(1,5))
+        instance_metrics = {'Instance Loss': loss_instance, 'Instance Accuracy @1':acc_1,'Instance Accuracy @5':acc_5}
+        metrics.update(instance_metrics)
         # ProtoNCE loss
+        loss_proto = 0
         if output_proto is not None:
-            loss_proto = 0
+            
             for index, (proto_out,proto_target) in enumerate(zip(output_proto, target_proto)): # Nawid - I believe this goes through the results of the m different k clustering results
                 loss_proto += F.cross_entropy(proto_out, proto_target) #
                 accp = precision_at_k(proto_out, proto_target)[0]
@@ -433,68 +402,31 @@ class PCLModule(base_module):
                 metrics.update(proto_metrics)
             # average loss across all sets of prototypes
             loss_proto /= len(self.hparams.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
-            loss += loss_proto # Nawid - increase the loss
+        
+        loss = loss_instance + loss_proto # Nawid - increase the loss
 
         additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
         metrics.update(additional_metrics)
         return metrics
     
-    # Override the other loss to use the test step as well as the batch size for the specific task
-    def test_step(self, batch, batch_idx):
-        loss = torch.tensor([0.0], device=self.device)
-
-        metrics = self.loss_function(batch,self.auxillary_data)
-        for k,v in metrics.items():
-            if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
-        loss += metrics['Loss']
-        
-        metrics = self.classification_loss(batch)
-        for k,v in metrics.items():
-            if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
-        loss += metrics['Class Loss']
-        self.log('Test Total Loss', loss.item(),on_epoch=True)
-        
-        #return {'logits':logits,'target':labels} # returns y_pred as y_pred are essentially the logits in this case, and I want to log how the logits change in time
-    '''
-    def test_epoch_end(self, test_step_outputs):
-        # Saves the predictions which are the logits in this case to see how the logits are changing in time
-        
-        #flattened_logits = torch.flatten(torch.cat([output['logits']for output in validation_step_outputs])) #  concatenate the logits
-        #self.logger.experiment.log(
-        #    {"valid/logits": wandb.Histogram(flattened_logits.to("cpu")),
-        #    "global_step": self.global_step})
-        
-        preds = torch.cat([output['logits'] for output in test_step_outputs])
-        targets = torch.cat([output['target'] for output in test_step_outputs])
-
-        top_pred_ids = preds.argmax(axis=1)
-
-        self.logger.experiment.log({"my_conf_mat_id" : wandb.plot.confusion_matrix(probs = preds.cpu().numpy(),
-            preds=None, y_true=targets.cpu().numpy(),
-            class_names=self.class_names),
-            "global_step": self.global_step
-                  })
-    '''    
-    def aux_data(self):        
-        dataloader = self.datamodule.val_dataloader()
-        cluster_result = self.cluster_data(dataloader)
-        return cluster_result
-
-    # https://pytorch-lightning.readthedocs.io/en/stable/_modules/pytorch_lightning/core/hooks.html#ModelHooks.on_validation_start 
-    #Do not currently need to obtain the auxillary data of the train dataloader as the val and train data are the same in PCL currently
-    '''
-    def on_epoch_start(self):
-        self.auxillary_data = self.aux_data()
-        return self.auxillary_data
-    '''    
     
     def on_train_epoch_start(self):
-        self.auxillary_data = self.aux_data()
-        return self.auxillary_data
+        dataloader = self.datamodule.val_dataloader()
+        self.auxillary_data = self.aux_data(dataloader)
+        #return self.auxillary_data
 
     def on_validation_epoch_start(self):
-        self.auxillary_data = self.aux_data()
-        return self.auxillary_data
+        # If first epoch, perform clustering, else pass
+        if self.current_epoch ==0:
+            dataloader = self.datamodule.val_dataloader()
+            self.auxillary_data = self.aux_data(dataloader)
+        else: 
+            pass
+        #return self.auxillary_data
+
+    def aux_data(self,dataloader):
+        cluster_result = self.cluster_data(dataloader)
+        return cluster_result
             
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):
@@ -502,18 +434,3 @@ class PCLModule(base_module):
         checkpoint = torch.load(pretrained_network)
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
-
-
-# utils
-@torch.no_grad()
-def concat_all_gather(tensor):
-    """
-    Performs all_gather operation on the provided tensors.
-    *** Warning ***: torch.distributed.all_gather has no gradient.
-    """
-    tensors_gather = [torch.ones_like(tensor)
-                      for _ in range(torch.distributed.get_world_size())]
-    torch.distributed.all_gather(tensors_gather, tensor, async_op=False)
-
-    output = torch.cat(tensors_gather, dim=0)
-    return output

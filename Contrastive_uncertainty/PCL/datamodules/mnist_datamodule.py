@@ -3,11 +3,12 @@ from typing import Optional, Sequence
 import numpy as np
 import torch
 from pytorch_lightning import LightningDataModule
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split,Subset
 
 from warnings import warn
 from torchvision import transforms as transform_lib
 from torchvision.datasets import FashionMNIST,MNIST
+import math
 
 from Contrastive_uncertainty.datamodules.dataset_normalizations import mnist_normalization
 from Contrastive_uncertainty.datamodules.datamodule_transforms import dataset_with_indices
@@ -71,6 +72,15 @@ class MNISTDataModule(LightningDataModule):
         self.seed = seed
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
+    
+    def split_size(self, samples): # obtains a dataset size for the k-means based on the batch size
+        batch_size = self.batch_size
+
+        batch_num = math.floor(samples/batch_size)
+        
+        new_dataset_size = batch_num * batch_size
+        #split = samples - new_dataset_size
+        return int(new_dataset_size)
         
 
     @property
@@ -107,14 +117,24 @@ class MNISTDataModule(LightningDataModule):
 
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        self.train_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
+        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
         
+        train_length = len(dataset)
+        new_dataset_size = self.split_size(train_length)
+        indices = range(new_dataset_size)
 
+        self.train_dataset = Subset(dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
+    
     def setup_val(self):
         # val transforms use the test transforms in this case
         val_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        self.val_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
+        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
         
+        train_length = len(dataset)
+        new_dataset_size = self.split_size(train_length)
+        indices = range(new_dataset_size)
+
+        self.val_dataset = Subset(dataset, indices) # Obtain a subset of the data from 0th index to the index for the last value
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
@@ -123,7 +143,11 @@ class MNISTDataModule(LightningDataModule):
             self.test_dataset.targets = torch.Tensor(self.test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
         elif isinstance(self.test_dataset.targets,np.ndarray):
             self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
-
+        
+        test_length = len(self.test_dataset)
+        new_dataset_size = self.split_size(test_length)
+        indices = range(new_dataset_size)
+        self.test_dataset = Subset(self.test_dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
 
     def train_dataloader(self):
         """

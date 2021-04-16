@@ -439,7 +439,6 @@ class SupConPCLModule(base_module):
         metrics = self(img_1,img_2,cluster_result,indices)
         return metrics
         
-    
     def on_train_epoch_start(self):
         dataloader = self.datamodule.val_dataloader()
         self.auxillary_data = self.aux_data(dataloader)

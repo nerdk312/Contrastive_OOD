@@ -1,6 +1,6 @@
 from Contrastive_uncertainty.PCL.train.train_pcl import training
-from Contrastive_uncertainty.PCL.config.pcl_params import nncl_hparams
+from Contrastive_uncertainty.PCL.config.pcl_params import pcl_hparams
 
 
 # calls the function
-training(nncl_hparams)
+training(pcl_hparams)
