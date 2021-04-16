@@ -131,6 +131,10 @@ class SupConPCLModule(base_module):
         self.register_buffer("queue_index", torch.zeros(len(self.hparams.num_cluster),self.dataset_size, dtype=torch.long))
         #self.register_buffer("queue_index", torch.zeros(len(self.hparams.num_cluster),num_negatives, dtype=torch.long))
         
+        # num samples to obtain from memory bank
+        self.num_samples = 4096
+        #import ipdb; ipdb.set_trace()
+        
         
     def init_encoders(self):
         """
@@ -176,8 +180,9 @@ class SupConPCLModule(base_module):
         ptr = (ptr + batch_size) % self.dataset_size  # move pointer  
         self.queue_ptr[0] = ptr
 
-    def forward(self,img_1,img_2,pseudo_labels):
+    def forward(self,img_q,img_k,cluster_result,indices):
          # compute query features
+        batch_size = img_q.shape[0] # obtain the batch size in order to copy labels for the samples
         q = self.encoder_q(img_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1)
         # compute key features
@@ -185,6 +190,15 @@ class SupConPCLModule(base_module):
             self._momentum_update_key_encoder()  # update the key encoder
             k = self.encoder_k(img_k)  # keys: NxC
             k = nn.functional.normalize(k, dim=1)
+
+        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+            pseudo_labels = im2cluster[indices] # indices for the particular case: shape [bsz]
+            views = int(self.num_samples/batch_size) # obtain the number of views
+            full_view_labels = pseudo_labels.repeat(views) # copy the pseudolabels along multiple dimensions
+            import ipdb; ipdb.set_trace()
+
+
+
 
 
         
@@ -427,16 +441,33 @@ class SupConPCLModule(base_module):
         # Nawid - compute K-means
         #import ipdb; ipdb.set_trace()
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
-        key_indices = torch.stack(cluster_result['im2cluster'])
-        print('key indices',key_indices.shape)
+        return cluster_result
 
+    def cluster_data_full(self,dataloader):
+        features = self.compute_features(dataloader)
+        # placeholder for clustering result
+        cluster_result = {'im2cluster':[],'centroids':[],'density':[]}
+        for num_cluster in self.hparams.num_cluster: # Nawid -Makes separate list for each different k value of the cluster (clustering is performed several times with different values of k), array of zeros for the im2cluster, the centroids and the density/concentration
+            cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
+            cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
+            cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
+        
+         #if using a single gpuif args.gpu == 0:
+        features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
+        features = features.numpy()
+        # Nawid - compute K-means
+        #import ipdb; ipdb.set_trace()
+        cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
+        
+        # Add the keys and the indices to the dataset at the first epoch
+        key_indices = torch.stack(cluster_result['im2cluster'])
         self._dequeue_and_enqueue(torch.from_numpy(features), key_indices)
         return cluster_result
 
     
     def loss_function(self,batch,cluster_result=None):
         (img_1,img_2), labels,indices = batch
-
+        self(img_1,img_2,cluster_result,indices)
 
         # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
         output, target, output_proto, target_proto = self(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
@@ -467,13 +498,21 @@ class SupConPCLModule(base_module):
     def on_train_epoch_start(self):
         dataloader = self.datamodule.val_dataloader()
         self.auxillary_data = self.aux_data(dataloader)
-        return self.auxillary_data
+        #return self.auxillary_data
 
     def on_validation_epoch_start(self):
-        dataloader = self.datamodule.val_dataloader()
-        self.auxillary_data = self.aux_data(dataloader)
-        return self.auxillary_data
-    
+        # If first epoch, perform clustering, else pass
+        if self.current_epoch ==0:
+            dataloader = self.datamodule.val_dataloader()
+            self.auxillary_data = self.aux_data(dataloader)
+        else: 
+            pass
+        #return self.auxillary_data
+
     def aux_data(self,dataloader):
-        cluster_result = self.cluster_data(dataloader)
+        # If first epoch perform full clustering (adding keys and indices), else just obtain cluster results for the data
+        if self.current_epoch ==0:
+            cluster_result = self.cluster_data_full(dataloader)
+        else:   
+            cluster_result = self.cluster_data(dataloader)
         return cluster_result

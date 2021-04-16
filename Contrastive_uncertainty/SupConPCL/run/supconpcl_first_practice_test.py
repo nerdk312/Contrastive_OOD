@@ -2,7 +2,7 @@ from Contrastive_uncertainty.SupConPCL.train.train_supconpcl import training
 from Contrastive_uncertainty.SupConPCL.config.supconpcl_params  import supconpcl_hparams 
 
 
-supconpcl_hparams['bsz'] = 1228
+supconpcl_hparams['bsz'] = 64
 supconpcl_hparams['num_cluster'] = [10,20]
 supconpcl_hparams['instance_encoder'] = 'resnet18'
 supconpcl_hparams['epochs'] = 1
