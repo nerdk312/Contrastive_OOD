@@ -149,7 +149,7 @@ class FashionMNISTDataModule(LightningDataModule):
         new_dataset_size = self.split_size(train_length)
         indices = range(new_dataset_size)
 
-        self.val_dataset = Subset(dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
+        self.val_dataset = Subset(dataset, indices) # Obtain a subset of the data from 0th index to the index for the last value
         '''
         train_length = len(dataset)
         self.val_dataset, _ = random_split(

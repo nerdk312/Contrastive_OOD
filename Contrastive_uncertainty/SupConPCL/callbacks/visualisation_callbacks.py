@@ -55,7 +55,7 @@ class Visualisation(pl.Callback): # General class for visualisation
 
         self.data = self.datamodule.test_dataset
         dataloader = torch.utils.data.DataLoader(
-                self.data, batch_size=200, shuffle=False, num_workers=6, pin_memory=False
+                self.data, batch_size=self.datamodule.batch_size, shuffle=False, num_workers=6, pin_memory=False
             ) # Dataloader with batch size 500 to ensure that all the data is obtained for the tas
         
         #self.labels = self.datamodule.test_dataset.targets  # Obtain the test dataset targets
@@ -78,7 +78,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         concat_datasets = torch.utils.data.ConcatDataset(datasets)
 
         dataloader = torch.utils.data.DataLoader(
-                concat_datasets, batch_size=200, shuffle=False, num_workers=6, pin_memory=False
+                concat_datasets, batch_size=self.ood_datamodule.batch_size, shuffle=False, num_workers=6, pin_memory=False
             )
         loader = quickloading(self.quick_callback, dataloader)
 

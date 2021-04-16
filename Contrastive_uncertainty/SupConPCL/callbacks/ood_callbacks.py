@@ -206,7 +206,7 @@ class OOD_ROC(pl.Callback):
         concat_datasets = torch.utils.data.ConcatDataset(datasets)
         # Dataset becomes transformed as it passes through the datalodaer I believe
         dataloader = torch.utils.data.DataLoader(
-            concat_datasets, batch_size=100, shuffle=False, num_workers=6, pin_memory=False,
+            concat_datasets, batch_size=self.Datamodule.batch_Size, shuffle=False, num_workers=6, pin_memory=False,
         )
 
         return dataloader, anomaly_targets # Nawid -contains the data for the true data and the false data aswell as values which indicate whether it is an anomaly or not

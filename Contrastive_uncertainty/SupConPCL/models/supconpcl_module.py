@@ -321,6 +321,18 @@ class SupConPCLModule(base_module):
         #z = nn.functional.normalize(z, dim=1)
         return z
     
+
+    def callback_vector(self,x): # vector for the representation before using separate branches for the task
+        """
+        Input:
+            x: a batch of images for classification
+        Output:
+            z: latent vector
+        """
+        z = self.encoder_k(x)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+
     @torch.no_grad()
     def compute_features(self,dataloader):
         print('Computing features ...')
