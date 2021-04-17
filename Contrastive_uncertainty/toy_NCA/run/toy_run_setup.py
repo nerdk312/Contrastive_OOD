@@ -4,7 +4,7 @@ from Contrastive_uncertainty.toy_NCA.callbacks.toy_ood_callbacks import OOD_ROC,
 from Contrastive_uncertainty.toy_NCA.datamodules.datamodule_dict import dataset_dict
 
 from Contrastive_uncertainty.toy_NCA.models.toy_nca import NCAToy
-
+from Contrastive_uncertainty.toy_NCA.callbacks.toy_general_callbacks import kNN
 
 def Datamodule_selection(dataset, config):
     # Information regarding the configuration of the data module for the specific task
@@ -23,14 +23,15 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
                      'Data_visualise': data_visualisation(Datamodule, OOD_Datamodule),
                      'Uncertainty_visualise': TwoMoonsVisualisation(Datamodule),
                      'ROC': OOD_ROC(Datamodule, OOD_Datamodule),
-                     'Mahalanobis': Mahalanobis_OOD(Datamodule, OOD_Datamodule, config['quick_callback'])}
+                     'Mahalanobis': Mahalanobis_OOD(Datamodule, OOD_Datamodule, config['quick_callback']),
+                     'kNN': kNN(Datamodule)}
 
 
     return callback_dict
 
 
 def Model_selection(datamodule,config):
-    data_labels = datamodule.train_dataloader().dataset.tensors[1]
+    data_labels = datamodule.val_dataloader().dataset.tensors[1]
     model_dict = {'NCA': NCAToy(datamodule=datamodule,
                 optimizer= config['optimizer'],learning_rate= config['learning_rate'],
                 momentum=config['momentum'], weight_decay=config['weight_decay'],

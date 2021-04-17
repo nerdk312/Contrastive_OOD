@@ -53,9 +53,14 @@ class ToyTrainTwoMoonsTransforms:
     """
     def __init__(self):
         # image augmentation functions
+        '''
         self.train_transform = transforms.Compose([
             transforms.RandomApply([GaussianNoise([0, 0.00001])], p=0.5),
         ])
+        '''
+        self.test_transform = transforms.Compose([
+        ])
+
 
     def __call__(self, inp):
         q = self.train_transform(inp)

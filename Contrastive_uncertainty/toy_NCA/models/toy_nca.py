@@ -46,6 +46,7 @@ class NCAToy(Toy):
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder = self.init_encoders()
+
     
     
     def init_encoders(self):
@@ -54,6 +55,10 @@ class NCAToy(Toy):
         """
         encoder = Backbone(self.hparams.hidden_dim, self.hparams.emb_dim)
         return encoder
+    
+    def callback_vector(self,x):
+        z = self.encoder(x)
+        return z
     
     def loss_function(self, batch, auxillary_data=None):
         (data, *aug_data), labels, indices = batch
