@@ -10,8 +10,8 @@ from torchvision import transforms as transform_lib
 from torchvision.datasets import FashionMNIST,MNIST
 import math
 
-from Contrastive_uncertainty.datamodules.dataset_normalizations import mnist_normalization
-from Contrastive_uncertainty.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.PCL.datamodules.dataset_normalizations import mnist_normalization
+from Contrastive_uncertainty.PCL.datamodules.datamodule_transforms import dataset_with_indices
 
 
 class MNISTDataModule(LightningDataModule):

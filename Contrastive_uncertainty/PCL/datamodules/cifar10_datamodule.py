@@ -3,22 +3,22 @@ from typing import Optional, Sequence
 import numpy as np
 import torch
 from pytorch_lightning import LightningDataModule
-from torch.utils.data import DataLoader, random_split,Subset
-import math
+from torch.utils.data import DataLoader, random_split, Subset
 
 
+from Contrastive_uncertainty.datamodules.dataset_normalizations import cifar10_normalization
+from Contrastive_uncertainty.datamodules.datamodule_transforms import dataset_with_indices
 from warnings import warn
+
+
 from torchvision import transforms as transform_lib
-from torchvision.datasets import FashionMNIST
-
-from Contrastive_uncertainty.PCL.datamodules.dataset_normalizations import fashionmnist_normalization
-from Contrastive_uncertainty.PCL.datamodules.datamodule_transforms import dataset_with_indices
+from torchvision.datasets import CIFAR10
 
 
 
-class FashionMNISTDataModule(LightningDataModule):
+class CIFAR10DataModule(LightningDataModule):
 
-    name = 'fashionmnist'
+    name = 'cifar10'
     extra_args = {}
 
     def __init__(
@@ -38,7 +38,7 @@ class FashionMNISTDataModule(LightningDataModule):
             :alt: CIFAR-10
         Specs:
             - 10 classes (1 per class)
-            - Each image is (1 x 28 x 28)
+            - Each image is (3 x 32 x 32)
         Standard CIFAR10, train, val, test splits and transforms
         Transforms::
             mnist_transforms = transform_lib.Compose([
@@ -65,20 +65,16 @@ class FashionMNISTDataModule(LightningDataModule):
             batch_size: number of examples per training/eval step
         """
         super().__init__(*args, **kwargs)
-        self.dims = (1, 28, 28)
-        self.DATASET = FashionMNIST
+        self.dims = (3, 32, 32)
+        self.DATASET = CIFAR10
         self.DATASET_with_indices = dataset_with_indices(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size
-        
         self.seed = seed
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
-        
-        #self.full_train_samples = 60000
-        #self.full_test_samples = 10000
-    
+
     def split_size(self, samples): # obtains a dataset size for the k-means based on the batch size
         batch_size = self.batch_size
 
@@ -87,7 +83,6 @@ class FashionMNISTDataModule(LightningDataModule):
         new_dataset_size = batch_num * batch_size
         #split = samples - new_dataset_size
         return int(new_dataset_size)
-
 
     @property
     def num_classes(self):
@@ -111,15 +106,14 @@ class FashionMNISTDataModule(LightningDataModule):
         self.setup_train()
         self.setup_val()
         self.setup_test()
-        
-        
+
         # Obtain class indices
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
         # Obtains a class where there is 
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
         self.idx2class = {v:f'{i} - {k}'for i, (k, v) in zip(range(len(dataset.class_to_idx)),dataset.class_to_idx.items())}
         # Need to change key and value around to get in the correct order
-        self.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}   
+        self.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}  
 
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
@@ -129,7 +123,7 @@ class FashionMNISTDataModule(LightningDataModule):
         new_dataset_size = self.split_size(train_length)
         indices = range(new_dataset_size)
 
-        self.train_dataset = Subset(dataset, indices) # Obtain a subset of the data from 0th index to the index for the last value
+        self.train_dataset = Subset(dataset, indices)  # Obtain a subset of the data from 0th index to the index for the last value
 
         '''
         self.train_dataset, _ = random_split(
@@ -139,17 +133,17 @@ class FashionMNISTDataModule(LightningDataModule):
         )
         '''
         #self.datasize =train_length - self.val_split
-        
+
+    
 
     def setup_val(self):
         # val transforms use the test transforms in this case
         val_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
-        
+
         train_length = len(dataset)
         new_dataset_size = self.split_size(train_length)
         indices = range(new_dataset_size)
-
         self.val_dataset = Subset(dataset, indices) # Obtain a subset of the data from 0th index to the index for the last value
         '''
         train_length = len(dataset)
@@ -159,7 +153,6 @@ class FashionMNISTDataModule(LightningDataModule):
             generator=torch.Generator().manual_seed(self.seed)
         )
         '''
-
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
         self.test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)
@@ -182,6 +175,7 @@ class FashionMNISTDataModule(LightningDataModule):
             generator=torch.Generator().manual_seed(self.seed)
         )
         '''
+
     def train_dataloader(self):
         """
         FashionMNIST train set removes a subset to use for validation
@@ -227,8 +221,8 @@ class FashionMNISTDataModule(LightningDataModule):
         return loader
 
     def default_transforms(self):
-        FashionMNIST_transforms = transform_lib.Compose([
+        cf10_transforms = transform_lib.Compose([
             transform_lib.ToTensor(),
-            fashionmnist_normalization()
+            cifar10_normalization()
         ])
-        return FashionMNIST_transforms
+        return cf10_transforms
