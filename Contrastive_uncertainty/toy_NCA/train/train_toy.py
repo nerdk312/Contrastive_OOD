@@ -10,14 +10,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 
 #from Contrastive_uncertainty.toy_example.callbacks.toy_visualisation_callbacks import circular_visualisation, data_visualisation
-from Contrastive_uncertainty.toy_example.run.toy_run_setup  import callback_dictionary, Datamodule_selection, Model_selection
-
-from Contrastive_uncertainty.toy_example.models.toy_moco import MocoToy
-from Contrastive_uncertainty.toy_example.models.toy_softmax import SoftmaxToy
-from Contrastive_uncertainty.toy_example.models.toy_PCL import PCLToy
-from Contrastive_uncertainty.toy_example.models.toy_supcon import SupConToy
-from Contrastive_uncertainty.toy_example.models.toy_ova import OVAToy
-
+from Contrastive_uncertainty.toy_NCA.run.toy_run_setup  import callback_dictionary, Datamodule_selection, Model_selection
 
 def training(params):
     wandb.init(entity="nerdk312",config = params,project= params['project']) # Required to have access to wandb config, which is needed to set up a sweep
@@ -35,11 +28,11 @@ def training(params):
     OOD_datamodule = Datamodule_selection(config['OOD_dataset'],config)
     datamodule.setup(), OOD_datamodule.setup()
 
-    
+    #import ipdb; ipdb.set_trace()
     model = Model_selection(datamodule, config)
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
-
+    #desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
+    desired_callbacks = []
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
         
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,

@@ -25,7 +25,7 @@ class Toy(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
 
-        metrics = self.loss_function(batch, self.auxillary_data)
+        metrics = self.loss_function(batch)
         for k,v in metrics.items():
                 if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
         loss = metrics['Loss']
@@ -33,13 +33,13 @@ class Toy(pl.LightningModule):
         
 
     def validation_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
+        metrics = self.loss_function(batch)
         
         for k,v in metrics.items():
                 if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
         
     def test_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
+        metrics = self.loss_function(batch)
         for k,v in metrics.items():
                 if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
 

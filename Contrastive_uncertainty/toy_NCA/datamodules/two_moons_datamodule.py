@@ -47,7 +47,7 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         self.train_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
         self.val_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)
         self.test_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)
-       
+        #import ipdb; ipdb.set_trace()
 
         self.idx2class  = {0:'0 - orange',1:'1 - blue'} # Dict for two moons
 
@@ -61,7 +61,7 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         '''returns validation dataloader'''
         
         val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True,num_workers = 8) # Batch size is entire validataion set
-
+        #import ipdb; ipdb.set_trace()
         return val_loader
 
     def test_dataloader(self):
@@ -70,4 +70,8 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         test_loader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
         return test_loader
 
-
+'''
+datamodule = TwoMoonsDataModule()
+datamodule.setup()
+datamodule.val_dataloader()
+'''

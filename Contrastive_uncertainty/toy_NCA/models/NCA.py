@@ -18,7 +18,6 @@ class NCACrossEntropy(nn.Module):
         self.margin = margin
 
     def forward(self, x, indexes):
-        
         batchSize = x.size(0)
         # Nawid - n is the dimensionality I believe
         n = x.size(1)

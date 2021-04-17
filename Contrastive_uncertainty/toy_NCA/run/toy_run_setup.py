@@ -1,19 +1,10 @@
-from Contrastive_uncertainty.toy_example.callbacks.toy_visualisation_callbacks import circular_visualisation, data_visualisation,\
+from Contrastive_uncertainty.toy_NCA.callbacks.toy_visualisation_callbacks import circular_visualisation, data_visualisation,\
                                                                                UncertaintyVisualisation , TwoMoonsVisualisation    
-from Contrastive_uncertainty.toy_example.callbacks.toy_ood_callbacks import OOD_ROC, Mahalanobis_OOD
-from Contrastive_uncertainty.toy_example.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.toy_NCA.callbacks.toy_ood_callbacks import OOD_ROC, Mahalanobis_OOD
+from Contrastive_uncertainty.toy_NCA.datamodules.datamodule_dict import dataset_dict
 
-from Contrastive_uncertainty.toy_example.models.toy_moco import MocoToy
-from Contrastive_uncertainty.toy_example.models.toy_PCL import PCLToy
-from Contrastive_uncertainty.toy_example.models.toy_softmax import SoftmaxToy
-from Contrastive_uncertainty.toy_example.models.toy_supcon import SupConToy
-from Contrastive_uncertainty.toy_example.models.toy_ova import OVAToy
-from Contrastive_uncertainty.toy_example.models.toy_uniform import UniformityToy
-from Contrastive_uncertainty.toy_example.models.toy_align import AlignmentToy
-from Contrastive_uncertainty.toy_example.models.toy_align_uniform import AlignmentUniformityToy
-from Contrastive_uncertainty.toy_example.models.toy_ova_uniform import OVAUniformityToy
-from Contrastive_uncertainty.toy_example.models.toy_NNCL import NNCLToy
-from Contrastive_uncertainty.toy_example.models.toy_ova_uniform_cluster import OVAUniformClusterToy
+from Contrastive_uncertainty.toy_NCA.models.toy_nca import NCAToy
+
 
 def Datamodule_selection(dataset, config):
     # Information regarding the configuration of the data module for the specific task
@@ -39,80 +30,14 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
 
 
 def Model_selection(datamodule,config):
-    model_dict = {'Moco':MocoToy(datamodule=datamodule,
-                optimizer=config['optimizer'], learning_rate=config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'], emb_dim=config['emb_dim'],
-                num_negatives=config['num_negatives'], encoder_momentum=config['encoder_momentum'],
-                softmax_temperature=config['softmax_temperature'],
-                pretrained_network=config['pretrained_network'], num_classes=config['num_classes']),
-                
-                'SupCon':SupConToy(datamodule=datamodule,
+    data_labels = datamodule.train_dataloader().dataset.tensors[1]
+    model_dict = {'NCA': NCAToy(datamodule=datamodule,
                 optimizer= config['optimizer'],learning_rate= config['learning_rate'],
                 momentum=config['momentum'], weight_decay=config['weight_decay'],
                 hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                softmax_temperature=config['softmax_temperature'],base_temperature=config['softmax_temperature'],
-                num_classes= config['num_classes']),
-
-                'PCL':PCLToy(datamodule=datamodule,
-                optimizer=config['optimizer'], learning_rate=config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'], emb_dim=config['emb_dim'],
-                num_negatives=config['num_negatives'], encoder_momentum=config['encoder_momentum'],
-                softmax_temperature=config['softmax_temperature'],
-                pretrained_network=config['pretrained_network']),#, num_cluster=config['num_cluster']),
-
-                'NNCL':NNCLToy(datamodule=datamodule,
-                optimizer=config['optimizer'], learning_rate=config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'], emb_dim=config['emb_dim'],
-                num_negatives=config['num_negatives'], encoder_momentum=config['encoder_momentum'],
-                softmax_temperature=config['softmax_temperature'],
-                pretrained_network=config['pretrained_network']),#, num_cluster=config['num_cluster']),),
-
-                'Softmax': SoftmaxToy(datamodule=datamodule,
-                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                num_classes = config['num_classes']),
-                
-                'OVA': OVAToy(datamodule=datamodule,
-                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                num_classes = config['num_classes']),
-                
-                'Uniformity':UniformityToy(datamodule=datamodule,
-                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                num_classes = config['num_classes']),
-
-                'Alignment':AlignmentToy(datamodule=datamodule,
-                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                num_classes = config['num_classes']),
-
-                'AlignUniform':AlignmentUniformityToy(datamodule=datamodule,
-                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                num_classes = config['num_classes']),
-
-                'OVAUniform': OVAUniformityToy(datamodule=datamodule,
-                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                num_classes = config['num_classes']),
-
-                'OVAUniformCluster': OVAUniformClusterToy(datamodule=datamodule,
-                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
-                momentum=config['momentum'], weight_decay=config['weight_decay'],
-                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
-                num_classes = config['num_classes'],encoder_momentum=config['encoder_momentum'],
+                num_classes = config['num_classes'],memory_momentum=config['memory_momentum'],
                 softmax_temperature = config['softmax_temperature'],
-                num_cluster = config['num_cluster']),
+                labels=data_labels),
 
     }
     
