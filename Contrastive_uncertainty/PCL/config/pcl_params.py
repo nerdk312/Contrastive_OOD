@@ -18,8 +18,8 @@ instance_encoder = 'resnet50',
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
 bsz = 512,
-dataset = 'CIFAR10',
-OOD_dataset = 'SVHN',
+dataset = 'FashionMNIST',
+OOD_dataset = 'MNIST',
 
 # Miscellaneous arguments
 seed = 42,

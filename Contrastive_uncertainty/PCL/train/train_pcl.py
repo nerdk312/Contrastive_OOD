@@ -59,7 +59,7 @@ def training(params):
 
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
 
-    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,precision = 16,
+    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,precision = 16,num_sanity_val_steps=2,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks)#,auto_lr_find = True)

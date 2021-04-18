@@ -19,6 +19,8 @@ from sklearn.metrics import roc_auc_score
 from Contrastive_uncertainty.Moco.hybrid_utils import OOD_conf_matrix
 from Contrastive_uncertainty.Moco.loss_functions import class_discrimination
 from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
+from Contrastive_uncertainty.PCL.utils.pl_metrics import precision_at_k, mean
+
 
 # Used to log input images and predictions of the dataset
 
@@ -27,7 +29,6 @@ class ImagePredictionLogger(pl.Callback):
         super().__init__()
         self.collated_samples = collated_samples # The number of samples to save
         self.imgs, self.labels,self.indices = samples
-
 
         self.ood_imgs, self.ood_labels,self.ood_indices = ood_samples
         if isinstance(self.imgs,tuple) or isinstance(self.imgs,list):
@@ -334,6 +335,7 @@ class Mahalanobis_OOD(pl.Callback):
         self.log_name = "Mahalanobis_"
         self.true_histogram = 'Mahalanobis_True_data_scores'
         self.ood_histogram = 'Mahalanobis_OOD_data_scores'
+        self.log_classification = 'Mahalanobis Classification'
 
         # Names for creating a confusion matrix for the data
         class_dict = self.Datamodule.idx2class
@@ -379,8 +381,17 @@ class Mahalanobis_OOD(pl.Callback):
             np.copy(features_ood),
             np.copy(labels_train),
         )
-
+        #import ipdb;ipdb.set_trace()
+        # Performs centroid classification
+        self.mahalanobis_classification(indices_dtest, labels_test)
         return fpr95,auroc,aupr 
+
+    # Calaculates the accuracy of a data point based on the closest distance to a centroid
+    def mahalanobis_classification(self,predictions, labels):
+        predictions = torch.tensor(predictions,dtype = torch.long)
+        labels = torch.tensor(labels,dtype = torch.long)
+        mahalanobis_test_accuracy = 100*predictions.eq(labels) /len(predictions)        
+        wandb.log({self.log_classification:mahalanobis_test_accuracy})
 
     def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
         features, labels = [], []

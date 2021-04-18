@@ -15,11 +15,9 @@ import faiss
 import math
 
 
-from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.PCL.utils.pl_metrics import precision_at_k, mean
 from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
-
 from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
-
 
 
 class base_module(pl.LightningModule):
@@ -423,7 +421,7 @@ class PCLModule(base_module):
         else: 
             pass
         #return self.auxillary_data
-
+    
     def aux_data(self,dataloader):
         cluster_result = self.cluster_data(dataloader)
         return cluster_result

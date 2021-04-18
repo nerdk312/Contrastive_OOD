@@ -241,6 +241,7 @@ class MetricLogger(pl.Callback):
 
         numeric_metrics = {}
         histogr_metrics = {}
+        #import ipdb; ipdb.set_trace()
         for main_key in computed_metrics.keys(): # Nawid - iterates through the keys in the computed metrics
             for name,value in computed_metrics[main_key].items(): # Nawid - looks at the name and values of a particular metric
                 if isinstance(value, np.ndarray):
@@ -266,18 +267,28 @@ class MetricLogger(pl.Callback):
                 import wandb, numpy
                 wandb.log({log_key+': '+evaltype+'_{}'.format(eval_metric): wandb.Histogram(np_histogram=(list(hist),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
                 wandb.log({log_key+': '+evaltype+'_LOG-{}'.format(eval_metric): wandb.Histogram(np_histogram=(list(np.log(hist)+20),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
-
+        
+        
         for evaltype in numeric_metrics.keys():# Nawid - plot the numeric metrics on wandb
             for eval_metric in numeric_metrics[evaltype].keys():
                 parent_metric = evaltype+'_{}'.format(eval_metric.split('@')[0])
-                wandb.run.summary[eval_metric] = numeric_metrics[evaltype][eval_metric]
+                if 'dists' in eval_metric or 'rho_spectrum' in eval_metric:
+                    wandb.log({eval_metric:numeric_metrics[evaltype][eval_metric]})
+                else:
+                    wandb.run.summary[eval_metric] = numeric_metrics[evaltype][eval_metric]
                 #wandb.log({eval_metric:numeric_metrics[evaltype][eval_metric]})
                 #print('parent metric',parent_metric)
+
+    
 
     def on_validation_epoch_end(self,trainer,pl_module):
         self.metric_initialise(trainer,pl_module)
         self.evaluate_data(trainer,pl_module)
     '''
+    def on_train_epoch_start(self,trainer,pl_module):
+        self.metric_initialise(trainer,pl_module)
+        self.evaluate_data(trainer,pl_module)
+        
     def on_test_epoch_end(self,trainer,pl_module):
         self.metric_initialise(trainer,pl_module)
         self.evaluate_data(trainer,pl_module)
