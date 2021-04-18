@@ -11,7 +11,7 @@ from torchvision.datasets import FashionMNIST,MNIST
 import math
 
 from Contrastive_uncertainty.PCL.datamodules.dataset_normalizations import mnist_normalization
-from Contrastive_uncertainty.PCL.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.PCL.datamodules.datamodule_transforms import dataset_with_indices, split_size
 
 
 class MNISTDataModule(LightningDataModule):
@@ -72,7 +72,7 @@ class MNISTDataModule(LightningDataModule):
         self.seed = seed
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
-    
+    '''
     def split_size(self, samples): # obtains a dataset size for the k-means based on the batch size
         batch_size = self.batch_size
 
@@ -81,7 +81,7 @@ class MNISTDataModule(LightningDataModule):
         new_dataset_size = batch_num * batch_size
         #split = samples - new_dataset_size
         return int(new_dataset_size)
-        
+    '''        
 
     @property
     def num_classes(self):
@@ -120,7 +120,7 @@ class MNISTDataModule(LightningDataModule):
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
         
         train_length = len(dataset)
-        new_dataset_size = self.split_size(train_length)
+        new_dataset_size = split_size(self.batch_size,train_length)
         indices = range(new_dataset_size)
 
         self.train_dataset = Subset(dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
@@ -131,7 +131,7 @@ class MNISTDataModule(LightningDataModule):
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
         
         train_length = len(dataset)
-        new_dataset_size = self.split_size(train_length)
+        new_dataset_size = split_size(self.batch_size,train_length)
         indices = range(new_dataset_size)
 
         self.val_dataset = Subset(dataset, indices) # Obtain a subset of the data from 0th index to the index for the last value
@@ -145,7 +145,7 @@ class MNISTDataModule(LightningDataModule):
             self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
         
         test_length = len(self.test_dataset)
-        new_dataset_size = self.split_size(test_length)
+        new_dataset_size = split_size(self.batch_size,test_length)
         indices = range(new_dataset_size)
         self.test_dataset = Subset(self.test_dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
 

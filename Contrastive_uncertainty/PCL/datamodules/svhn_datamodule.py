@@ -3,7 +3,7 @@ from typing import Optional, Sequence
 import numpy as np
 import torch
 from pytorch_lightning import LightningDataModule
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, Subset
 
 
 from warnings import warn
@@ -12,8 +12,9 @@ from warnings import warn
 from torchvision import transforms as transform_lib
 from torchvision.datasets import SVHN
 
+
 from Contrastive_uncertainty.PCL.datamodules.dataset_normalizations import svhn_normalization
-from Contrastive_uncertainty.PCL.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.PCL.datamodules.datamodule_transforms import dataset_with_indices, split_size
 
 
 
@@ -77,14 +78,6 @@ class SVHNDataModule(LightningDataModule):
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
 
-    def split_size(self, samples): # obtains a dataset size for the k-means based on the batch size
-        batch_size = self.batch_size
-
-        batch_num = math.floor(samples/batch_size)
-        
-        new_dataset_size = batch_num * batch_size
-        #split = samples - new_dataset_size
-        return int(new_dataset_size)
 
     @property
     def num_classes(self):
@@ -112,7 +105,7 @@ class SVHNDataModule(LightningDataModule):
          # Obtain class indices
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
         # Obtains a class where there is 
-        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
+        dataset = self.DATASET_with_indices(self.data_dir, split ='train', download=False, transform=train_transforms, **self.extra_args)
         self.idx2class = {i:f'class {i}' for i in range(max(dataset.labels)+1)}
         #self.idx2class = {v:f'{i} - {k}'for i, (k, v) in zip(range(len(dataset.class_to_idx)),dataset.class_to_idx.items())}
         # Need to change key and value around to get in the correct order
@@ -120,10 +113,10 @@ class SVHNDataModule(LightningDataModule):
 
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
+        dataset = self.DATASET_with_indices(self.data_dir, split ='train', download=False, transform=train_transforms, **self.extra_args)
         
         train_length = len(dataset)
-        new_dataset_size = self.split_size(train_length)
+        new_dataset_size = split_size(self.batch_size, train_length)
         indices = range(new_dataset_size)
 
         self.train_dataset = Subset(dataset, indices)  # Obtain a subset of the data from 0th index to the index for the last value
@@ -131,10 +124,10 @@ class SVHNDataModule(LightningDataModule):
     def setup_val(self):
         # val transforms use the test transforms in this case
         val_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
+        dataset = self.DATASET_with_indices(self.data_dir, split ='train', download=False, transform=val_transforms, **self.extra_args)
 
         train_length = len(dataset)
-        new_dataset_size = self.split_size(train_length)
+        new_dataset_size = split_size(self.batch_size, train_length)
         indices = range(new_dataset_size)
         self.val_dataset = Subset(dataset, indices) # Obtain a subset of the data from 0th index to the index for the last value
         '''
@@ -148,15 +141,17 @@ class SVHNDataModule(LightningDataModule):
     
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        self.test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)
-        if isinstance(self.test_dataset.targets, list):
-            self.test_dataset.targets = torch.Tensor(self.test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
-        elif isinstance(self.test_dataset.targets,np.ndarray):
-            self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
-        
+        self.test_dataset = self.DATASET_with_indices(self.data_dir, split ='test', download=False, transform=test_transforms, **self.extra_args)
+        #import ipdb; ipdb.set_trace()
+        if isinstance(self.test_dataset.labels, list):
+            self.test_dataset.labels = torch.Tensor(self.test_dataset.labels).type(torch.int64) # Need to change into int64 to use in test step 
+        elif isinstance(self.test_dataset.labels,np.ndarray):
+            self.test_dataset.labels = torch.from_numpy(self.test_dataset.labels).type(torch.int64)
+
+        self.test_dataset.targets = self.test_dataset.labels
 
         test_length = len(self.test_dataset)
-        new_dataset_size = self.split_size(test_length)
+        new_dataset_size = split_size(self.batch_size,test_length)
         indices = range(new_dataset_size)
 
         self.test_dataset = Subset(self.test_dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
@@ -166,7 +161,6 @@ class SVHNDataModule(LightningDataModule):
         FashionMNIST train set removes a subset to use for validation
         """
 
-        
         loader = DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,

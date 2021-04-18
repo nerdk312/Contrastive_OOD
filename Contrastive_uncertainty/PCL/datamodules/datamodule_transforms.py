@@ -1,11 +1,12 @@
 import random
+import math
 from warnings import warn
-from Contrastive_uncertainty.datamodules.dataset_normalizations import  cifar10_normalization, fashionmnist_normalization,mnist_normalization,svhn_normalization
 
 
 from PIL import ImageFilter
 from torchvision import transforms
 
+from Contrastive_uncertainty.datamodules.dataset_normalizations import  cifar10_normalization, fashionmnist_normalization,mnist_normalization,svhn_normalization
 
 
 class Moco2TrainCIFAR10Transforms:
@@ -205,3 +206,10 @@ def dataset_with_indices(cls):
     name is the name of the class which corresponds to the __name__ attribute__
     bases: tupe of clases from which corresponds to the __bases__ attribute
     '''
+
+
+def split_size(batch_size, samples): # obtains a dataset size for the k-means based on the batch size
+        batch_num = math.floor(samples/batch_size)
+        new_dataset_size = batch_num * batch_size
+        #split = samples - new_dataset_size
+        return int(new_dataset_size)
