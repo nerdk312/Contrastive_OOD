@@ -352,6 +352,7 @@ class Mahalanobis_OOD(pl.Callback):
 
         
     def on_validation_epoch_end(self,trainer,pl_module):
+    #def on_fit_start(self,trainer,pl_module):
         #import ipdb; ipdb.set_trace()
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
@@ -367,6 +368,7 @@ class Mahalanobis_OOD(pl.Callback):
             np.copy(features_test),
             np.copy(features_ood),
             np.copy(labels_train),
+            self.num_classes
         )
         # Performs centroid classification using the labels
         self.mahalanobis_classification(indices_dtest, labels_test)
@@ -377,7 +379,19 @@ class Mahalanobis_OOD(pl.Callback):
             np.copy(features_test),
             np.copy(features_ood),
             None,
+            self.num_classes
         )
+        # Perform unsupervised clustering with different values        
+        for num_clusters in pl_module.hparams.num_cluster:
+            _, _, _, UL_indices_dtest, UL_indices_dood = self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            None,
+            num_clusters
+        )
+
+
 
         #self.distance_confusion_matrix(trainer,indices_dtest,labels_test)
         #self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)
@@ -387,7 +401,8 @@ class Mahalanobis_OOD(pl.Callback):
     def mahalanobis_classification(self,predictions, labels):
         predictions = torch.tensor(predictions,dtype = torch.long)
         labels = torch.tensor(labels,dtype = torch.long)
-        mahalanobis_test_accuracy = 100*predictions.eq(labels) /len(predictions)        
+        mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
+        #import ipdb; ipdb.set_trace()       
         wandb.log({self.log_classification:mahalanobis_test_accuracy})
 
     def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
@@ -424,9 +439,9 @@ class Mahalanobis_OOD(pl.Callback):
         _, ypred = kmeans.assign(ftrain)
         return ypred
     
-    def get_scores(self,ftrain, ftest, food, labelstrain):
+    def get_scores(self,ftrain, ftest, food, labelstrain,n_clusters):
         if labelstrain is None:
-            ypred = self.get_clusters(ftrain=ftrain, nclusters=self.num_classes)
+            ypred = self.get_clusters(ftrain=ftrain, nclusters=n_clusters)
         else:
             ypred = labelstrain
         return self.get_scores_multi_cluster(ftrain, ftest, food, ypred)
@@ -469,10 +484,11 @@ class Mahalanobis_OOD(pl.Callback):
 
         return din, dood, indices_din, indices_dood
 
-    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+    def get_eval_results(self,ftrain, ftest, food, labelstrain,num_clusters):
         """
             None.
         """
+        #import ipdb; ipdb.set_trace()
         # Nawid -normalise the featues for the training, test and ood data
         # standardize data
         ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
@@ -485,15 +501,15 @@ class Mahalanobis_OOD(pl.Callback):
         ftest = (ftest - m) / (s + 1e-10)
         food = (food - m) / (s + 1e-10)
         # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain)
-        # self.log_confidence_scores(dtest,dood)
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain,num_clusters)
+        self.log_confidence_scores(dtest,dood,labelstrain,num_clusters)
 
         # Nawid- get false postive rate and asweel as AUROC and aupr
         fpr95 = get_fpr(dtest, dood)
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
         
         if labelstrain is None:
-            wandb.log({self.unsupervised_log_name + 'AUROC': auroc})
+            wandb.log({self.unsupervised_log_name + 'AUROC_'+f'{num_clusters}_clusters': auroc})
         else:
             wandb.log({self.log_name + 'AUROC': auroc})
         return fpr95, auroc, aupr, indices_dtest, indices_dood
@@ -514,7 +530,7 @@ class Mahalanobis_OOD(pl.Callback):
                   })
     
     # Changes OOD scores to confidence scores 
-    def log_confidence_scores(self,Dtest,DOOD):
+    def log_confidence_scores(self,Dtest,DOOD,labels_train,num_clusters):
         '''
         confidence_test = np.exp(-Dtest)
         confidence_OOD  = np.exp(-DOOD)
@@ -524,14 +540,22 @@ class Mahalanobis_OOD(pl.Callback):
          # histogram of the confidence scores for the true data
         true_data = [[s] for s in confidence_test]
         true_table = wandb.Table(data=true_data, columns=["scores"])
-        wandb.log({self.true_histogram: wandb.plot.histogram(true_table, "scores",title= self.true_histogram)})
+        # Examine if the centroid was obtained in supervised or unsupervised manner
+        if labels_train is not None:    
+            true_histogram_name = self.true_histogram 
+            ood_histogram_name = self.ood_histogram
+        else:
+            true_histogram_name = self.true_histogram + f'_{num_clusters}_clusters'
+            ood_histogram_name = self.ood_histogram + f'_{num_clusters}_clusters'
+
+        #import ipdb; ipdb.set_trace()
+        wandb.log({true_histogram_name: wandb.plot.histogram(true_table, "scores",title=true_histogram_name)})
 
         # Histogram of the confidence scores for the OOD data
         ood_data = [[s] for s in confidence_OOD]
         ood_table = wandb.Table(data=ood_data, columns=["scores"])
-        wandb.log({self.ood_histogram: wandb.plot.histogram(ood_table, "scores",title=self.ood_histogram)})
-
-    
+        wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
+        
 # Same as mahalanobis but calculates score based on the minimum euclidean distance rather than min Mahalanobis distance
 class Euclidean_OOD(Mahalanobis_OOD):
     def __init__(self, Datamodule,OOD_Datamodule,quick_callback):

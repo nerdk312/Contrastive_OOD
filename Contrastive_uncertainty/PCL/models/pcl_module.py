@@ -407,7 +407,6 @@ class PCLModule(base_module):
         metrics.update(additional_metrics)
         return metrics
     
-    
     def on_train_epoch_start(self):
         dataloader = self.datamodule.val_dataloader()
         self.auxillary_data = self.aux_data(dataloader)
