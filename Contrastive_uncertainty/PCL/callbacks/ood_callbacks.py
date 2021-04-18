@@ -10,16 +10,18 @@ import sklearn.datasets
 import matplotlib.pyplot as plt
 import seaborn as sns
 import wandb
-import sklearn.metrics as skm
+import faiss
 
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
+import sklearn.metrics as skm
 
 from Contrastive_uncertainty.Moco.hybrid_utils import OOD_conf_matrix
 from Contrastive_uncertainty.Moco.loss_functions import class_discrimination
 from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
 from Contrastive_uncertainty.PCL.utils.pl_metrics import precision_at_k, mean
+
 
 
 # Used to log input images and predictions of the dataset
@@ -332,40 +334,25 @@ class Mahalanobis_OOD(pl.Callback):
         self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
         self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
+        
         self.log_name = "Mahalanobis_"
+        self.unsupervised_log_name = "Unsupervised_Mahalanobis_"
         self.true_histogram = 'Mahalanobis_True_data_scores'
         self.ood_histogram = 'Mahalanobis_OOD_data_scores'
         self.log_classification = 'Mahalanobis Classification'
-
+        
+        # Number of classes of the data
+        self.num_classes = self.Datamodule.num_classes
         # Names for creating a confusion matrix for the data
         class_dict = self.Datamodule.idx2class
         self.class_names = [v for k,v in class_dict.items()] # names of the categories of the dataset
         # Obtain class names list for the case of the OOD data
         OOD_class_dict = self.OOD_Datamodule.idx2class
         self.OOD_class_names = [v for k,v in OOD_class_dict.items()] # names of the categories of the dataset
-    '''
-    def on_test_epoch_end(self,trainer,pl_module):
-        train_loader = self.Datamodule.train_dataloader()
-        test_loader = self.Datamodule.test_dataloader()
-        ood_loader = self.OOD_Datamodule.test_dataloader()
-            
-        features_train, labels_train = self.get_features(pl_module, train_loader)  # using feature befor MLP-head
-        features_test, labels_test = self.get_features(pl_module, train_loader)
-        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
-        
-        # Obtain the fpr95, aupr, test predictions, OOD predictions
-        fpr95, auroc, aupr, indices_dtest, indices_dood = self.get_eval_results(
-            np.copy(features_train),
-            np.copy(features_test),
-            np.copy(features_ood),
-            np.copy(labels_train),
-        )
-        self.distance_confusion_matrix(trainer,indices_dtest,labels_test)
-        self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)
 
-        return fpr95,auroc,aupr 
-    '''
+        
     def on_validation_epoch_end(self,trainer,pl_module):
+        #import ipdb; ipdb.set_trace()
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
         ood_loader = self.OOD_Datamodule.test_dataloader()
@@ -375,15 +362,25 @@ class Mahalanobis_OOD(pl.Callback):
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         
         # Obtain the fpr95, aupr, test predictions, OOD predictions (basic version does not log the confidence scores or the confusion matrices)
-        fpr95, auroc, aupr, indices_dtest, indices_dood = self.get_eval_results_basic(
+        fpr95, auroc, aupr, indices_dtest, indices_dood = self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
             np.copy(features_ood),
             np.copy(labels_train),
         )
-        #import ipdb;ipdb.set_trace()
-        # Performs centroid classification
+        # Performs centroid classification using the labels
         self.mahalanobis_classification(indices_dtest, labels_test)
+
+        # Calculates the mahalanobis distance using unsupervised approach
+        _, _, _, UL_indices_dtest, UL_indices_dood = self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            None,
+        )
+
+        #self.distance_confusion_matrix(trainer,indices_dtest,labels_test)
+        #self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)
         return fpr95,auroc,aupr 
 
     # Calaculates the accuracy of a data point based on the closest distance to a centroid
@@ -417,10 +414,23 @@ class Mahalanobis_OOD(pl.Callback):
             total += len(img)
 
         return np.array(features), np.array(labels)    
+    
+    # Nawid - perform k-means on the training features and then assign a cluster assignment
+    def get_clusters(self, ftrain, nclusters):
+        kmeans = faiss.Kmeans(
+            ftrain.shape[1], nclusters, niter=100, verbose=False, gpu=True
+        )
+        kmeans.train(np.random.permutation(ftrain))
+        _, ypred = kmeans.assign(ftrain)
+        return ypred
+    
     def get_scores(self,ftrain, ftest, food, labelstrain):
-        ypred = labelstrain
+        if labelstrain is None:
+            ypred = self.get_clusters(ftrain=ftrain, nclusters=self.num_classes)
+        else:
+            ypred = labelstrain
         return self.get_scores_multi_cluster(ftrain, ftest, food, ypred)
-
+    
     def get_scores_multi_cluster(self,ftrain, ftest, food, ypred):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
@@ -458,6 +468,50 @@ class Mahalanobis_OOD(pl.Callback):
         dood = np.min(dood, axis=0)
 
         return din, dood, indices_din, indices_dood
+
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        """
+            None.
+        """
+        # Nawid -normalise the featues for the training, test and ood data
+        # standardize data
+        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
+        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
+        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
+        # Nawid - calculate the mean and std of the traiing features
+        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
+        # Nawid - normalise data using the mean and std
+        ftrain = (ftrain - m) / (s + 1e-10)
+        ftest = (ftest - m) / (s + 1e-10)
+        food = (food - m) / (s + 1e-10)
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain)
+        # self.log_confidence_scores(dtest,dood)
+
+        # Nawid- get false postive rate and asweel as AUROC and aupr
+        fpr95 = get_fpr(dtest, dood)
+        auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
+        
+        if labelstrain is None:
+            wandb.log({self.unsupervised_log_name + 'AUROC': auroc})
+        else:
+            wandb.log({self.log_name + 'AUROC': auroc})
+        return fpr95, auroc, aupr, indices_dtest, indices_dood
+        
+    
+    def distance_confusion_matrix(self,trainer,predictions,labels):
+        wandb.log({self.log_name +"conf_mat_id": wandb.plot.confusion_matrix(probs = None,
+            preds=predictions, y_true=labels,
+            class_names=self.class_names),
+            "global_step": trainer.global_step
+                  })
+
+    def distance_OOD_confusion_matrix(self,trainer,predictions,labels):
+        wandb.log({self.log_name +"OOD_conf_mat_id": OOD_conf_matrix(probs = None,
+            preds=predictions, y_true=labels,
+            class_names=self.class_names,OOD_class_names =self.OOD_class_names),
+            "global_step": trainer.global_step
+                  })
     
     # Changes OOD scores to confidence scores 
     def log_confidence_scores(self,Dtest,DOOD):
@@ -476,106 +530,7 @@ class Mahalanobis_OOD(pl.Callback):
         ood_data = [[s] for s in confidence_OOD]
         ood_table = wandb.Table(data=ood_data, columns=["scores"])
         wandb.log({self.ood_histogram: wandb.plot.histogram(ood_table, "scores",title=self.ood_histogram)})
-    
-    def get_eval_results(self,ftrain, ftest, food, labelstrain):
-        """
-            None.
-        """
-        # Nawid -normalise the featues for the training, test and ood data
-        # standardize data
-        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
-        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
-        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
-        # Nawid - calculate the mean and std of the traiing features
-        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
-        # Nawid - normalise data using the mean and std
-        ftrain = (ftrain - m) / (s + 1e-10)
-        ftest = (ftest - m) / (s + 1e-10)
-        food = (food - m) / (s + 1e-10)
-        # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain)
-        self.log_confidence_scores(dtest,dood)
 
-        # Nawid- get false postive rate and asweel as AUROC and aupr
-        fpr95 = get_fpr(dtest, dood)
-        auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
-        wandb.log({self.log_name + 'AUROC': auroc})
-        return fpr95, auroc, aupr, indices_dtest, indices_dood
-
-    def get_eval_results_basic(self,ftrain, ftest, food, labelstrain):
-        """
-            None.
-        """
-        # Nawid -normalise the featues for the training, test and ood data
-        # standardize data
-        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
-        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
-        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
-        # Nawid - calculate the mean and std of the traiing features
-        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
-        # Nawid - normalise data using the mean and std
-        ftrain = (ftrain - m) / (s + 1e-10)
-        ftest = (ftest - m) / (s + 1e-10)
-        food = (food - m) / (s + 1e-10)
-        # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain)
-
-
-        # Nawid- get false postive rate and asweel as AUROC and aupr
-        fpr95 = get_fpr(dtest, dood)
-        auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
-        wandb.log({self.log_name + 'AUROC': auroc})
-        return fpr95, auroc, aupr, indices_dtest, indices_dood
-        
-    
-    def distance_confusion_matrix(self,trainer,predictions,labels):
-        wandb.log({self.log_name +"conf_mat_id": wandb.plot.confusion_matrix(probs = None,
-            preds=predictions, y_true=labels,
-            class_names=self.class_names),
-            "global_step": trainer.global_step
-                  })
-
-    def distance_OOD_confusion_matrix(self,trainer,predictions,labels):
-        wandb.log({self.log_name +"OOD_conf_mat_id": OOD_conf_matrix(probs = None,
-            preds=predictions, y_true=labels,
-            class_names=self.class_names,OOD_class_names =self.OOD_class_names),
-            "global_step": trainer.global_step
-                  })
-
-# Same as mahalanobis but obtains different feature vector for the task
-class Mahalanobis_OOD_compressed(Mahalanobis_OOD):
-    def __init__(self, Datamodule,OOD_Datamodule,quick_callback):
-        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
-        self.log_name = "Mahalanobis_compressed_"    
-        self.true_histogram = 'Mahalanobis_True_data_compressed'
-        self.ood_histogram = 'Mahalanobis_OOD_data_compressed'
-
-        
-
-    def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
-        features, labels = [], []
-        total = 0
-        loader = quickloading(self.quick_callback,dataloader)
-        for index, (img, label,indices) in enumerate(loader):
-            assert len(loader)>0, 'loader is empty'
-            if isinstance(img, tuple) or isinstance(img, list):
-                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
-
-
-            if total > max_images:
-                break
-            
-            img, label = img.to(pl_module.device), label.to(pl_module.device)
-
-            features += list(pl_module.feature_vector_compressed(img).data.cpu().numpy())
-            labels += list(label.data.cpu().numpy())
-
-            if verbose and not index % 50:
-                print(index)
-                
-            total += len(img)
-
-        return np.array(features), np.array(labels)
     
 # Same as mahalanobis but calculates score based on the minimum euclidean distance rather than min Mahalanobis distance
 class Euclidean_OOD(Mahalanobis_OOD):

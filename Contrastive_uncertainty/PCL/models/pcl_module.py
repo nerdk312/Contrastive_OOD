@@ -425,6 +425,7 @@ class PCLModule(base_module):
     def aux_data(self,dataloader):
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
+    
             
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):

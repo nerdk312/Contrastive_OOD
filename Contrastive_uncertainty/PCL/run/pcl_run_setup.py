@@ -4,7 +4,7 @@ from Contrastive_uncertainty.PCL.callbacks.general_callbacks import ModelSaving,
                                                                     Centroid_distance, SupConLoss
 
 from Contrastive_uncertainty.PCL.callbacks.ood_callbacks import ImagePredictionLogger, OOD_confusion_matrix, \
-                                                                OOD_ROC, Mahalanobis_OOD, Mahalanobis_OOD_compressed, \
+                                                                OOD_ROC, Mahalanobis_OOD, \
                                                                 Euclidean_OOD
 
 from Contrastive_uncertainty.PCL.callbacks.visualisation_callbacks import Visualisation
@@ -46,7 +46,7 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
     callback_dict = {'Model_saving':ModelSaving(config['model_saving']), 'Confusion_matrix':OOD_confusion_matrix(Datamodule,OOD_Datamodule),'ROC':OOD_ROC(Datamodule,OOD_Datamodule),
                 'Reliability': ReliabiltyLogger(samples,sample_size), 'Metrics': MetricLogger(evaluation_metrics,val_loader,evaltypes,config['quick_callback']),'Image_prediction':ImagePredictionLogger(samples,OOD_samples,sample_size),
                 
-                'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule, config['quick_callback']), 'Mahalanobis_compressed': Mahalanobis_OOD_compressed(Datamodule,OOD_Datamodule,config['quick_callback']),
+                'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule, config['quick_callback']),
                 
                 'Euclidean': Euclidean_OOD(Datamodule,OOD_Datamodule, config['quick_callback']),'MMD': MMD_distance(Datamodule, config['quick_callback']),
                 
