@@ -35,11 +35,9 @@ class NCAOriginalToy(Toy):
         self.datamodle = datamodule
         #import ipdb; ipdb.set_trace()
 
-        
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder = self.init_encoders()
-
 
     def init_encoders(self):
         """
@@ -49,7 +47,7 @@ class NCAOriginalToy(Toy):
         return encoder
     
     # Obtain feature vector
-    def callback_vector(self,x):
+    def callback_vector(self, x):
         z = self.encoder(x)
         return z
     
@@ -93,6 +91,6 @@ class NCAOriginalToy(Toy):
         # sum both loss terms and return
         loss = classification_loss + hinge_loss
 
-        metrics = {'Loss': loss,'Accuracy':accuracy}
+        metrics = {'Loss': loss,'Accuracy':accuracy, 'Classification Loss':classification_loss, 'Hinge Loss':hinge_loss}
 
         return metrics 
