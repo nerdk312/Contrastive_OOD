@@ -239,7 +239,7 @@ class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two
 
 
 
-class TwoMoonsRepresentationVisualisation(pl.Callback): # contains methods specifc for the two moons dataset
+class TwoMoonsUncertaintyVisualisation_NCA(pl.Callback): # contains methods specifc for the two moons dataset
     def __init__(self,datamodule):
         super().__init__()
         self.datamodule = datamodule
@@ -249,14 +249,24 @@ class TwoMoonsRepresentationVisualisation(pl.Callback): # contains methods speci
         #self.frames = []
     
     def on_validation_epoch_end(self,trainer, pl_module):
-        self.visualise_representation(trainer,pl_module)
+        self.visualise_uncertainty(trainer, pl_module)
     
     def on_test_epoch_end(self,tainer,pl_module):
         self.generate_video()
 
     
+    def outlier_grid(self): #  Generates the grid of points, outputs, x_lin and y_lin aswell as this is required for the uncertainty visualisation
+        domain = 3
+        x_lin,y_lin = np.linspace(-domain+0.5, domain+0.5, 50), np.linspace(-domain, domain, 50)
 
-    def visualise_representation(self,trainer,pl_module):
+        # Normalising the data which is used for the visualisation
+        x_lin,y_lin = (x_lin -self.datamodule.mean[0])/self.datamodule.std[0], (y_lin -self.datamodule.mean[1])/self.datamodule.std[1]
+        xx, yy = np.meshgrid(x_lin, y_lin)
+        X_grid = np.column_stack([xx.flatten(), yy.flatten()])
+        return x_lin, y_lin, X_grid
+
+
+    def visualise_uncertainty(self,trainer,pl_module):
         # Generates test outlier data
         
         mask = self.y_vis.astype(np.bool)
@@ -286,17 +296,55 @@ class TwoMoonsRepresentationVisualisation(pl.Callback): # contains methods speci
         #self.frames.append(plt.show(block=False))
         plt.close()
     
+    def visualise_uncertainty(self,trainer,pl_module):
+        # Generates test outlier data
+        x_lin, y_lin, X_grid = self.outlier_grid()
+
+        mask = self.y_vis.astype(np.bool)
+        with torch.no_grad():
+            output = pl_module.callback_vector(torch.from_numpy(self.X_vis).float().to(pl_module.device))
+
+
+        with torch.no_grad():
+            output = pl_module.centroid_confidence(torch.from_numpy(X_grid).float().to(pl_module.device),centroids)
+            #output = pl_module(torch.from_numpy(X_grid).float().to(pl_module.device),centroids)
+            confidence = output.max(1)[0].cpu().numpy()
+
+        # z = confidence.reshape(xx.shape) # Original version, replaced with x_lin shape[0] since I placed xx in a function
+        z = confidence.reshape((x_lin.shape[0], x_lin.shape[0]))
+        plt.figure()
+        plt.contourf(x_lin, y_lin, z, cmap='cividis')
+        plt.colorbar().set_label('Confidence')
+
+
+        plt.scatter(self.X_vis[mask,0], self.X_vis[mask,1])
+        plt.scatter(self.X_vis[~mask,0], self.X_vis[~mask,1])
+        #import ipdb; ipdb.set_trace()
+        
+        video_image = 'Images/file%02d.png' % trainer.current_epoch
+        uncertainty_filename = 'Images/uncertainty.png'
+        plt.savefig(uncertainty_filename)
+        plt.savefig(video_image)
+        wandb_uncertainty = 'uncertainty'
+        wandb.log({wandb_uncertainty:wandb.Image(uncertainty_filename)})
+        # Add the image to the frames section to make a video
+        #import ipdb; ipdb.set_trace()
+        #self.frames.append(plt.show(block=False))
+        plt.close()
+    
     def generate_video(self):
         # Changes the directory
         os.chdir("Images")
-        video_filename = 'Two_moons_representation.mp4' 
+        video_filename = 'Two_moons_uncertainty.mp4' 
         subprocess.call([
-            'ffmpeg', '-framerate', '4', '-i', 'representation%02d.png', '-r', '30', '-pix_fmt', 'yuv420p',
+            'ffmpeg', '-framerate', '4', '-i', 'file%02d.png', '-r', '30', '-pix_fmt', 'yuv420p',
             video_filename
         ])
         # Logs the video onto wandb
-        wandb.log({"Representation visualisation": wandb.Video(video_filename, fps=4, format="mp4")})
+        wandb.log({"Uncertainty visualisation": wandb.Video(video_filename, fps=4, format="mp4")})
         for file_name in glob.glob("*.png"):
             os.remove(file_name)
         
         #os.remove(video_filename)
+
+

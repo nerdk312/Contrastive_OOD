@@ -17,9 +17,9 @@ normalize = False,
 instance_encoder = 'resnet50',
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
-bsz = 512,
-dataset = 'CIFAR10',
-OOD_dataset = 'SVHN',
+bsz = 256,
+dataset = 'FashionMNIST',
+OOD_dataset = 'MNIST',
 
 # Miscellaneous arguments
 seed = 42,
@@ -31,7 +31,7 @@ quick_callback = False,
 training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
-val_check = 10,
+val_check = 5,
 model_saving = 200, # Used to control how often the model is saved
 
 project = 'evaluation')  # evaluation
