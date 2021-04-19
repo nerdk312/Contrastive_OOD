@@ -4,11 +4,12 @@ from Contrastive_uncertainty.toy_NCA.callbacks.toy_ood_callbacks import OOD_ROC,
 from Contrastive_uncertainty.toy_NCA.datamodules.datamodule_dict import dataset_dict
 
 from Contrastive_uncertainty.toy_NCA.models.toy_nca import NCAToy
+from Contrastive_uncertainty.toy_NCA.models.toy_nca_original import NCAOriginalToy
 from Contrastive_uncertainty.toy_NCA.callbacks.toy_general_callbacks import kNN
 
 def Datamodule_selection(dataset, config):
     # Information regarding the configuration of the data module for the specific task
-    datamodule_info =  dataset_dict[dataset] # Specific module
+    datamodule_info = dataset_dict[dataset] # Specific module
     Datamodule = datamodule_info['module'](batch_size = config['bsz'])
     Datamodule.train_transforms = datamodule_info['train_transform']
     Datamodule.val_transforms = datamodule_info['val_transform']
@@ -30,7 +31,7 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
     return callback_dict
 
 
-def Model_selection(datamodule,config):
+def Model_selection(datamodule, config):
     data_labels = datamodule.val_dataloader().dataset.tensors[1]
     model_dict = {'NCA': NCAToy(datamodule=datamodule,
                 optimizer= config['optimizer'],learning_rate= config['learning_rate'],
@@ -39,6 +40,12 @@ def Model_selection(datamodule,config):
                 num_classes = config['num_classes'],memory_momentum=config['memory_momentum'],
                 softmax_temperature = config['softmax_temperature'],
                 labels=data_labels),
+
+                'NCA_Original': NCAOriginalToy(datamodule=datamodule,
+                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
+                momentum=config['momentum'], weight_decay=config['weight_decay'],
+                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
+                num_classes = config['num_classes']),
 
     }
     

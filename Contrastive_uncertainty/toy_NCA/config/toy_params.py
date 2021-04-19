@@ -8,8 +8,8 @@ num_classes = 2,
 
 
 # optimizer args
-optimizer = 'sgd',
-learning_rate= 0.003,
+optimizer = 'adam',#'sgd',
+learning_rate= 3e-4,#0.003,
 momentum= 0.9,
 weight_decay = 1e-4,
 
@@ -17,10 +17,10 @@ weight_decay = 1e-4,
 # Miscellaneous arguments
 seed = 26,
 epochs = 25,
-bsz = 512,
+bsz = 64,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
-model = 'NCA',
+model = 'NCA_Original',
 
 # Trainer configurations
 fast_run = False,

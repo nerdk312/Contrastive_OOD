@@ -44,7 +44,7 @@ class Toy(pl.LightningModule):
                 if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
 
 
-    def loss_function(self, batch, auxillary_data=None):
+    def loss_function(self, batch):
         raise NotImplementedError
 
     
