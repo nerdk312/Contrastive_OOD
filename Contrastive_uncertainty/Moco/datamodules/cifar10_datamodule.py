@@ -5,16 +5,20 @@ import torch
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
+
+from Contrastive_uncertainty.Moco.datamodules.dataset_normalizations import cifar10_normalization
+from Contrastive_uncertainty.Moco.datamodules.datamodule_transforms import dataset_with_indices
 from warnings import warn
+
+
 from torchvision import transforms as transform_lib
-from torchvision.datasets import MNIST
-
-from Contrastive_uncertainty.datamodules.dataset_normalizations import mnist_normalization
-from Contrastive_uncertainty.datamodules.datamodule_transforms import dataset_with_indices
+from torchvision.datasets import CIFAR10
 
 
-class MNISTDataModule(LightningDataModule):
-    name = 'mnist'
+
+class CIFAR10DataModule(LightningDataModule):
+
+    name = 'cifar10'
     extra_args = {}
 
     def __init__(
@@ -34,7 +38,7 @@ class MNISTDataModule(LightningDataModule):
             :alt: CIFAR-10
         Specs:
             - 10 classes (1 per class)
-            - Each image is (1 x 28 x 28)
+            - Each image is (3 x 32 x 32)
         Standard CIFAR10, train, val, test splits and transforms
         Transforms::
             mnist_transforms = transform_lib.Compose([
@@ -61,9 +65,8 @@ class MNISTDataModule(LightningDataModule):
             batch_size: number of examples per training/eval step
         """
         super().__init__(*args, **kwargs)
-        self.dims = (1, 28, 28)
-        self.DATASET = MNIST
-        self.DATASET_with_indices = dataset_with_indices(self.DATASET)
+        self.dims = (3, 32, 32)
+        self.DATASET = CIFAR10
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size
@@ -93,18 +96,18 @@ class MNISTDataModule(LightningDataModule):
         self.setup_train()
         self.setup_val()
         self.setup_test()
-        
+
         # Obtain class indices
         # Obtain class indices
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
-        #dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=True, transform=train_transforms, **self.extra_args))
-        self.idx2class = {v: k for k, v in dataset.class_to_idx.items()} # Obtain the class names for the data module        # Need to change key and value around to get in the correct order
+        dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args))
+        self.idx2class = {v:f'{i} - {k}'for i, (k, v) in zip(range(len(dataset.class_to_idx)),dataset.class_to_idx.items())}
+        # Need to change key and value around to get in the correct order
         self.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}  
-    
+
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
+        dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args))
         train_length = len(dataset)
         self.train_dataset, _ = random_split(
             dataset,
@@ -125,7 +128,8 @@ class MNISTDataModule(LightningDataModule):
         )
         '''
         val_train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        val_train_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_train_transforms, **self.extra_args)
+        val_train_dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=val_train_transforms, **self.extra_args))
+
         
         train_length = len(val_train_dataset)
         _, self.val_train_dataset = random_split(
@@ -135,7 +139,7 @@ class MNISTDataModule(LightningDataModule):
         )
 
         val_test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        val_test_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_test_transforms, **self.extra_args)
+        val_test_dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=val_test_transforms, **self.extra_args))
         
         _, self.val_test_dataset = random_split(
             val_test_dataset,
@@ -145,7 +149,7 @@ class MNISTDataModule(LightningDataModule):
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        self.test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)        
+        self.test_dataset = dataset_with_indices(self.DATASET(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args))
         if isinstance(self.test_dataset.targets, list):
             self.test_dataset.targets = torch.Tensor(self.test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
         elif isinstance(self.test_dataset.targets,np.ndarray):
@@ -156,6 +160,8 @@ class MNISTDataModule(LightningDataModule):
         """
         FashionMNIST train set removes a subset to use for validation
         """
+
+        
         loader = DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -217,8 +223,8 @@ class MNISTDataModule(LightningDataModule):
         return loader
 
     def default_transforms(self):
-        MNIST_transforms = transform_lib.Compose([
+        cf10_transforms = transform_lib.Compose([
             transform_lib.ToTensor(),
-            mnist_normalization()
+            cifar10_normalization()
         ])
-        return MNIST_transforms
+        return cf10_transforms

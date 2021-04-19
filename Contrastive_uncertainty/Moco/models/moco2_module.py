@@ -7,18 +7,8 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-
-
-from Contrastive_uncertainty.datamodules.cifar10_datamodule import CIFAR10DataModule
-from Contrastive_uncertainty.datamodules.fashionmnist_datamodule import FashionMNISTDataModule
-from Contrastive_uncertainty.datamodules.mnist_datamodule import MNISTDataModule
-from Contrastive_uncertainty.datamodules.datamodule_transforms import Moco2TrainCIFAR10Transforms, Moco2EvalCIFAR10Transforms, Moco2TrainFashionMNISTTransforms, Moco2EvalFashionMNISTTransforms, Moco2TrainMNISTTransforms, Moco2EvalMNISTTransforms
-from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
-from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.Moco.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
-
-from Contrastive_uncertainty.Moco.loss_functions import moco_loss, classification_loss, supervised_contrastive_loss, \
-                                                        pcl_loss, aux_data
+from Contrastive_uncertainty.Moco.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
+from Contrastive_uncertainty.Moco.models.loss_functions import moco_loss, classification_loss, supervised_contrastive_loss
 
 
 class MocoV2(pl.LightningModule):
@@ -27,7 +17,6 @@ class MocoV2(pl.LightningModule):
         num_negatives: int = 65536,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
-        num_cluster: list = [100],
         optimizer:str = 'sgd',
         learning_rate: float = 0.03,
         momentum: float = 0.9,
@@ -40,7 +29,6 @@ class MocoV2(pl.LightningModule):
         classifier: bool = False,
         contrastive: bool = True,
         supervised_contrastive: bool = False,
-        PCL: bool = False,
         normalize:bool = True,
         class_dict:dict = None,
         instance_encoder:str = 'resnet50',
@@ -53,14 +41,6 @@ class MocoV2(pl.LightningModule):
         self.num_classes = num_classes
         self.class_names = [v for k,v in class_dict.items()]
         self.save_hyperparameters()
-
-
-        # use CIFAR-10 by default if no datamodule passed in
-        if datamodule is None:
-            datamodule = CIFAR10DataModule('./', batch_size=self.hparams.batch_size)
-            datamodule.train_transforms = Moco2TrainCIFAR10Transforms()
-            datamodule.val_transforms = Moco2EvalCIFAR10Transforms()
-            datamodule.test_transforms = Moco2EvalCIFAR10Transforms()
 
         self.datamodule = datamodule
 
@@ -100,10 +80,7 @@ class MocoV2(pl.LightningModule):
             encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
             encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
         
-        '''
-        encoder_q = MocoEncoder(latent_size =self.hparams.emb_dim,feature_map_size = self.hparams.z_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
-        encoder_k = MocoEncoder(latent_size =self.hparams.emb_dim,feature_map_size = self.hparams.z_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
-        '''
+        
         return encoder_q, encoder_k
 
     @torch.no_grad()
@@ -131,53 +108,7 @@ class MocoV2(pl.LightningModule):
 
         self.queue_ptr[0] = ptr
 
-    @torch.no_grad()
-    def _batch_shuffle_ddp(self, x):  # pragma: no-cover
-        """
-        Batch shuffle, for making use of BatchNorm.
-        *** Only support DistributedDataParallel (DDP) model. ***
-        """
-        # gather from all gpus
-        batch_size_this = x.shape[0]
-        x_gather = concat_all_gather(x)
-        batch_size_all = x_gather.shape[0]
-
-        num_gpus = batch_size_all // batch_size_this
-
-        # random shuffle index
-        idx_shuffle = torch.randperm(batch_size_all).cuda()
-
-        # broadcast to all gpus
-        torch.distributed.broadcast(idx_shuffle, src=0)
-
-        # index for restoring
-        idx_unshuffle = torch.argsort(idx_shuffle)
-
-        # shuffled index for this gpu
-        gpu_idx = torch.distributed.get_rank()
-        idx_this = idx_shuffle.view(num_gpus, -1)[gpu_idx]
-
-        return x_gather[idx_this], idx_unshuffle
-
-    @torch.no_grad()
-    def _batch_unshuffle_ddp(self, x, idx_unshuffle):  # pragma: no-cover
-        """
-        Undo batch shuffle.
-        *** Only support DistributedDataParallel (DDP) model. ***
-        """
-        # gather from all gpus
-        batch_size_this = x.shape[0]
-        x_gather = concat_all_gather(x)
-        batch_size_all = x_gather.shape[0]
-
-        num_gpus = batch_size_all // batch_size_this
-
-        # restored index for this gpu
-        gpu_idx = torch.distributed.get_rank()
-        idx_this = idx_unshuffle.view(num_gpus, -1)[gpu_idx]
-
-        return x_gather[idx_this]
-
+    '''
     def feature_vector(self,x):
         """
         Input:
@@ -201,17 +132,19 @@ class MocoV2(pl.LightningModule):
         z = self.encoder_q.class_fc1(z)
         z = nn.functional.normalize(z, dim=1)
         return z
-
-    
+    '''    
+    def callback_vector(self,x): # vector for the representation before using separate branches for the task
+        """
+        Input:
+            x: a batch of images for classification
+        Output:
+            z: latent vector
+        """
+        z = self.encoder_k(x)
+        z = nn.functional.normalize(z, dim=1)
+        return z
 
     def training_step(self, batch, batch_idx):
-        
-        #(img_1, img_2), labels = batch
-        #dataloader = self.datamodule.val_dataloader()
-        dataloader = self.datamodule.train_dataloader()
-        #import ipdb; ipdb.set_trace()
-        self.auxillary_data = aux_data(self, dataloader)
-
         loss = torch.tensor([0.0], device=self.device)
         if self.hparams.classifier:
             metrics = classification_loss(self,batch)
@@ -231,22 +164,12 @@ class MocoV2(pl.LightningModule):
                 if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
             loss += metrics['Supervised Contrastive Loss']
         
-        if self.hparams.PCL:
-            metrics = pcl_loss(self,batch,self.auxillary_data)
-            for k,v in metrics.items():
-                if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
-            loss += metrics['PCL Loss']
-
         self.log('Training Total Loss', loss.item(),on_epoch=True)
 
         return loss
         
 
     def validation_step(self, batch, batch_idx,dataset_idx):
-        #dataloader = self.datamodule.val_dataloader()
-        dataloader = self.datamodule.train_dataloader()
-        #import ipdb; ipdb.set_trace()
-        self.auxillary_data = aux_data(self, dataloader)
         loss = torch.tensor([0.0], device=self.device)
         if self.hparams.contrastive:
             metrics = moco_loss(self,batch)
@@ -266,28 +189,8 @@ class MocoV2(pl.LightningModule):
                 if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
             loss += metrics['Supervised Contrastive Loss']
         
-        if self.hparams.PCL:
-            metrics = pcl_loss(self,batch,self.auxillary_data)
-            for k,v in metrics.items():
-                if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
-            loss += metrics['PCL Loss']
-
         self.log('Validation Total Loss', loss.item(),on_epoch=True)
 
-        #return results
-    '''
-    def validation_epoch_end(self, outputs):
-        val_loss = mean(outputs, 'val_loss')
-        val_acc1 = mean(outputs, 'val_acc1')
-        val_acc5 = mean(outputs, 'val_acc5')
-
-        log = {
-            'val_loss': val_loss,
-            'val_acc1': val_acc1,
-            'val_acc5': val_acc5
-        }
-        return {'val_loss': val_loss, 'log': log, 'progress_bar': log}
-    '''
 
     def test_step(self, batch, batch_idx):
         loss = torch.tensor([0.0], device=self.device)
@@ -318,26 +221,7 @@ class MocoV2(pl.LightningModule):
         self.log('Test Total Loss', loss.item(),on_epoch=True)
         
         #return {'logits':logits,'target':labels} # returns y_pred as y_pred are essentially the logits in this case, and I want to log how the logits change in time
-    '''
-    def test_epoch_end(self, test_step_outputs):
-        # Saves the predictions which are the logits in this case to see how the logits are changing in time
-        
-        #flattened_logits = torch.flatten(torch.cat([output['logits']for output in validation_step_outputs])) #  concatenate the logits
-        #self.logger.experiment.log(
-        #    {"valid/logits": wandb.Histogram(flattened_logits.to("cpu")),
-        #    "global_step": self.global_step})
-        
-        preds = torch.cat([output['logits'] for output in test_step_outputs])
-        targets = torch.cat([output['target'] for output in test_step_outputs])
-
-        top_pred_ids = preds.argmax(axis=1)
-
-        self.logger.experiment.log({"my_conf_mat_id" : wandb.plot.confusion_matrix(probs = preds.cpu().numpy(),
-            preds=None, y_true=targets.cpu().numpy(),
-            class_names=self.class_names),
-            "global_step": self.global_step
-                  })
-    '''    
+     
 
 
     def configure_optimizers(self):
@@ -349,13 +233,7 @@ class MocoV2(pl.LightningModule):
             optimizer = torch.optim.Adam(self.parameters(), self.hparams.learning_rate,
                                         weight_decay=self.hparams.weight_decay)
         return optimizer
-    '''
-    def encoder_loading(self,pretrained_network):
-        print('checkpoint loaded')
-        checkpoint = torch.load(pretrained_network)
-        self.encoder_q.load_state_dict(checkpoint['online_encoder_state_dict'])
-        self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
-    '''
+    
 
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):
@@ -363,34 +241,3 @@ class MocoV2(pl.LightningModule):
         checkpoint = torch.load(pretrained_network)
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
-
-    '''
-    def on_train_epoch_start(self):
-        #dataloader = self.datamodule.val_dataloader()
-        dataloader = self.datamodule.train_dataloader()
-        #import ipdb; ipdb.set_trace()
-        self.auxillary_data = aux_data(self, dataloader)
-        return self.auxillary_data
-
-    def on_validation_epoch_start(self):
-        #dataloader = self.datamodule.val_dataloader()
-        dataloader = self.datamodule.train_dataloader()
-        self.auxillary_data = aux_data(self, dataloader)
-        return self.auxillary_data
-    '''    
-    
-    
-
-# utils
-@torch.no_grad()
-def concat_all_gather(tensor):
-    """
-    Performs all_gather operation on the provided tensors.
-    *** Warning ***: torch.distributed.all_gather has no gradient.
-    """
-    tensors_gather = [torch.ones_like(tensor)
-                      for _ in range(torch.distributed.get_world_size())]
-    torch.distributed.all_gather(tensors_gather, tensor, async_op=False)
-
-    output = torch.cat(tensors_gather, dim=0)
-    return output

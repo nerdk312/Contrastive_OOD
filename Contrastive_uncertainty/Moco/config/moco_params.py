@@ -1,10 +1,9 @@
-sweep_hparams = dict(
+moco_hparams = dict(
 num_classes = 10,
 emb_dim = 128,
 num_negatives = 65536,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
-num_cluster = [100,200],
 instance_encoder = 'resnet50',
 
 # optimizer args
@@ -19,9 +18,8 @@ OOD_dataset = 'MNIST',
 
 classifier = False,
 normalize = False,
-contrastive = False,
+contrastive = True,
 supervised_contrastive = False,
-PCL = True,
 use_mlp = True,
 
 # Miscellaneous arguments

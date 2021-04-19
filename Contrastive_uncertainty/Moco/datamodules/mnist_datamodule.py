@@ -5,20 +5,16 @@ import torch
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
-
-
 from warnings import warn
 from torchvision import transforms as transform_lib
-from torchvision.datasets import FashionMNIST
+from torchvision.datasets import MNIST
 
-from Contrastive_uncertainty.datamodules.dataset_normalizations import fashionmnist_normalization
-from Contrastive_uncertainty.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.Moco.datamodules.dataset_normalizations import mnist_normalization
+from Contrastive_uncertainty.Moco.datamodules.datamodule_transforms import dataset_with_indices
 
 
-
-class FashionMNISTDataModule(LightningDataModule):
-
-    name = 'fashionmnist'
+class MNISTDataModule(LightningDataModule):
+    name = 'mnist'
     extra_args = {}
 
     def __init__(
@@ -66,7 +62,7 @@ class FashionMNISTDataModule(LightningDataModule):
         """
         super().__init__(*args, **kwargs)
         self.dims = (1, 28, 28)
-        self.DATASET = FashionMNIST
+        self.DATASET = MNIST
         self.DATASET_with_indices = dataset_with_indices(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
@@ -74,7 +70,6 @@ class FashionMNISTDataModule(LightningDataModule):
         self.seed = seed
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
-        
 
     @property
     def num_classes(self):
@@ -99,16 +94,13 @@ class FashionMNISTDataModule(LightningDataModule):
         self.setup_val()
         self.setup_test()
         
-        
+        # Obtain class indices
         # Obtain class indices
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        # Obtains a class where there is 
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
-        self.idx2class = {v:f'{i} - {k}'for i, (k, v) in zip(range(len(dataset.class_to_idx)),dataset.class_to_idx.items())}
-        # Need to change key and value around to get in the correct order
-        self.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}   
-
-    
+        #dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=True, transform=train_transforms, **self.extra_args))
+        self.idx2class = {v: k for k, v in dataset.class_to_idx.items()} # Obtain the class names for the data module        # Need to change key and value around to get in the correct order
+        self.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}  
     
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
@@ -121,7 +113,7 @@ class FashionMNISTDataModule(LightningDataModule):
         )
 
     def setup_val(self):
-        
+
         '''
         val_transforms = self.default_transforms() if self.val_transforms is None else self.val_transforms
         dataset = self.DATASET(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
@@ -134,7 +126,6 @@ class FashionMNISTDataModule(LightningDataModule):
         '''
         val_train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
         val_train_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_train_transforms, **self.extra_args)
-
         
         train_length = len(val_train_dataset)
         _, self.val_train_dataset = random_split(
@@ -142,7 +133,7 @@ class FashionMNISTDataModule(LightningDataModule):
             [train_length - self.val_split, self.val_split],
             generator=torch.Generator().manual_seed(self.seed)
         )
-        
+
         val_test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
         val_test_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_test_transforms, **self.extra_args)
         
@@ -154,19 +145,17 @@ class FashionMNISTDataModule(LightningDataModule):
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        self.test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)
+        self.test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)        
         if isinstance(self.test_dataset.targets, list):
             self.test_dataset.targets = torch.Tensor(self.test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
         elif isinstance(self.test_dataset.targets,np.ndarray):
             self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
 
 
-
     def train_dataloader(self):
         """
         FashionMNIST train set removes a subset to use for validation
         """
-
         loader = DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -211,7 +200,6 @@ class FashionMNISTDataModule(LightningDataModule):
         )
 
         return [val_train_loader, val_test_loader]
-        
 
     def test_dataloader(self):
         """
@@ -229,8 +217,8 @@ class FashionMNISTDataModule(LightningDataModule):
         return loader
 
     def default_transforms(self):
-        FashionMNIST_transforms = transform_lib.Compose([
+        MNIST_transforms = transform_lib.Compose([
             transform_lib.ToTensor(),
-            fashionmnist_normalization()
+            mnist_normalization()
         ])
-        return FashionMNIST_transforms
+        return MNIST_transforms

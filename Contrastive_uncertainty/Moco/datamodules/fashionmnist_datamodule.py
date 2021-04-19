@@ -6,19 +6,19 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
 
-from Contrastive_uncertainty.datamodules.dataset_normalizations import cifar10_normalization
-from Contrastive_uncertainty.datamodules.datamodule_transforms import dataset_with_indices
+
 from warnings import warn
-
-
 from torchvision import transforms as transform_lib
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import FashionMNIST
+
+from Contrastive_uncertainty.Moco.datamodules.dataset_normalizations import fashionmnist_normalization
+from Contrastive_uncertainty.Moco.datamodules.datamodule_transforms import dataset_with_indices
 
 
 
-class CIFAR10DataModule(LightningDataModule):
+class FashionMNISTDataModule(LightningDataModule):
 
-    name = 'cifar10'
+    name = 'fashionmnist'
     extra_args = {}
 
     def __init__(
@@ -38,7 +38,7 @@ class CIFAR10DataModule(LightningDataModule):
             :alt: CIFAR-10
         Specs:
             - 10 classes (1 per class)
-            - Each image is (3 x 32 x 32)
+            - Each image is (1 x 28 x 28)
         Standard CIFAR10, train, val, test splits and transforms
         Transforms::
             mnist_transforms = transform_lib.Compose([
@@ -65,14 +65,16 @@ class CIFAR10DataModule(LightningDataModule):
             batch_size: number of examples per training/eval step
         """
         super().__init__(*args, **kwargs)
-        self.dims = (3, 32, 32)
-        self.DATASET = CIFAR10
+        self.dims = (1, 28, 28)
+        self.DATASET = FashionMNIST
+        self.DATASET_with_indices = dataset_with_indices(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.seed = seed
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
+        
 
     @property
     def num_classes(self):
@@ -96,18 +98,21 @@ class CIFAR10DataModule(LightningDataModule):
         self.setup_train()
         self.setup_val()
         self.setup_test()
-
-        # Obtain class indices
+        
+        
         # Obtain class indices
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args))
+        # Obtains a class where there is 
+        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
         self.idx2class = {v:f'{i} - {k}'for i, (k, v) in zip(range(len(dataset.class_to_idx)),dataset.class_to_idx.items())}
         # Need to change key and value around to get in the correct order
-        self.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}  
+        self.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}   
 
+    
+    
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args))
+        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
         train_length = len(dataset)
         self.train_dataset, _ = random_split(
             dataset,
@@ -116,7 +121,7 @@ class CIFAR10DataModule(LightningDataModule):
         )
 
     def setup_val(self):
-
+        
         '''
         val_transforms = self.default_transforms() if self.val_transforms is None else self.val_transforms
         dataset = self.DATASET(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
@@ -128,7 +133,7 @@ class CIFAR10DataModule(LightningDataModule):
         )
         '''
         val_train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        val_train_dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=val_train_transforms, **self.extra_args))
+        val_train_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_train_transforms, **self.extra_args)
 
         
         train_length = len(val_train_dataset)
@@ -137,9 +142,9 @@ class CIFAR10DataModule(LightningDataModule):
             [train_length - self.val_split, self.val_split],
             generator=torch.Generator().manual_seed(self.seed)
         )
-
+        
         val_test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        val_test_dataset = dataset_with_indices(self.DATASET(self.data_dir, train=True, download=False, transform=val_test_transforms, **self.extra_args))
+        val_test_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_test_transforms, **self.extra_args)
         
         _, self.val_test_dataset = random_split(
             val_test_dataset,
@@ -149,11 +154,12 @@ class CIFAR10DataModule(LightningDataModule):
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        self.test_dataset = dataset_with_indices(self.DATASET(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args))
+        self.test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)
         if isinstance(self.test_dataset.targets, list):
             self.test_dataset.targets = torch.Tensor(self.test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
         elif isinstance(self.test_dataset.targets,np.ndarray):
             self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
+
 
 
     def train_dataloader(self):
@@ -161,7 +167,6 @@ class CIFAR10DataModule(LightningDataModule):
         FashionMNIST train set removes a subset to use for validation
         """
 
-        
         loader = DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -206,6 +211,7 @@ class CIFAR10DataModule(LightningDataModule):
         )
 
         return [val_train_loader, val_test_loader]
+        
 
     def test_dataloader(self):
         """
@@ -223,8 +229,8 @@ class CIFAR10DataModule(LightningDataModule):
         return loader
 
     def default_transforms(self):
-        cf10_transforms = transform_lib.Compose([
+        FashionMNIST_transforms = transform_lib.Compose([
             transform_lib.ToTensor(),
-            cifar10_normalization()
+            fashionmnist_normalization()
         ])
-        return cf10_transforms
+        return FashionMNIST_transforms

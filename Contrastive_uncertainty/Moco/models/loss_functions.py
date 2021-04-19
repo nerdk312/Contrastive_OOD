@@ -4,8 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 
-from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.Moco.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
+from Contrastive_uncertainty.Moco.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.Moco.utils.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
 
 # Supervised contrastive loss
 def supervised_contrastive_forward(model, features, labels=None, mask=None):

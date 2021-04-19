@@ -1,4 +1,4 @@
-from Contrastive_uncertainty.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.Moco.datamodules.datamodule_dict import dataset_dict
 from Contrastive_uncertainty.Moco.moco_callbacks import ReliabiltyLogger, ImagePredictionLogger, ModelSaving, OOD_confusion_matrix, OOD_ROC, \
                                                         Mahalanobis_OOD, Mahalanobis_OOD_compressed, Euclidean_OOD, \
                                                         MMD_distance, Uniformity,Centroid_distance, SupConLoss

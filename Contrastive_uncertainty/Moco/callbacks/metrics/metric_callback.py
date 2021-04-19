@@ -13,7 +13,6 @@ import wandb
 from PIL import Image
 import faiss
 
-
 import numpy as np
 import faiss
 import torch
@@ -69,7 +68,7 @@ def select(metricname, pl_module):
         return dists.Metric(mode)
     elif 'rho_spectrum' in metricname:
         mode = int(metricname.split('@')[-1])
-        embed_dim = pl_module.hparams.z_dim
+        embed_dim = pl_module.hparams.emb_dim
         return rho_spectrum.Metric(embed_dim, mode=mode)
     elif 'uniformity' in metricname:
         t = 2
@@ -270,7 +269,10 @@ class MetricLogger(pl.Callback):
         for evaltype in numeric_metrics.keys():# Nawid - plot the numeric metrics on wandb
             for eval_metric in numeric_metrics[evaltype].keys():
                 parent_metric = evaltype+'_{}'.format(eval_metric.split('@')[0])
-                wandb.run.summary[eval_metric] = numeric_metrics[evaltype][eval_metric]
+                if 'dists' in eval_metric or 'rho_spectrum' in eval_metric:
+                    wandb.log({eval_metric:numeric_metrics[evaltype][eval_metric]})
+                else:
+                    wandb.run.summary[eval_metric] = numeric_metrics[evaltype][eval_metric]
                 #wandb.log({eval_metric:numeric_metrics[evaltype][eval_metric]})
                 #print('parent metric',parent_metric)
 

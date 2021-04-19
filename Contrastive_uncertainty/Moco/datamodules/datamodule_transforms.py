@@ -1,6 +1,6 @@
 import random
 from warnings import warn
-from Contrastive_uncertainty.datamodules.dataset_normalizations import  cifar10_normalization, fashionmnist_normalization,mnist_normalization,svhn_normalization
+from Contrastive_uncertainty.Moco.datamodules.dataset_normalizations import  cifar10_normalization, fashionmnist_normalization,mnist_normalization,svhn_normalization
 
 
 from PIL import ImageFilter

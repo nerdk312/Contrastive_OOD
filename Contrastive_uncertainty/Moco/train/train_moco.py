@@ -8,19 +8,8 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-
-from Contrastive_uncertainty.datamodules.cifar10_datamodule import CIFAR10DataModule
-from Contrastive_uncertainty.datamodules.fashionmnist_datamodule import FashionMNISTDataModule
-from Contrastive_uncertainty.datamodules.mnist_datamodule import MNISTDataModule
-from Contrastive_uncertainty.datamodules.datamodule_transforms import Moco2TrainCIFAR10Transforms, Moco2EvalCIFAR10Transforms, Moco2TrainFashionMNISTTransforms, Moco2EvalFashionMNISTTransforms, Moco2TrainMNISTTransforms, Moco2EvalMNISTTransforms
-
-from Contrastive_uncertainty.metrics.metric_callback import MetricLogger,evaluation_metrics,evaltypes
-
-from Contrastive_uncertainty.Moco.self_supervised import SSLOnlineEvaluator
-from Contrastive_uncertainty.Moco.ssl_finetuner import SSLFineTuner
-from Contrastive_uncertainty.Moco.moco_callbacks import ModelSaving,OOD_ROC, OOD_confusion_matrix,ReliabiltyLogger,ImagePredictionLogger
-from Contrastive_uncertainty.Moco.moco_run_setup import run_name, Datamodule_selection,Channel_selection,callback_dictionary
-from Contrastive_uncertainty.Moco.moco2_module import MocoV2
+from Contrastive_uncertainty.Moco.models.moco2_module import MocoV2
+from Contrastive_uncertainty.Moco.run.moco_run_setup import run_name, Datamodule_selection,Channel_selection,callback_dictionary
 
 def train(params):
     wandb.init(entity="nerdk312",config = params,project= params['project']) # Required to have access to wandb config, which is needed to set up a sweep
@@ -63,13 +52,13 @@ def train(params):
 
     model = MocoV2(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
         encoder_momentum = config['encoder_momentum'], 
-        softmax_temperature = config['softmax_temperature'], num_cluster=config['num_cluster'],
+        softmax_temperature = config['softmax_temperature'],
         optimizer = config['optimizer'],learning_rate = config['learning_rate'],
         momentum = config['momentum'], weight_decay = config['weight_decay'],
         batch_size = config['bsz'],use_mlp = config['use_mlp'],
         num_classes = config['num_classes'],datamodule = datamodule,num_channels = channels,
         classifier = config['classifier'],normalize = config['normalize'],contrastive = config['contrastive'],
-        supervised_contrastive = config['supervised_contrastive'],PCL=config['PCL'],
+        supervised_contrastive = config['supervised_contrastive'],
         class_dict = class_names_dict,instance_encoder = config['instance_encoder'],
         pretrained_network = config['pretrained_network'],label_smoothing=config['label_smoothing'])
         
