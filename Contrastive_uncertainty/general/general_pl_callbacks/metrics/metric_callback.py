@@ -20,7 +20,6 @@ from sklearn.preprocessing import normalize
 from tqdm import tqdm
 import copy
 
-from Contrastive_uncertainty.general.general_pl_callbacks.metrics.Metric_computer import MetricComputer
 from Contrastive_uncertainty.general.general_pl_callbacks.metrics import e_recall, nmi, f1, mAP, mAP_c, mAP_1000, mAP_lim
 from Contrastive_uncertainty.general.general_pl_callbacks.metrics import dists, rho_spectrum, uniformity
 from Contrastive_uncertainty.general.general_pl_callbacks.metrics import c_recall, c_nmi, c_f1, c_mAP_c, c_mAP_1000, c_mAP_lim

@@ -4,8 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 
-from Contrastive_uncertainty.Moco.utils.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.Moco.utils.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
+from Contrastive_uncertainty.sup_con.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.sup_con.utils.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
 
 # Supervised contrastive loss
 def supervised_contrastive_forward(model, features, labels=None, mask=None):
@@ -97,37 +97,6 @@ def supervised_contrastive_loss(model, batch, auxillary_data=None):
 
 
 
-def class_discrimination(model, x):
-    """
-    Input:
-        x: a batch of images for classification
-    Output:
-        logits
-    """
-    # compute query features
-    z = model.feature_vector(x) # Gets the feature map representations which I use for the purpose of pretraining
-    z = F.relu(model.encoder_q.class_fc1(z))
-    
-    if model.hparams.normalize:
-        z = nn.functional.normalize(z, dim=1)
-    
-    logits = model.encoder_q.class_fc2(z)
-    return logits
-
-
-def classification_loss(model, batch,auxillary_data = None):
-    (img_1, img_2), labels,indices = batch
-    logits = class_discrimination(model,img_1)
-    if model.hparams.label_smoothing:
-        loss = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
-        loss = torch.mean(loss)
-    else:
-        loss = F.cross_entropy(logits.float(), labels.long())
-    
-    class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
-    metrics = {'Class Loss': loss, 'Class Accuracy @ 1': class_acc1, 'Class Accuracy @ 5': class_acc5}
-
-    return metrics
 
 # MOCO
 def moco_forward(model, img_q, img_k):
@@ -369,6 +338,9 @@ def aux_data(model, dataloader):
     else:
         cluster_result = None
     return cluster_result
+
+def class_discrimination(model):
+    raise NotImplemented
 
 
 # Uniformity and alignment
