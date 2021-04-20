@@ -1,7 +1,6 @@
 from Contrastive_uncertainty.Contrastive.datamodules.datamodule_dict import dataset_dict
-
 from Contrastive_uncertainty.Contrastive.callbacks.general_callbacks import  ModelSaving,SupConLoss,Uniformity,MMD_distance,Centroid_distance
-from Contrastive_uncertainty.Contrastive.callbacks.ood_callbacks import OOD_ROC, OOD_confusion_matrix, Mahalanobis_OOD, Euclidean_OOD,ImagePredictionLogger
+from Contrastive_uncertainty.Contrastive.callbacks.ood_callbacks import  Mahalanobis_OOD, Euclidean_OOD  #,ImagePredictionLogger, OOD_ROC, OOD_confusion_matrix,
 from Contrastive_uncertainty.Contrastive.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.Contrastive.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 
@@ -40,8 +39,8 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
 
     OOD_samples = next(iter(OOD_val_test_loader))
 
-    callback_dict = {'Model_saving':ModelSaving(config['model_saving']), 'Confusion_matrix':OOD_confusion_matrix(Datamodule,OOD_Datamodule),'ROC':OOD_ROC(Datamodule,OOD_Datamodule),
-                'Metrics': MetricLogger(evaluation_metrics,num_classes,val_test_loader,evaltypes,config['quick_callback']),'Image_prediction':ImagePredictionLogger(samples,OOD_samples,sample_size),
+    callback_dict = {'Model_saving':ModelSaving(config['model_saving']), 
+                'Metrics': MetricLogger(evaluation_metrics,num_classes,val_test_loader,evaltypes,config['quick_callback']),
                 
                 'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule, config['quick_callback']),
                 
@@ -52,3 +51,5 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
                 'Centroid': Centroid_distance(Datamodule, config['quick_callback']), 'SupCon': SupConLoss(Datamodule, config['quick_callback'])}
     
     return callback_dict
+
+#'Image_prediction':ImagePredictionLogger(samples,OOD_samples,sample_size), 'Confusion_matrix':OOD_confusion_matrix(Datamodule,OOD_Datamodule),'ROC':OOD_ROC(Datamodule,OOD_Datamodule),
