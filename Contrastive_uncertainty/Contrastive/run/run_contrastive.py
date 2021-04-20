@@ -1,5 +1,5 @@
-from Contrastive_uncertainty.run.train_moco import train
-from Contrastive_uncertainty.config.contrastive_params import contrastive_hparams
+from Contrastive_uncertainty.Contrastive.train.train_contrastive import train
+from Contrastive_uncertainty.Contrastive.config.contrastive_params import contrastive_hparams
 
 # calls the function
 train(contrastive_hparams)

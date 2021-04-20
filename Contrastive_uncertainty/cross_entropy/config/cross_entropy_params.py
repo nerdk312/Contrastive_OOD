@@ -13,9 +13,8 @@ bsz = 256,
 dataset = 'FashionMNIST',
 OOD_dataset = 'MNIST',
 
-classifier = False,
-normalize = False,
-use_mlp = True,
+
+label_smoothing =False,
 
 # Miscellaneous arguments
 seed = 42,
@@ -30,7 +29,7 @@ test_ratio = 1.0,
 val_check = 5,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
-label_smoothing =False ,
+
 
 project = 'evaluation'# evaluation, Moco_training
 )

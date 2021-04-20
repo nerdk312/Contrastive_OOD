@@ -11,7 +11,7 @@ from Contrastive_uncertainty.Moco.models.resnet_models import custom_resnet18,cu
 from Contrastive_uncertainty.Moco.models.loss_functions import moco_loss, classification_loss, supervised_contrastive_loss
 
 
-class CrossEntropy(pl.LightningModule):
+class CrossEntropyModule(pl.LightningModule):
     def __init__(self,
         emb_dim: int = 128,
         optimizer:str = 'sgd',
@@ -19,15 +19,13 @@ class CrossEntropy(pl.LightningModule):
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        use_mlp: bool = False,
         num_channels:int = 3, # number of channels for the specific dataset
         num_classes:int = 10, # Attribute required for the finetuning value
         classifier: bool = False,
-        normalize:bool = True,
+        label_smoothing:bool = False,
         class_dict:dict = None,
         instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
-        label_smoothing:bool = False,
         ):
 
         super().__init__()
@@ -41,10 +39,6 @@ class CrossEntropy(pl.LightningModule):
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder_q, self.encoder_k = self.init_encoders()
-        if use_mlp:  # hack: brute-force replacement
-            dim_mlp = self.encoder_q.fc.weight.shape[1]
-            self.encoder_q.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_q.fc)
-            self.encoder_k.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_k.fc)
 
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
@@ -74,7 +68,6 @@ class CrossEntropy(pl.LightningModule):
             encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
             encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
         
-        
         return encoder_q, encoder_k
 
     @torch.no_grad()
@@ -89,7 +82,6 @@ class CrossEntropy(pl.LightningModule):
     @torch.no_grad()
     def _dequeue_and_enqueue(self, keys):
         # gather keys before updating queue
-
 
         batch_size = keys.shape[0]
 

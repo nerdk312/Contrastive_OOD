@@ -1,5 +1,5 @@
-from Contrastive_uncertainty.run.train_moco import train
-from Contrastive_uncertainty.config.default_params import sweep_hparams
+from Contrastive_uncertainty.cross_entropy.train.train_cross_entropy import train
+from Contrastive_uncertainty.cross_entropy.config.cross_entropy_params  import cross_entropy_hparams
 
 # calls the function
-train(sweep_hparams)
+train(cross_entropy_hparams)
