@@ -89,12 +89,13 @@ class Visualisation(pl.Callback): # General class for visualisation
     def compute_representations(self, pl_module, loader):
         features = []
         collated_labels = []
-        for i, (images, labels) in enumerate(tqdm(loader)): # Obtain data and labels from dataloader
+        for i, (images, labels,indices) in enumerate(tqdm(loader)): # Obtain data and labels from dataloader
+            assert len(loader)>0, 'loader is empty'
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_imgs = images
             
             images = images.to(pl_module.device)  # cuda(non_blocking=True)
-            features.append(pl_module.feature_vector(images))  # Obtain features
+            features.append(pl_module.callback_vector(images))  # Obtain features
             collated_labels.append(labels)
 
         features = torch.cat(features)

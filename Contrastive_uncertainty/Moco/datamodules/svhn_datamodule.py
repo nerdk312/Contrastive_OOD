@@ -12,8 +12,8 @@ from warnings import warn
 from torchvision import transforms as transform_lib
 from torchvision.datasets import SVHN
 
-from Contrastive_uncertainty.datamodules.dataset_normalizations import svhn_normalization
-from Contrastive_uncertainty.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.Moco.datamodules.dataset_normalizations import svhn_normalization
+from Contrastive_uncertainty.Moco.datamodules.datamodule_transforms import dataset_with_indices
 
 
 

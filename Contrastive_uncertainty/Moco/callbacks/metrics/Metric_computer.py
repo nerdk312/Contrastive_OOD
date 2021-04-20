@@ -5,9 +5,9 @@ from sklearn.preprocessing import normalize
 from tqdm import tqdm
 import copy
 
-from Contrastive_uncertainty.metrics import e_recall, nmi, f1, mAP, mAP_c, mAP_1000, mAP_lim
-from Contrastive_uncertainty.metrics import dists, rho_spectrum
-from Contrastive_uncertainty.metrics import c_recall, c_nmi, c_f1, c_mAP_c, c_mAP_1000, c_mAP_lim
+from Contrastive_uncertainty.Moco.callbacks.metrics import e_recall, nmi, f1, mAP, mAP_c, mAP_1000, mAP_lim
+from Contrastive_uncertainty.Moco.callbacks.metrics import dists, rho_spectrum
+from Contrastive_uncertainty.Moco.callbacks.metrics import c_recall, c_nmi, c_f1, c_mAP_c, c_mAP_1000, c_mAP_lim
 
 def select(metricname, opt):
     #### Metrics based on euclidean distances

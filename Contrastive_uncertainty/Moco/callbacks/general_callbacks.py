@@ -207,7 +207,7 @@ class MMD_distance(pl.Callback):
             uniform_distribution = torch.distributions.uniform.Uniform(low,high) # causes all samples to be on the correct device when obtainig smaples https://stackoverflow.com/questions/59179609/how-to-make-a-pytorch-distribution-on-gpu
             #uniform_distribution =  torch.distributions.uniform.Uniform(-1,1).sample(output.shape)
             loader = quickloading(self.quick_callback,dataloader) # Used to get a single batch or used to get the entire dataset
-            for data, target in loader:
+            for data, target,indices in loader:
                 if isinstance(data, tuple) or isinstance(data, list):
                     data, *aug_data = data # Used to take into accoutn whether the data is a tuple of the different augmentations
 
@@ -243,7 +243,6 @@ class Uniformity(pl.Callback):
         uniformity = self.calculate_uniformity(features)
     '''
     
-
     def on_validation_epoch_end(self,trainer,pl_module):
         features = self.obtain_features(pl_module) 
         uniformity = self.calculate_uniformity(features)
@@ -310,6 +309,7 @@ class Centroid_distance(pl.Callback):
         wandb.log({self.log_distance_name: mean_distance.item()})
         wandb.log({self.log_rbf_similarity_name:mean_rbf_similarity})
     '''
+
     def on_validation_epoch_end(self,trainer,pl_module):
         optimal_centroids = self.optimal_centroids(pl_module)
         test_loader = self.datamodule.test_dataloader()
@@ -402,6 +402,7 @@ class Centroid_distance(pl.Callback):
     "        confidence,indices =  confidence.reshape(len(confidence),1), indices.reshape(len(indices),1) # reshape the tensors\n",
     "        density_targets = torch.zeros(len(confidence),2).to(self.device)\n",
     "        density_targets.scatter(1,indices,confidence) # place the values of confidences in the locations specified by indices\n",
+
 class SupConLoss(pl.Callback):
     def __init__(self,datamodule,quick_callback, temperature=0.07, contrast_mode='all',
                  base_temperature=0.07):

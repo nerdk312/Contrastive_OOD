@@ -171,17 +171,18 @@ class MocoV2(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx,dataset_idx):
         loss = torch.tensor([0.0], device=self.device)
-        if self.hparams.contrastive:
-            metrics = moco_loss(self,batch)
-            for k,v in metrics.items():
-                if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
-            loss += metrics['Instance Loss']
-        
+
         if self.hparams.classifier:
             metrics = classification_loss(self,batch)
             for k,v in metrics.items():
                 if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
             loss += metrics['Class Loss']
+        
+        if self.hparams.contrastive:
+            metrics = moco_loss(self,batch)
+            for k,v in metrics.items():
+                if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
+            loss += metrics['Instance Loss']
         
         if self.hparams.supervised_contrastive:
             metrics = supervised_contrastive_loss(self,batch)
@@ -194,30 +195,24 @@ class MocoV2(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         loss = torch.tensor([0.0], device=self.device)
+        if self.hparams.classifier:
+            metrics = classification_loss(self,batch)
+            for k,v in metrics.items():
+                if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
+            loss += metrics['Class Loss']
+        
         if self.hparams.contrastive:
             metrics = moco_loss(self,batch)
             for k,v in metrics.items():
                 if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
             loss += metrics['Instance Loss']
-
+        
         if self.hparams.supervised_contrastive:
             metrics = supervised_contrastive_loss(self,batch)
             for k,v in metrics.items():
                 if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
             loss += metrics['Supervised Contrastive Loss']
-
-        if self.hparams.PCL:
-            metrics = pcl_loss(self,batch,self.auxillary_data)
-            for k,v in metrics.items():
-                if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
-            loss += metrics['PCL Loss']
         
-        metrics = classification_loss(self,batch)
-        for k,v in metrics.items():
-            if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
-        loss += metrics['Class Loss']
-
-
         self.log('Test Total Loss', loss.item(),on_epoch=True)
         
         #return {'logits':logits,'target':labels} # returns y_pred as y_pred are essentially the logits in this case, and I want to log how the logits change in time
