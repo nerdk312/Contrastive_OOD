@@ -1,3 +1,18 @@
+import os
+import torch
+import torch.optim as optim
+import torch.nn as nn
+import torch.nn.functional as F
+import pytorch_lightning as pl
+
+import numpy as np
+import sklearn.datasets
+import matplotlib.pyplot as plt
+import seaborn as sns
+import wandb
+from PIL import Image
+import faiss
+
 import numpy as np
 import faiss
 import torch
@@ -5,11 +20,15 @@ from sklearn.preprocessing import normalize
 from tqdm import tqdm
 import copy
 
-from Contrastive_uncertainty.general_pl_callbacks.metrics import e_recall, nmi, f1, mAP, mAP_c, mAP_1000, mAP_lim
-from Contrastive_uncertainty.general_pl_callbacks.metrics import dists, rho_spectrum
-from Contrastive_uncertainty.general_pl_callbacks.metrics import c_recall, c_nmi, c_f1, c_mAP_c, c_mAP_1000, c_mAP_lim
+from Contrastive_uncertainty.general.general_pl_callbacks.metrics.Metric_computer import MetricComputer
+from Contrastive_uncertainty.general.general_pl_callbacks.metrics import e_recall, nmi, f1, mAP, mAP_c, mAP_1000, mAP_lim
+from Contrastive_uncertainty.general.general_pl_callbacks.metrics import dists, rho_spectrum, uniformity
+from Contrastive_uncertainty.general.general_pl_callbacks.metrics import c_recall, c_nmi, c_f1, c_mAP_c, c_mAP_1000, c_mAP_lim
+from Contrastive_uncertainty.general.general_pl_callbacks.general_callbacks import quickloading
 
-def select(metricname, opt):
+
+
+def select(metricname, pl_module):
     #### Metrics based on euclidean distances
     if 'e_recall' in metricname:
         k = int(metricname.split('@')[-1])
@@ -50,27 +69,35 @@ def select(metricname, opt):
         return dists.Metric(mode)
     elif 'rho_spectrum' in metricname:
         mode = int(metricname.split('@')[-1])
-        embed_dim = opt['rho_spectrum_embed_dim']
-        return rho_spectrum.Metric(embed_dim, mode=mode, opt=opt)
+        embed_dim = pl_module.hparams.emb_dim
+        return rho_spectrum.Metric(embed_dim, mode=mode)
+    elif 'uniformity' in metricname:
+        t = 2
+        return uniformity.Metric(t=t)
     else:
         raise NotImplementedError("Metric {} not available!".format(metricname))
 
 
+class MetricLogger(pl.Callback):
+    def __init__(self, metric_names,num_classes,dataloader,evaltypes,quick_callback):
+        super().__init__()
+        self.metric_names = metric_names # Nawid - names of the metrics to compute
+        self.num_classes = num_classes
+        self.dataloader = dataloader
+        self.evaltypes = evaltypes
+        self.quick_callback = quick_callback
+        
 
-
-class MetricComputer():
-    def __init__(self, metric_names, opt):
-        self.pars            = opt
-        self.metric_names    = metric_names # Nawid - names of the metrics to compute
-        self.list_of_metrics = [select(metricname, opt) for metricname in metric_names] # Nawid - Obtains the different metrics for the task
+    def metric_initialise(self,trainer,pl_module):
+        self.list_of_metrics = [select(metricname, pl_module) for metricname in self.metric_names] # Nawid - Obtains the different metrics for the task
         self.requires        = [metric.requires for metric in self.list_of_metrics] # Nawid - says what each metric requires
         self.requires        = list(set([x for y in self.requires for x in y]))
 
-    def compute_standard(self, opt, model, dataloader, evaltypes, **kwargs):
-        evaltypes = copy.deepcopy(evaltypes)
+    def compute_standard(self, trainer,pl_module):
+        evaltypes = copy.deepcopy(self.evaltypes)
+        n_classes = self.num_classes
 
-        n_classes = opt['n_classes']
-        _ = model.online_encoder.to(self.pars['device']).eval()
+        pl_module.to(pl_module.device).eval()
 
         ###
         feature_colls  = {key:[] for key in evaltypes}
@@ -78,15 +105,17 @@ class MetricComputer():
         ###
         with torch.no_grad():
             target_labels = []
-            final_iter = tqdm(dataloader, desc='Embedding Data...'.format(len(evaltypes)))# Nawid - loading of dataloader I believe
+            loader = quickloading(self.quick_callback,self.dataloader) # Used to choose using a single dataloader or using a wide variety of data loaders
+            final_iter = tqdm(loader, desc='Embedding Data...'.format(len(evaltypes)))# Nawid - loading of dataloader I believe
             for idx,inp in enumerate(final_iter):
                 input_img,target = inp[0], inp[1] # Nawid - obtain data
+                if isinstance(input_img, tuple) or isinstance(input_img,list):input_img, *aug_imgs = input_img
+
                 target_labels.extend(target.numpy().tolist()) # Nawid- obtain labels
                 #embeddings = model.embedding_encoder.update_embeddings(input_img.to(self.pars['device']),target.to(self.pars['device']))
                 #out = model.online_encoder(input_img.to(self.pars['device']),embeddings) # Nawid - Obtain output
-                out = model.online_encoder.instance_embed(input_img.to(self.pars['device'])) # Nawid - Need to use instance embed for DUQP due to outputtng a 3D tensor
-                if isinstance(out, tuple): out, aux_f = out #  Nawid - if the output is a tuple, separate the output
-
+                out = pl_module.callback_vector(input_img.to(pl_module.device)) # Nawid - Need to use instance embed for DUQP due to outputtng a 3D tensor
+                if isinstance(out, tuple): out, *aux_f = out #  Nawid - if the output is a tuple, separate the output
 
                 ### Include embeddings of all output features
                 for evaltype in evaltypes:
@@ -95,21 +124,19 @@ class MetricComputer():
                     else:
                         feature_colls[evaltype].extend(out.cpu().detach().numpy().tolist()) # Nawid - add out
 
-
             target_labels = np.hstack(target_labels).reshape(-1,1) # Nawid- reshape labels
+
 
         computed_metrics = {evaltype:{} for evaltype in evaltypes} # Nawid - dict for logging metric
         extra_infos      = {evaltype:{} for evaltype in evaltypes} # Nawid - dict for extra info
 
 
         ###
-        faiss.omp_set_num_threads(self.pars['kernels'])
+        faiss.omp_set_num_threads(6) # Set 6 workers
         # faiss.omp_set_num_threads(self.pars.kernels)
         res = None
         torch.cuda.empty_cache()
-        if self.pars['evaluate_on_gpu']:
-            res = faiss.StandardGpuResources()
-
+        if pl_module.device == 'cuda': res = faiss.StandardGpuResources()
 
         import time
         for evaltype in evaltypes:
@@ -182,9 +209,8 @@ class MetricComputer():
                 k_closest_classes_cosine   = target_labels.reshape(-1)[k_closest_points_cosine[:,1:]]
 
 
-
             ###
-            if self.pars['evaluate_on_gpu']: # Nawid - Place features on GPU
+            if pl_module.device=='cuda': # Nawid - Place features on GPU
                 features        = torch.from_numpy(features).to(self.pars['device'])
                 features_cosine = torch.from_numpy(features_cosine).to(self.pars['device'])
 
@@ -209,3 +235,61 @@ class MetricComputer():
             extra_infos[evaltype] = {'features':features, 'target_labels':target_labels}
         torch.cuda.empty_cache()
         return computed_metrics, extra_infos
+
+
+
+    def evaluate_data(self,trainer,pl_module,log_key='Test'):
+        computed_metrics, extra_infos = self.compute_standard(trainer,pl_module) # Nawid - compute all the metrics
+
+        numeric_metrics = {}
+        histogr_metrics = {}
+        for main_key in computed_metrics.keys(): # Nawid - iterates through the keys in the computed metrics
+            for name,value in computed_metrics[main_key].items(): # Nawid - looks at the name and values of a particular metric
+                if isinstance(value, np.ndarray):
+                    if main_key not in histogr_metrics: histogr_metrics[main_key] = {} # Nawid - add empty dict for the situation where the main key is not in the histogram metrics
+                    histogr_metrics[main_key][name] = value
+                else:
+                    if main_key not in numeric_metrics: numeric_metrics[main_key] = {}
+                    numeric_metrics[main_key][name] = value
+
+      ###
+        full_result_str = ''
+        for evaltype in numeric_metrics.keys(): # Nawid - Go through the different types
+            full_result_str += 'Embed-Type: {}:\n'.format(evaltype) # Shows the embed type
+            # Nawid - Shows all the different results
+            for i,(metricname, metricval) in enumerate(numeric_metrics[evaltype].items()): # Nawid - Go through the different metric
+                full_result_str += '{0}{1}: {2:4.4f}'.format(' | ' if i>0 else '',metricname, metricval)
+            full_result_str += '\n'
+
+        # Nawid - log the histograms
+        # if log online
+        for evaltype in histogr_metrics.keys():
+            for eval_metric, hist in histogr_metrics[evaltype].items(): # Nawid - plot the histogram metrics on wandb
+                import wandb, numpy
+                wandb.log({log_key+': '+evaltype+'_{}'.format(eval_metric): wandb.Histogram(np_histogram=(list(hist),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
+                wandb.log({log_key+': '+evaltype+'_LOG-{}'.format(eval_metric): wandb.Histogram(np_histogram=(list(np.log(hist)+20),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
+
+        for evaltype in numeric_metrics.keys():# Nawid - plot the numeric metrics on wandb
+            for eval_metric in numeric_metrics[evaltype].keys():
+                parent_metric = evaltype+'_{}'.format(eval_metric.split('@')[0])
+                if 'dists' in eval_metric or 'rho_spectrum' in eval_metric:
+                    wandb.log({eval_metric:numeric_metrics[evaltype][eval_metric]})
+                else:
+                    wandb.run.summary[eval_metric] = numeric_metrics[evaltype][eval_metric]
+                #wandb.log({eval_metric:numeric_metrics[evaltype][eval_metric]})
+                #print('parent metric',parent_metric)
+
+    def on_validation_epoch_end(self,trainer,pl_module):
+        self.metric_initialise(trainer,pl_module)
+        self.evaluate_data(trainer,pl_module)
+    '''
+    def on_test_epoch_end(self,trainer,pl_module):
+        self.metric_initialise(trainer,pl_module)
+        self.evaluate_data(trainer,pl_module)
+    '''
+
+evaluation_metrics =['e_recall@1', 'e_recall@2', 'e_recall@4', 'nmi', 'f1', 'mAP_1000', 'mAP_lim', 'mAP_c', \
+                        'dists@intra', 'dists@inter', 'dists@intra_over_inter', 'rho_spectrum@0', \
+                        'rho_spectrum@-1', 'rho_spectrum@1', 'rho_spectrum@2', 'rho_spectrum@10','uniformity']
+
+evaltypes = ['discriminative']

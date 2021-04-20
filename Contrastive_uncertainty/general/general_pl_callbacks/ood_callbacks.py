@@ -18,7 +18,7 @@ from sklearn.metrics import roc_auc_score
 
 from Contrastive_uncertainty.Contrastive.utils.hybrid_utils import OOD_conf_matrix
 #from Contrastive_uncertainty.Contrastive.models.loss_functions import class_discrimination
-from Contrastive_uncertainty.general_pl_callbacks.general_callbacks import quickloading
+from Contrastive_uncertainty.Contrastive.callbacks.general_callbacks import quickloading
 from Contrastive_uncertainty.Contrastive.utils.pl_metrics import precision_at_k, mean
 '''
 class ImagePredictionLogger(pl.Callback):

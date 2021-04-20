@@ -22,6 +22,6 @@ import torch.nn.functional as F
 import wandb
 from tqdm import tqdm
 
-from Contrastive_uncertainty.general_pl_callbacks.visualisation_callback import Visualisation
+from Contrastive_uncertainty.general.general_pl_callbacks.visualisation_callback import Visualisation
 
 

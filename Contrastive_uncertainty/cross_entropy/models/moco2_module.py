@@ -11,24 +11,18 @@ from Contrastive_uncertainty.Moco.models.resnet_models import custom_resnet18,cu
 from Contrastive_uncertainty.Moco.models.loss_functions import moco_loss, classification_loss, supervised_contrastive_loss
 
 
-class MocoV2(pl.LightningModule):
+class CrossEntropy(pl.LightningModule):
     def __init__(self,
         emb_dim: int = 128,
-        num_negatives: int = 65536,
-        encoder_momentum: float = 0.999,
-        softmax_temperature: float = 0.07,
         optimizer:str = 'sgd',
         learning_rate: float = 0.03,
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        batch_size: int = 32,
         use_mlp: bool = False,
         num_channels:int = 3, # number of channels for the specific dataset
         num_classes:int = 10, # Attribute required for the finetuning value
         classifier: bool = False,
-        contrastive: bool = True,
-        supervised_contrastive: bool = False,
         normalize:bool = True,
         class_dict:dict = None,
         instance_encoder:str = 'resnet50',
