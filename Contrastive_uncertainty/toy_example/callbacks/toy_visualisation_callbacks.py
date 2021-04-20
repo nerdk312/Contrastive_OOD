@@ -13,8 +13,6 @@ import sklearn.datasets
 
 
 import glob
-from Contrastive_uncertainty.Moco.moco_callbacks import quickloading, \
-                                                         get_fpr, get_pr_sklearn, get_roc_sklearn
 
 
 class circular_visualisation(pl.Callback):
@@ -63,9 +61,6 @@ class circular_visualisation(pl.Callback):
         #ax[1].set_xlim([np.min(base_embed[:,0])*0.85,np.max(base_embed[:,0]*1.15)]) # Set an x limit for the graph
         #ax[1].set_ylim([np.min(base_embed[:,1])*1.15,np.max(base_embed[:,1]*0.85)]) # Set y limit for the graph
 
-        
-
-
         '''    
         # Plotting the second image
         ax[1].plot(x_2, y_2, '--', color='gray', label='Unit Circle')
@@ -102,7 +97,7 @@ class data_visualisation(pl.Callback):
         plt.savefig('full_visual.png')
         plt.savefig('full_visual.pdf')
         plt.close()
-
+'''
 class UncertaintyVisualisation(pl.Callback):  # contains methods specifc for the two moons dataset
     def __init__(self, datamodule):
         super().__init__()
@@ -161,9 +156,11 @@ class UncertaintyVisualisation(pl.Callback):  # contains methods specifc for the
         ani = animation.ArtistAnimation(fig, self.frames, interval=50, blit=True,
                                 repeat_delay=1000)
         plt.show()
+'''
+
 
 #https://stackoverflow.com/questions/34975972/how-can-i-make-a-video-from-array-of-images-in-matplotlib - Used to produce videos from images
-class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two moons dataset
+class TwoMoonsUncertaintyVisualisation(pl.Callback): # contains methods specifc for the two moons dataset
     def __init__(self,datamodule):
         super().__init__()
         self.datamodule = datamodule
@@ -232,6 +229,66 @@ class TwoMoonsVisualisation(pl.Callback): # contains methods specifc for the two
         ])
         # Logs the video onto wandb
         wandb.log({"Uncertainty visualisation": wandb.Video(video_filename, fps=4, format="mp4")})
+        for file_name in glob.glob("*.png"):
+            os.remove(file_name)
+        
+        #os.remove(video_filename)
+
+class TwoMoonsRepresentationVisualisation(pl.Callback): # contains methods specifc for the two moons dataset
+    def __init__(self,datamodule):
+        super().__init__()
+        self.datamodule = datamodule
+
+        self.X_vis, self.y_vis = sklearn.datasets.make_moons(n_samples=500, noise=self.datamodule.noise) # Nawid - moon dataset
+        self.X_vis = (self.X_vis - self.datamodule.mean)/self.datamodule.std # normalise data
+        #self.frames = []
+    
+    def on_validation_epoch_end(self,trainer, pl_module):
+        self.visualise_uncertainty(trainer, pl_module)
+    
+    def on_test_epoch_end(self,tainer,pl_module):
+        self.generate_video()
+    
+    def visualise_representation(self,trainer,pl_module):
+        # Generates test outlier data
+        
+        mask = self.y_vis.astype(np.bool)
+        with torch.no_grad():
+            representation = pl_module.callback_vector(torch.from_numpy(self.X_vis).float().to(pl_module.device))
+
+        plt.figure()
+        plt.scatter(self.X_vis[mask,0], self.X_vis[mask,1])
+        plt.scatter(self.X_vis[~mask,0], self.X_vis[~mask,1])
+
+        plt.scatter(representation[mask,0].cpu(),representation[mask,1].cpu())
+        plt.scatter(representation[~mask,0].cpu(),representation[~mask,1].cpu())
+
+        #plt.scatter(self.X_vis[mask,0], self.X_vis[mask,1])
+        #plt.scatter(self.X_vis[~mask,0], self.X_vis[~mask,1])
+        #import ipdb; ipdb.set_trace()
+        
+        video_image = 'Images/representation%02d.png' % trainer.current_epoch
+        representation_filename = 'Images/representation.png'
+        
+        plt.savefig(representation_filename)
+        plt.savefig(video_image)
+        wandb_representation = 'representation'
+        wandb.log({wandb_representation:wandb.Image(representation_filename)})
+        # Add the image to the frames section to make a video
+        #import ipdb; ipdb.set_trace()
+        #self.frames.append(plt.show(block=False))
+        plt.close()
+    
+    def generate_video(self):
+        # Changes the directory
+        os.chdir("Images")
+        video_filename = 'Two_moons_representation.mp4' 
+        subprocess.call([
+            'ffmpeg', '-framerate', '4', '-i', 'file%02d.png', '-r', '30', '-pix_fmt', 'yuv420p',
+            video_filename
+        ])
+        # Logs the video onto wandb
+        wandb.log({"Representation visualisation": wandb.Video(video_filename, fps=4, format="mp4")})
         for file_name in glob.glob("*.png"):
             os.remove(file_name)
         
