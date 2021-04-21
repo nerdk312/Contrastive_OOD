@@ -13,8 +13,8 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'FashionMNIST',
-OOD_dataset = 'MNIST',
+dataset = 'CIFAR10',
+OOD_dataset = 'SVHN',
 
 contrastive = True,
 supervised_contrastive = False,
