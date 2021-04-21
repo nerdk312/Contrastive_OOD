@@ -37,7 +37,7 @@ def train(params):
         softmax_temperature = config['softmax_temperature'],
         optimizer = config['optimizer'],learning_rate = config['learning_rate'],
         momentum = config['momentum'], weight_decay = config['weight_decay'],
-        use_mlp = config['use_mlp'],
+        use_mlp = config['use_mlp'],num_cluster = config['num_cluster'],
         datamodule = datamodule,num_channels = channels,
         instance_encoder = config['instance_encoder'],
         pretrained_network = config['pretrained_network'])

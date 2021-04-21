@@ -12,6 +12,6 @@ from warnings import warn
 from torchvision import transforms as transform_lib
 from torchvision.datasets import CIFAR10
 
-from Contrastive_uncertainty.PCL.datamodules.cifar10_datamodule import CIFAR10DataModule
+from Contrastive_uncertainty.general_clustering.datamodules.cifar10_datamodule import CIFAR10DataModule
 
 

@@ -16,7 +16,7 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
 
-from Contrastive_uncertainty.general.general_pl_callbacks.general_callbacks import ModelSaving, MMD_distance, \
+from Contrastive_uncertainty.general_clustering.general_callbacks import ModelSaving, MMD_distance, \
                                                                            Uniformity, SupConLoss, Centroid_distance, \
                                                                            quickloading
 

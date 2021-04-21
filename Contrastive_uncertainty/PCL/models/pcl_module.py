@@ -16,7 +16,7 @@ import math
 
 
 from Contrastive_uncertainty.PCL.utils.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.Moco.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
+from Contrastive_uncertainty.Moco.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 from Contrastive_uncertainty.PCL.callbacks.general_callbacks import quickloading
 
 

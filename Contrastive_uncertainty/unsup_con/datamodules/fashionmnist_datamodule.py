@@ -12,4 +12,4 @@ from torchvision.datasets import FashionMNIST
 from Contrastive_uncertainty.unsup_con.datamodules.dataset_normalizations import fashionmnist_normalization
 from Contrastive_uncertainty.unsup_con.datamodules.datamodule_transforms import dataset_with_indices
 
-from Contrastive_uncertainty.PCL.datamodules.fashionmnist_datamodule import FashionMNISTDataModule
+from Contrastive_uncertainty.general_clustering.datamodules.fashionmnist_datamodule import FashionMNISTDataModule

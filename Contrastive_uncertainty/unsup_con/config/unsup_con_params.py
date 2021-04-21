@@ -16,6 +16,7 @@ OOD_dataset = 'MNIST',
 
 contrast_mode = 'one',
 use_mlp = True,
+num_cluster = [10],
 
 # Miscellaneous arguments
 seed = 42,
@@ -31,6 +32,7 @@ val_check = 10,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
+num_inference_cluster = [10], # Number of clusters for the inference callback
 
 project = 'evaluation'# evaluation, Moco_training
 )

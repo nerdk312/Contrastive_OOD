@@ -15,4 +15,4 @@ from torchvision.datasets import SVHN
 from Contrastive_uncertainty.unsup_con.datamodules.dataset_normalizations import svhn_normalization
 from Contrastive_uncertainty.unsup_con.datamodules.datamodule_transforms import dataset_with_indices
 
-from Contrastive_uncertainty.PCL.datamodules.svhn_datamodule import SVHNDataModule
+from Contrastive_uncertainty.general_clustering.datamodules.svhn_datamodule import SVHNDataModule

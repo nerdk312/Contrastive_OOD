@@ -10,7 +10,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.unsup_con.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 
-from Contrastive_uncertainty.PCL.models.pcl_module import datasize, \
+from Contrastive_uncertainty.general_clustering.models.pcl_module import datasize, \
     compute_features , run_kmeans, cluster_data, \
     on_train_epoch_start, on_fit_start, aux_data
       
