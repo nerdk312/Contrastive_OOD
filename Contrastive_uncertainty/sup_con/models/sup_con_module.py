@@ -156,13 +156,13 @@ class SupConModule(pl.LightningModule):
         loss = self(features, labels) #  forward pass of the model
         metrics = {'Loss': loss}
 
-    return metrics
+        return metrics
 
     def training_step(self, batch, batch_idx):
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
             if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
-        loss = metrics['Class Loss']
+        loss = metrics['Loss']
         return loss
         
     def validation_step(self, batch, batch_idx,dataset_idx):

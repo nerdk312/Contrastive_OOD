@@ -14,6 +14,7 @@ bsz = 256,
 dataset = 'FashionMNIST',
 OOD_dataset = 'MNIST',
 
+contrast_mode = 'one',
 use_mlp = True,
 
 # Miscellaneous arguments

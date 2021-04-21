@@ -8,8 +8,8 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.sup_con.models.contrastive_module import ContrastiveModule
-from Contrastive_uncertainty.sup_con.run.contrastive_run_setup  import run_name, Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
+from Contrastive_uncertainty.sup_con.run.sup_con_run_setup import run_name, Datamodule_selection,Channel_selection,callback_dictionary
 
 def train(params):
     wandb.init(entity="nerdk312",config = params,project= params['project']) # Required to have access to wandb config, which is needed to set up a sweep
@@ -33,14 +33,12 @@ def train(params):
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['Mahalanobis'],callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']] 
 
-    model = ContrastiveModule(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
-        encoder_momentum = config['encoder_momentum'], 
+    model = SupConModule(emb_dim = config['emb_dim'],contrast_mode=config['contrast_mode'],
         softmax_temperature = config['softmax_temperature'],
         optimizer = config['optimizer'],learning_rate = config['learning_rate'],
         momentum = config['momentum'], weight_decay = config['weight_decay'],
         use_mlp = config['use_mlp'],
         datamodule = datamodule,num_channels = channels,
-        contrastive = config['contrastive'], supervised_contrastive = config['supervised_contrastive'],
         instance_encoder = config['instance_encoder'],
         pretrained_network = config['pretrained_network'])
         
