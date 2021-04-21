@@ -7,9 +7,15 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.sup_con.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 
-class SupConModule(pl.LightningModule):
+from Contrastive_uncertainty.unsup_con.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
+
+from Contrastive_uncertainty.PCL.models.pcl_module import datasize, \
+    compute_features , run_kmeans, cluster_data, \
+    on_train_epoch_start, on_fit_start, aux_data
+      
+
+class UnSupConModule(pl.LightningModule):
     def __init__(self,
         emb_dim: int = 128,
         contrast_mode:str = 'one',
@@ -20,6 +26,7 @@ class SupConModule(pl.LightningModule):
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
         use_mlp: bool = False,
+        num_cluster: list = [10], # Clusters for training
         num_channels:int = 3, # number of channels for the specific dataset
         instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
@@ -40,6 +47,8 @@ class SupConModule(pl.LightningModule):
             
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
+        
+        self.auxillary_data = None # Basic instantiation before model starts training
 
     def init_encoders(self):
         """
@@ -64,7 +73,6 @@ class SupConModule(pl.LightningModule):
         z = self.encoder(x)
         z = nn.functional.normalize(z, dim=1)
         return z
-
 
 
     def forward(self, features, labels=None, mask=None):
@@ -143,33 +151,49 @@ class SupConModule(pl.LightningModule):
         return loss
 
 
-    def loss_function(self, batch):
-        (img_1, img_2), labels,indices = batch
-        imgs = torch.cat([img_1, img_2], dim=0)
-        bsz = labels.shape[0]
-        features = self.encoder(imgs)
-        features = nn.functional.normalize(features, dim=1)
-        ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
-        features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
-        loss = self(features, labels) #  forward pass of the model
-        metrics = {'Loss': loss}
+    def loss_function(self, batch,cluster_result):
+        metrics = {}
+        loss = torch.tensor([0],device = self.device)
+        (img_1, img_2), _, indices = batch
+        # Obtain clustering labels
+        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+            pseudo_labels= im2cluster[indices] # Nawid - get the true cluster assignment for each of the different samples
 
+            imgs = torch.cat([img_1, img_2], dim=0)
+            bsz = pseudo_labels.shape[0]
+            features = self.encoder(imgs)
+            features = nn.functional.normalize(features, dim=1)
+            ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
+            features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
+            loss_proto = self(features, pseudo_labels) #  forward pass of the model
+
+            # update metrics with the metrics for each cluster
+            proto_metrics = {f'Proto Loss Cluster {self.hparams[n]}':loss_proto}
+            metrics.update(proto_metrics)
+            
+            loss += loss_proto
+        
+        loss = loss/len(self.hparams.num_cluster)
+
+        loss_metrics = {'Loss': loss}
+
+        metrics.update(loss_metrics)
         return metrics
 
     def training_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch)
+        metrics = self.loss_function(batch,self.auxillary_data)
         for k,v in metrics.items():
             if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
         loss = metrics['Loss']
         return loss
         
-    def validation_step(self, batch, batch_idx,dataset_idx):
-        metrics = self.loss_function(batch)
+    def validation_step(self, batch, batch_idx):
+        metrics = self.loss_function(batch,self.auxillary_data)
         for k,v in metrics.items():
             if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
         
     def test_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch)
+        metrics = self.loss_function(batch,self.auxillary_data)
         for k,v in metrics.items():
             if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
         

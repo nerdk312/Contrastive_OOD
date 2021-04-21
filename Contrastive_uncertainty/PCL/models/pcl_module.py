@@ -412,6 +412,11 @@ class PCLModule(base_module):
         self.auxillary_data = self.aux_data(dataloader)
         #return self.auxillary_data
 
+    def on_fit_start(self):
+        dataloader = self.datamodule.val_dataloader()
+        self.auxillary_data = self.aux_data(dataloader)
+        
+    '''    
     def on_validation_epoch_start(self):
         # If first epoch, perform clustering, else pass
         if self.current_epoch ==0:
@@ -420,7 +425,7 @@ class PCLModule(base_module):
         else: 
             pass
         #return self.auxillary_data
-    
+    '''
     def aux_data(self,dataloader):
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
