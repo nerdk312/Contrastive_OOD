@@ -77,7 +77,7 @@ class Mahalanobis_OOD(pl.Callback):
         self.mahalanobis_classification(indices_dtest, labels_test)
 
         # Calculates the mahalanobis distance using unsupervised approach
-        )
+        
         # Perform unsupervised clustering with different values        
         for num_clusters in self.num_inference_clusters:
             _, _, _, UL_indices_dtest, UL_indices_dood = self.get_eval_results(

@@ -8,7 +8,7 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.unsup_con.models.unsup_con_module import SupConModule
+from Contrastive_uncertainty.unsup_con.models.unsup_con_module import UnSupConModule
 from Contrastive_uncertainty.unsup_con.run.unsup_con_run_setup import run_name, Datamodule_selection,Channel_selection,callback_dictionary
 
 def train(params):
