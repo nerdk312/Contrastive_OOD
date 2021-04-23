@@ -8,6 +8,8 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 import math
 from tqdm import tqdm
+import faiss
+import numpy as np
 
 from Contrastive_uncertainty.unsup_con.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 
@@ -152,7 +154,7 @@ class UnSupConModule(pl.LightningModule):
 
     def loss_function(self, batch,cluster_result):
         metrics = {}
-        loss = torch.tensor([0],device = self.device)
+        loss = torch.tensor([0.0],device = self.device)
         (img_1, img_2), _, indices = batch
         # Obtain clustering labels
         for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
@@ -167,7 +169,7 @@ class UnSupConModule(pl.LightningModule):
             loss_proto = self(features, pseudo_labels) #  forward pass of the model
 
             # update metrics with the metrics for each cluster
-            proto_metrics = {f'Proto Loss Cluster {self.hparams[n]}':loss_proto}
+            proto_metrics = {f'Proto Loss Cluster {self.hparams.num_cluster[n]}':loss_proto}
             metrics.update(proto_metrics)
             
             loss += loss_proto
