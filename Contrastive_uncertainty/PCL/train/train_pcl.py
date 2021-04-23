@@ -47,13 +47,11 @@ def training(params):
 
     model = PCLModule(datamodule=datamodule,optimizer=config['optimizer'],
     learning_rate=config['learning_rate'],momentum=config['momentum'],
-    weight_decay=config['weight_decay'],num_classes=config['num_classes'],
-    class_dict=class_names_dict, emb_dim=config['emb_dim'],
-    num_negatives=config['num_negatives'],
-    encoder_momentum=config['encoder_momentum'],softmax_temperature=config['softmax_temperature'],
+    weight_decay=config['weight_decay'],emb_dim=config['emb_dim'],
+    num_negatives=config['num_negatives'],encoder_momentum=config['encoder_momentum'],
+    softmax_temperature=config['softmax_temperature'], 
     num_cluster=config['num_cluster'], use_mlp=config['use_mlp'],
-    num_channels=channels, classifier=config['classifier'],
-    normalize=config['normalize'], instance_encoder=config['instance_encoder'],
+    num_channels=channels, instance_encoder=config['instance_encoder'],
     pretrained_network=config['pretrained_network'])
         
 
@@ -65,7 +63,7 @@ def training(params):
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks)#,auto_lr_find = True)
     
     wandb.run.name = run_name(config)
-        
+    
     trainer.fit(model,datamodule)
     trainer.test(datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
