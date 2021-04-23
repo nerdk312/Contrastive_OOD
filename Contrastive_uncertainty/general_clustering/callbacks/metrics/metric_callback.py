@@ -22,4 +22,3 @@ from tqdm import tqdm
 import copy
 
 from Contrastive_uncertainty.general.general_pl_callbacks.metrics.metric_callback import MetricLogger,evaluation_metrics, evaltypes
-

@@ -13,13 +13,4 @@ import wandb
 from PIL import Image
 import faiss
 
-
-import numpy as np
-import faiss
-import torch
-from sklearn.preprocessing import normalize
-from tqdm import tqdm
-import copy
-
-from Contrastive_uncertainty.general.general_pl_callbacks.metrics.metric_callback import MetricLogger,evaluation_metrics, evaltypes
-
+from Contrastive_uncertainty.general_clustering.callbacks.metrics.metric_callback import MetricLogger,evaluation_metrics,evaltypes
