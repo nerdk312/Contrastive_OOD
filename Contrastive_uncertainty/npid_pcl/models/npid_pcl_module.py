@@ -100,7 +100,7 @@ class NPIDPCLModule(pl.LightningModule):
             features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
     
-    def run_kmeans(self,x):
+    def run_kmeans(self, x):
         """
         Args:
             x: data to be clustered
@@ -185,9 +185,23 @@ class NPIDPCLModule(pl.LightningModule):
         # Nawid - compute K-means
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
         self.memory_bank.init_memory(self,feature=features,label=cluster_result['im2cluster'][0].cpu().numpy())
+        self.weights = self.set_reweight(labels=cluster_result['im2cluster'][0].cpu().numpy())
         return cluster_result
 
-    
+    def set_reweight(self, labels, reweight_pow=0.5):
+        """Loss re-weighting.
+        Re-weighting the loss according to the number of samples in each class.
+        Args:
+            labels (numpy.ndarray): Label assignments.
+            reweight_pow (float): The power of re-weighting. Default: 0.5.
+        """
+        # import ipdb; ipdb.set_trace()
+        hist = np.bincount(
+            labels, minlength=self.hparams.num_cluster[0]).astype(np.float32)
+        inv_hist = (1. / (hist + 1e-10))**reweight_pow
+        weight = inv_hist / inv_hist.sum()
+        return weight
+
     def forward(self, img, idx,cluster_result):
         """ Forward computation
 
@@ -287,16 +301,16 @@ class NPIDPCLModule(pl.LightningModule):
         exp_logits = torch.exp(logits)
         log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
         mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
-
+        #import ipdb; ipdb.set_trace()
         loss = - (self.hparams.softmax_temperature / 0.07) * mean_log_prob_pos
+        
+        # Used to reweigh the loss by how common the different data points are
+        weights = torch.from_numpy(self.weights).to(self.device)
+        weightings = torch.index_select(weights,0,anchor_labels.squeeze(1))
+        loss = loss*weightings
         # Nawid - changes to shape (anchor_count, batch)
         loss = loss.view(1, batch_size).mean()
         return loss
-
-
-        
-    
-    
 
     def loss_function(self, batch):
         (img_1, img_2), labels,indices = batch
@@ -350,7 +364,6 @@ class NPIDPCLModule(pl.LightningModule):
     def on_fit_start(self):
         dataloader = self.datamodule.val_dataloader()
         self.auxillary_data = self.aux_data(dataloader)
-
     
     def aux_data(self,dataloader):
         cluster_result = self.cluster_data(dataloader)
