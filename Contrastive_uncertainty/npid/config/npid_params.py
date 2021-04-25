@@ -2,7 +2,7 @@ npid_hparams = dict(
 num_classes = 10,
 emb_dim = 128,
 num_negatives = 65536,
-encoder_momentum = 0.999,
+memory_momentum = 0.999,
 softmax_temperature = 0.07,
 instance_encoder = 'resnet50',
 
@@ -13,11 +13,9 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'CIFAR10',
-OOD_dataset = 'SVHN',
+dataset = 'FashionMNIST',
+OOD_dataset = 'MNIST',
 
-contrastive = True,
-supervised_contrastive = False,
 use_mlp = True,
 
 # Miscellaneous arguments

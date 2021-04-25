@@ -75,6 +75,15 @@ class CIFAR10DataModule(LightningDataModule):
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
 
+
+    @property
+    def total_samples(self):
+        """
+        Return:
+            60000
+        """
+        return 60_000
+
     @property
     def num_classes(self):
         """

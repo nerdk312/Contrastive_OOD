@@ -1,16 +1,16 @@
-from Contrastive_uncertainty.npid.train.train_contrastive import train
-from Contrastive_uncertainty.npid.config.contrastive_params import contrastive_hparams
+from Contrastive_uncertainty.npid.train.train_npid import train
+from Contrastive_uncertainty.npid.config.npid_params import npid_hparams
 
 
-contrastive_hparams['bsz'] = 16
-contrastive_hparams['instance_encoder'] = 'resnet18'
-contrastive_hparams['epochs'] = 1
-contrastive_hparams['fast_run'] = False
-contrastive_hparams['training_ratio'] = 0.01
-contrastive_hparams['validation_ratio'] = 0.2
-contrastive_hparams['test_ratio'] = 0.2
-contrastive_hparams['val_check'] = 1
-contrastive_hparams['project'] = 'practice'  # evaluation, contrastive_training
-contrastive_hparams['pretrained_network'] = None  # 'Pretrained_models/finetuned_network.pt'
-contrastive_hparams['quick_callback'] = True
-train(contrastive_hparams)
+npid_hparams['bsz'] = 16
+npid_hparams['instance_encoder'] = 'resnet18'
+npid_hparams['epochs'] = 1
+npid_hparams['fast_run'] = False
+npid_hparams['training_ratio'] = 0.01
+npid_hparams['validation_ratio'] = 0.2
+npid_hparams['test_ratio'] = 0.2
+npid_hparams['val_check'] = 1
+npid_hparams['project'] = 'practice'  # evaluation, contrastive_training
+npid_hparams['pretrained_network'] = None  # 'Pretrained_models/finetuned_network.pt'
+npid_hparams['quick_callback'] = True
+train(npid_hparams)

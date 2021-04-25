@@ -76,6 +76,15 @@ class SVHNDataModule(LightningDataModule):
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
 
+
+    @property
+    def total_samples(self):
+        """
+        Return:
+            630_420
+        """
+        return 630_420
+        
     @property
     def num_classes(self):
         """

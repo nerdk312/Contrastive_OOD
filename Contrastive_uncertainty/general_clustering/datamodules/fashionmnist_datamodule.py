@@ -77,7 +77,7 @@ class FashionMNISTDataModule(LightningDataModule):
         
         #self.full_train_samples = 60000
         #self.full_test_samples = 10000
-    
+
     ''' 
     def split_size(self, samples): # obtains a dataset size for the k-means based on the batch size
         batch_size = self.batch_size
@@ -88,6 +88,14 @@ class FashionMNISTDataModule(LightningDataModule):
         #split = samples - new_dataset_size
         return int(new_dataset_size)
     '''
+
+    @property
+    def total_samples(self):
+        """
+        Return:
+            60000
+        """
+        return 60_000
 
     @property
     def num_classes(self):

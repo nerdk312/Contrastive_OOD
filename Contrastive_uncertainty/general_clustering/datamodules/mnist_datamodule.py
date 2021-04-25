@@ -82,6 +82,13 @@ class MNISTDataModule(LightningDataModule):
         #split = samples - new_dataset_size
         return int(new_dataset_size)
     '''        
+    @property
+    def total_samples(self):
+        """
+        Return:
+            60000
+        """
+        return 60_000
 
     @property
     def num_classes(self):

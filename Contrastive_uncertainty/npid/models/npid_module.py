@@ -16,8 +16,9 @@ from Contrastive_uncertainty.npid.utils.pl_metrics import precision_at_k
 class NPIDModule(pl.LightningModule):
     def __init__(self,
         emb_dim: int = 128,
-        num_negatives: int = 65536,
+        num_negatives: int = 8192,
         softmax_temperature: float = 0.07,
+        memory_momentum = 0.5,
         optimizer:str = 'sgd',
         learning_rate: float = 0.03,
         momentum: float = 0.9,
@@ -35,14 +36,14 @@ class NPIDModule(pl.LightningModule):
         self.datamodule = datamodule
 
         # Instantiate memory bank
-        self.memory_bank = SimpleMemory(feat_dim=emb_dim, momentum=encoder_momentum)
+        self.memory_bank = SimpleMemory(length=self.datamodule.total_samples,feat_dim=emb_dim, momentum=memory_momentum)
 
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder= self.init_encoders()
         if use_mlp:  # hack: brute-force replacement
             dim_mlp = self.encoder.fc.weight.shape[1]
-            self.encoder.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_q.fc)
+            self.encoder.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder.fc)
             
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
@@ -54,10 +55,10 @@ class NPIDModule(pl.LightningModule):
         """
         if self.hparams.instance_encoder == 'resnet18':
             print('using resnet18')
-            encoder_q = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
+            encoder = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
         elif self.hparams.instance_encoder =='resnet50':
             print('using resnet50')
-            encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
+            encoder = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
         
         return encoder
        
@@ -96,13 +97,13 @@ class NPIDModule(pl.LightningModule):
 
         # Obtain negative features
         neg_feat = torch.index_select(self.memory_bank.feature_bank, 0,
-                                      neg_idx).view(bs, self.neg_num,
+                                      neg_idx).view(bs, self.hparams.num_negatives,
                                                     feat_dim)  # BxKxC
         
         # Obtain positive and negative logits of the data
         pos_logits = torch.einsum('nc,nc->n',
-                                  [pos_feat, feature]).unsqueeze(-1)
-        neg_logits = torch.bmm(neg_feat, feature.unsqueeze(2)).squeeze(2)
+                                  [pos_feat, features]).unsqueeze(-1)
+        neg_logits = torch.bmm(neg_feat, features.unsqueeze(2)).squeeze(2)
 
 
         logits = torch.cat([pos_logits, neg_logits], dim=1)
@@ -114,10 +115,9 @@ class NPIDModule(pl.LightningModule):
 
         # update memory bank
         with torch.no_grad():
-            self.memory_bank.update(idx, feature.detach())
+            self.memory_bank.update(idx, features.detach())
 
         return logits, labels
-
 
 
     def loss_function(self, batch):
