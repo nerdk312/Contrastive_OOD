@@ -39,8 +39,9 @@ class SimpleMemory(nn.Module):
         # Obtain the old features from the feature bank
         feature_old = self.feature_bank[ind, ...]
         # Obtain new features from running average of data
-        feature_new = (1 - self.memory_momentum) * feature_old + \
-            self.memory_momentum * feature_norm
+        # Nawid- changed the momentum update compared to the original implementation to better match my previous Moco code
+        feature_new = self.memory_momentum * feature_old + \
+            (1-self.memory_momentum) * feature_norm
         # Normalise new features
         feature_new_norm = nn.functional.normalize(feature_new)
         # Update featrue bank

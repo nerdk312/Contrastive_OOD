@@ -55,15 +55,15 @@ class OfflineLabelMemory(nn.Module):
         assert self.initialized
         feature_norm = feature / (feature.norm(dim=1).view(-1, 1) + 1e-10
                                   )  # normalize
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         # change indices to cpu
         ind = ind.cpu()
         #if self.rank == 0:
         # Select the old features
         feature_old = self.feature_bank[ind, ...].cuda()
         # Update the old features
-        feature_new = (1 - self.memory_momentum) * feature_old + \
-            self.memory_momentum * feature_norm
+        feature_new = self.memory_momentum * feature_old + \
+            (1 - self.memory_momentum) * feature_norm
         feature_norm = feature_new / (
             feature_new.norm(dim=1).view(-1, 1) + 1e-10)
         # Update feature bank

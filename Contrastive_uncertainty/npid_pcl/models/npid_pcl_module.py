@@ -204,6 +204,7 @@ class NPIDPCLModule(pl.LightningModule):
         features = self.encoder(img) 
         features = nn.functional.normalize(features) # BxD
         bs, feat_dim = features.shape[:2]
+        # number of negatives is equal to the batch size multipled by the number of negatives for each sample
         neg_idx = self.memory_bank.multinomial.draw(bs * self.hparams.num_negatives)
 
         # Obtain positive features 
@@ -228,6 +229,22 @@ class NPIDPCLModule(pl.LightningModule):
         labels = torch.zeros(logits.shape[0], dtype=torch.long) # Nawid - class zero is always the correct class, which corresponds to the postiive examples in the logit tensor (due to the positives being concatenated first)
         labels = labels.type_as(logits)
 
+
+        # Group based contrastive learning
+
+        # Concatenate all the examples from memory
+        cluster_labels = cluster_result['im2cluster'][0]
+        anchor_pseudo_labels = cluster_labels[idx]
+        
+        # Concatenate the instance positives (memory of anchor) as well as the negative instances to get all the different memory samples
+        memory_feat = torch.cat((pos_feat,neg_feat.view(-1,feat_dim)),dim=0)
+        # Obtain the labels of the negative memory features from the label bank of the memory bank using the negative indice
+        memory_labels = torch.index_select(self.memory_bank.label_bank, 0,
+                                      neg_idx)
+        # Concatenate anchor labels (which are the labels of the instance positives) with the labels of the negatives
+        memory_labels = torch.cat((anchor_pseudo_labels.clone(),memory_labels),dim=0) 
+        loss_proto = self.supervised_contrastive_forward(features,memory_feat,anchor_pseudo_labels,memory_labels)
+
         # update memory bank
         with torch.no_grad():
             cluster_labels = cluster_result['im2cluster'][0]
@@ -235,6 +252,49 @@ class NPIDPCLModule(pl.LightningModule):
             self.memory_bank.update_samples_memory(idx, features.detach(),pseudo_labels)
 
         return logits, labels
+
+    
+    def supervised_contrastive_forward(self, anchor_features,memory_features, anchor_labels, memory_labels):
+        """Compute loss for model. If both `labels` and `mask` are None,
+        it degenerates to SimCLR unsupervised loss:
+        https://arxiv.org/pdf/2002.05709.pdf
+        Args:
+            features: hidden vector of shape [bsz, n_views, ...].
+            anchor_labels: clustering labels of shape [bsz].
+            memory_labels: clustering labels of shape [K].
+        Returns:
+            A loss scalar.
+        """
+        #import ipdb; ipdb.set_trace()
+        batch_size = anchor_features.shape[0]
+        if anchor_labels is not None:
+            # Change the shape of the labels to make the values compatiable with one another
+            anchor_labels = anchor_labels.contiguous().view(-1, 1)
+            memory_labels = memory_labels.contiguous().view(-1,1)
+            if anchor_labels.shape[0] != batch_size:
+                raise ValueError('Num of labels does not match num of features')
+            # Makes a mask with values of 0 and 1 depending on whether the labels between two different samples in the batch are the same (shape [B,K])
+            mask = torch.eq(anchor_labels, memory_labels.T).float().to(self.device)
+        
+        # compute logits (between each data point with every other data point )
+        anchor_dot_contrast = torch.div(  # Nawid - similarity between the anchor and the memory features  (shape [bsz,D] x [D,K) gives [bsz,K])
+            torch.matmul(anchor_features, memory_features.T),
+            self.hparams.softmax_temperature)
+        # for numerical stability
+        logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
+        logits = anchor_dot_contrast - logits_max.detach()
+    
+        exp_logits = torch.exp(logits)
+        log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
+        mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
+
+        loss = - (self.hparams.softmax_temperature / 0.07) * mean_log_prob_pos
+        # Nawid - changes to shape (anchor_count, batch)
+        loss = loss.view(1, batch_size).mean()
+        return loss
+
+
+        
     
     
 
