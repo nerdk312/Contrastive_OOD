@@ -184,11 +184,11 @@ class NPIDPCLModule(pl.LightningModule):
         features = features.numpy()
         # Nawid - compute K-means
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
-        self.memory_bank.init_memory(feature=features,label=cluster_result['im2cluster'][0].cpu().numpy())
+        self.memory_bank.init_memory(self,feature=features,label=cluster_result['im2cluster'][0].cpu().numpy())
         return cluster_result
 
     
-    def forward(self, img, idx):
+    def forward(self, img, idx,cluster_result):
         """ Forward computation
 
         Args:
@@ -200,6 +200,7 @@ class NPIDPCLModule(pl.LightningModule):
         logits (Tensor): logits of the data
 
         """
+        # import ipdb; ipdb.set_trace()
         features = self.encoder(img) 
         features = nn.functional.normalize(features) # BxD
         bs, feat_dim = features.shape[:2]
@@ -229,7 +230,9 @@ class NPIDPCLModule(pl.LightningModule):
 
         # update memory bank
         with torch.no_grad():
-            self.memory_bank.update(idx, features.detach())
+            cluster_labels = cluster_result['im2cluster'][0]
+            pseudo_labels = cluster_labels[idx]
+            self.memory_bank.update_samples_memory(idx, features.detach(),pseudo_labels)
 
         return logits, labels
     
@@ -237,7 +240,7 @@ class NPIDPCLModule(pl.LightningModule):
 
     def loss_function(self, batch):
         (img_1, img_2), labels,indices = batch
-        output, target = self(img=img_1,idx=indices)      
+        output, target = self(img=img_1,idx=indices,cluster_result=self.auxillary_data)      
         loss = F.cross_entropy(output, target.long())
         acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
         metrics = {'Loss': loss, 'Instance Accuracy @ 1': acc1, 'Instance Accuracy @ 5': acc5}
@@ -251,7 +254,7 @@ class NPIDPCLModule(pl.LightningModule):
         loss = metrics['Loss']
         return loss
         
-    def validation_step(self, batch, batch_idx,dataset_idx):
+    def validation_step(self, batch, batch_idx):
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
             if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)

@@ -13,7 +13,7 @@ class SimpleMemory(nn.Module):
         momentum (float): Momentum coefficient for updating features.
     """
 
-    def __init__(self, length, feat_dim, momentum, **kwargs):
+    def __init__(self, length, feat_dim, memory_momentum, **kwargs):
         super(SimpleMemory, self).__init__()
         # Information on the distribution of the data
         #self.rank, self.num_replicas = get_dist_info()
@@ -21,7 +21,7 @@ class SimpleMemory(nn.Module):
         self.feature_bank = torch.randn(length, feat_dim).cuda()
         self.feature_bank = nn.functional.normalize(self.feature_bank)
         # Momentum for feature bank
-        self.momentum = momentum
+        self.memory_momentum = memory_momentum
         # Used to sample from feature bank
         self.multinomial = AliasMethod(torch.ones(length))
         self.multinomial.cuda()
@@ -39,8 +39,8 @@ class SimpleMemory(nn.Module):
         # Obtain the old features from the feature bank
         feature_old = self.feature_bank[ind, ...]
         # Obtain new features from running average of data
-        feature_new = (1 - self.momentum) * feature_old + \
-            self.momentum * feature_norm
+        feature_new = (1 - self.memory_momentum) * feature_old + \
+            self.memory_momentum * feature_norm
         # Normalise new features
         feature_new_norm = nn.functional.normalize(feature_new)
         # Update featrue bank
