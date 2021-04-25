@@ -8,7 +8,7 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.npid_pcl.models.npid_pcl_module  import npid_pclModule
+from Contrastive_uncertainty.npid_pcl.models.npid_pcl_module  import NPIDPCLModule
 from Contrastive_uncertainty.npid_pcl.run.npid_pcl_run_setup  import run_name, Datamodule_selection,Channel_selection,callback_dictionary
 
 def train(params):
@@ -36,7 +36,7 @@ def train(params):
     '''
     desired_callbacks = []
     
-    model = npid_pclModule(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
+    model = NPIDPCLModule(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
         memory_momentum = config['memory_momentum'], 
         softmax_temperature = config['softmax_temperature'],
         optimizer = config['optimizer'],learning_rate = config['learning_rate'],

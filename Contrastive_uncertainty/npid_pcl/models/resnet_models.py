@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Type, Any, Callable, Union, List, Optional
 
-from Contrastive_uncertainty.general.models.resnet_models import BasicBlock, Bottleneck, ResNet
+from Contrastive_uncertainty.general_clustering.models.resnet_models import BasicBlock, Bottleneck, ResNet
 
 class CustomResNet(ResNet):
     def __init__(

@@ -37,7 +37,7 @@ def train(params):
     desired_callbacks = []
     
     model = NPIDModule(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
-        memory_momentum = config['memory_momentum'], 
+        memory_momentum = config['memory_momentum'], num_cluster=config['num_cluster'],
         softmax_temperature = config['softmax_temperature'],
         optimizer = config['optimizer'],learning_rate = config['learning_rate'],
         momentum = config['momentum'], weight_decay = config['weight_decay'],

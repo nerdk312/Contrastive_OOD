@@ -12,4 +12,4 @@ from torchvision.datasets import MNIST
 from Contrastive_uncertainty.npid_pcl.datamodules.dataset_normalizations import mnist_normalization
 from Contrastive_uncertainty.npid_pcl.datamodules.datamodule_transforms import dataset_with_indices
 
-from Contrastive_uncertainty.general.datamodules.mnist_datamodule import MNISTDataModule
+from Contrastive_uncertainty.general_clustering.datamodules.mnist_datamodule import MNISTDataModule

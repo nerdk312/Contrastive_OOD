@@ -10,14 +10,14 @@ class OfflineLabelMemory(nn.Module):
     Args:
         length (int): Number of features stored in samples memory.
         feat_dim (int): Dimension of stored features.
-        momentum (float): Momentum coefficient for updating features.
+        memory_momentum (float): Momentum coefficient for updating features.
         num_classes (int): Number of clusters.
-        min_cluster (int): Minimal cluster size.
+        
     """
 
-    def __init__(self, length, feat_dim, momentum, num_classes, min_cluster,
+    def __init__(self, length, feat_dim, memory_momentum, num_classes,
                  **kwargs):
-        super(LabelMemory, self).__init__()
+        super(OfflineLabelMemory, self).__init__()
         #self.rank, self.num_replicas = get_dist_info()
         #if self.rank == 0:
         # Make feature bank
@@ -67,8 +67,7 @@ class OfflineLabelMemory(nn.Module):
         # update feature bank  
         newlabel_cpu = label.cpu()
         self.label_bank[ind] = newlabel_cpu.clone()  # copy to cpu
-        return change_ratio
-
+        
     
 
     
