@@ -5,7 +5,7 @@ num_negatives = 65536,
 memory_momentum = 0.999,
 softmax_temperature = 0.07,
 instance_encoder = 'resnet50',
-num_cluster = [10],
+num_cluster = [10,15],
 
 # optimizer args
 optimizer = 'sgd',
