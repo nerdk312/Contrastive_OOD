@@ -56,7 +56,7 @@ class OfflineLabelMemory(nn.Module):
         assert self.initialized
         feature_norm = feature / (feature.norm(dim=1).view(-1, 1) + 1e-10
                                   )  # normalize
-        import ipdb; ipdb.set_trace()
+        
         # change indices to cpu
         #ind = ind.cpu()
         #if self.rank == 0:

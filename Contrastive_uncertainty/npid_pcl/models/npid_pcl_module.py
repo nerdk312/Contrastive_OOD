@@ -178,7 +178,6 @@ class NPIDPCLModule(pl.LightningModule):
             cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
         
          #if using a single gpuif args.gpu == 0:
-        #import ipdb; ipdb.set_trace() 
         features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
         features = features.numpy()
         # Nawid - compute K-means
@@ -188,7 +187,6 @@ class NPIDPCLModule(pl.LightningModule):
         cluster_labels = cluster_result['im2cluster'][0]
         indices = torch.arange(len(features), dtype=torch.long, device=self.device) # indices for the features
         # Update memory bank with initial values or moving average
-        #import ipdb; ipdb.set_trace()
         if self.current_epoch ==0:
             self.memory_bank.init_memory(self,feature=features,label=cluster_labels.cpu().numpy())
         #else:
@@ -225,7 +223,6 @@ class NPIDPCLModule(pl.LightningModule):
         logits (Tensor): logits of the data
 
         """
-        #import ipdb; ipdb.set_trace()
         features = self.encoder(img) 
         features = nn.functional.normalize(features) # BxD
         bs, feat_dim = features.shape[:2]
@@ -258,7 +255,6 @@ class NPIDPCLModule(pl.LightningModule):
                                   [pos_feat, features]).unsqueeze(-1)
         # shape (BxKxc and BxCx1) to give BxKx1 which is then squeezed to (BxK)
         #neg_logits = torch.bmm(neg_feat, features.unsqueeze(2)).squeeze(2)
-        #import ipdb; ipdb.set_trace()
         neg_logits = torch.einsum('nc,kc->nk', [features, neg_feat.detach()]) # Nawid - negative logits (dot product between key and negative samples in a query bank)
 
         # Concatenate (nx1) and (nk) to get (n x k+1)
@@ -286,11 +282,11 @@ class NPIDPCLModule(pl.LightningModule):
         memory_labels = torch.cat((anchor_pseudo_labels.clone(),memory_labels),dim=0) 
         loss_proto = self.supervised_contrastive_forward(features,memory_feat,anchor_pseudo_labels,memory_labels)
 
-        # update memory bank
+        # update memory bank using the features in the batch, the indices as well as the labels from clustering each epoch
         with torch.no_grad():
             self.memory_bank.update_samples_memory(idx, features.detach(),anchor_pseudo_labels.detach())
 
-        return logits, labels
+        return logits, labels, loss_proto
 
     
     def supervised_contrastive_forward(self, anchor_features,memory_features, anchor_labels, memory_labels):
@@ -304,7 +300,6 @@ class NPIDPCLModule(pl.LightningModule):
         Returns:
             A loss scalar.
         """
-        #import ipdb; ipdb.set_trace()
         batch_size = anchor_features.shape[0]
         if anchor_labels is not None:
             # Change the shape of the labels to make the values compatiable with one another
@@ -326,11 +321,10 @@ class NPIDPCLModule(pl.LightningModule):
         exp_logits = torch.exp(logits)
         log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
         mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
-        #import ipdb; ipdb.set_trace()
         loss = - (self.hparams.softmax_temperature / 0.07) * mean_log_prob_pos
         
         # Used to reweigh the loss by how common the different data points are
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         weightings = torch.index_select(self.weights,0,anchor_labels.squeeze(1))
         loss = loss*weightings
         # Nawid - changes to shape (anchor_count, batch)
@@ -339,10 +333,11 @@ class NPIDPCLModule(pl.LightningModule):
 
     def loss_function(self, batch):
         (img_1, img_2), labels,indices = batch
-        output, target = self(img=img_1,idx=indices,cluster_result=self.auxillary_data)      
-        loss = F.cross_entropy(output, target.long())
+        output, target,loss_proto = self(img=img_1,idx=indices,cluster_result=self.auxillary_data)      
+        loss_instance = F.cross_entropy(output, target.long())
         acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
-        metrics = {'Loss': loss, 'Instance Accuracy @ 1': acc1, 'Instance Accuracy @ 5': acc5}
+        loss = loss_instance + loss_proto
+        metrics = {'Loss': loss, 'Loss Instance':loss_instance, 'Loss Proto':loss_proto, 'Instance Accuracy @ 1': acc1, 'Instance Accuracy @ 5': acc5}
 
         return metrics
 
@@ -387,7 +382,6 @@ class NPIDPCLModule(pl.LightningModule):
         #return self.auxillary_data
 
     def on_fit_start(self):
-        #import ipdb; ipdb.set_trace()
         # Decides whether to test quickly or slowly
         if self.trainer.fast_dev_run:
             self.data_length = self.datamodule.batch_size
