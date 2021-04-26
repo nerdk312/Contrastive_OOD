@@ -74,6 +74,7 @@ class CIFAR10DataModule(LightningDataModule):
         self.seed = seed
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
+        self.train_shuffle = True
 
     @property
     def total_samples(self):
@@ -187,7 +188,7 @@ class CIFAR10DataModule(LightningDataModule):
         loader = DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            shuffle=True,
+            shuffle=self.train_shuffle,
             num_workers=self.num_workers,
             drop_last=True,
             pin_memory=True

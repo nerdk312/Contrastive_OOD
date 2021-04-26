@@ -188,7 +188,7 @@ class NPIDPCLModule(pl.LightningModule):
         cluster_labels = cluster_result['im2cluster'][0]
         indices = torch.arange(len(features), dtype=torch.long, device=self.device) # indices for the features
         # Update memory bank with initial values or moving average
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         if self.current_epoch ==0:
             self.memory_bank.init_memory(self,feature=features,label=cluster_labels.cpu().numpy())
         #else:
@@ -204,13 +204,13 @@ class NPIDPCLModule(pl.LightningModule):
             labels (numpy.ndarray): Label assignments.
             reweight_pow (float): The power of re-weighting. Default: 0.5.
         """
-        # import ipdb; ipdb.set_trace()
+        
         hist = np.bincount(
             labels, minlength=self.hparams.num_cluster[0]).astype(np.float32)
         inv_hist = (1. / (hist + 1e-10))**reweight_pow
         weight = inv_hist / inv_hist.sum()
         # Obtain weights in tensor form
-        weights = torch.from_numpy(weight).to(self.device)
+        weight = torch.from_numpy(weight).to(self.device)
         return weight
 
     def forward(self, img, idx,cluster_result):
@@ -225,7 +225,7 @@ class NPIDPCLModule(pl.LightningModule):
         logits (Tensor): logits of the data
 
         """
-        # import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         features = self.encoder(img) 
         features = nn.functional.normalize(features) # BxD
         bs, feat_dim = features.shape[:2]
@@ -249,7 +249,7 @@ class NPIDPCLModule(pl.LightningModule):
         # Obtain negative features
         neg_idx = self.memory_bank.multinomial.draw(self.hparams.num_negatives)
         neg_feat = torch.index_select(self.memory_bank.feature_bank, 0,
-                                      neg_idx).view(self.hparams.num_negatives/bs,
+                                      neg_idx).view(self.hparams.num_negatives,
                                                     feat_dim)  # KxC
 
         # Obtain positive and negative logits of the data
@@ -257,8 +257,8 @@ class NPIDPCLModule(pl.LightningModule):
         pos_logits = torch.einsum('nc,nc->n',
                                   [pos_feat, features]).unsqueeze(-1)
         # shape (BxKxc and BxCx1) to give BxKx1 which is then squeezed to (BxK)
-        neg_logits = torch.bmm(neg_feat, features.unsqueeze(2)).squeeze(2)
-
+        #neg_logits = torch.bmm(neg_feat, features.unsqueeze(2)).squeeze(2)
+        #import ipdb; ipdb.set_trace()
         neg_logits = torch.einsum('nc,kc->nk', [features, neg_feat.detach()]) # Nawid - negative logits (dot product between key and negative samples in a query bank)
 
         # Concatenate (nx1) and (nk) to get (n x k+1)
@@ -330,8 +330,8 @@ class NPIDPCLModule(pl.LightningModule):
         loss = - (self.hparams.softmax_temperature / 0.07) * mean_log_prob_pos
         
         # Used to reweigh the loss by how common the different data points are
-        
-        weightings = torch.index_select(weights,0,anchor_labels.squeeze(1))
+        import ipdb; ipdb.set_trace()
+        weightings = torch.index_select(self.weights,0,anchor_labels.squeeze(1))
         loss = loss*weightings
         # Nawid - changes to shape (anchor_count, batch)
         loss = loss.view(1, batch_size).mean()
@@ -392,9 +392,11 @@ class NPIDPCLModule(pl.LightningModule):
         if self.trainer.fast_dev_run:
             self.data_length = self.datamodule.batch_size
             self.quick_load = True
+            self.datamodule.train_shuffle = False
         else:
-            self.length = self.datamodule.total_dataloader_samples
+            self.data_length = self.datamodule.total_dataloader_samples
             self.quick_load = False
+            self.datamodule.train_shuffle = True
         
         self.memory_bank = OfflineLabelMemory(length=self.data_length, feat_dim=self.hparams.emb_dim, memory_momentum=self.hparams.memory_momentum, num_classes=10)
         # create the encoders
