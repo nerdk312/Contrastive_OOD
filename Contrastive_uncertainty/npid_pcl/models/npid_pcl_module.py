@@ -41,7 +41,8 @@ class NPIDPCLModule(pl.LightningModule):
         self.datamodule = datamodule
 
         # Instantiate memory bank
-        self.memory_bank = OfflineLabelMemory(length=self.datamodule.total_samples,feat_dim=emb_dim,memory_momentum=memory_momentum,num_classes=10)
+
+        self.memory_bank = OfflineLabelMemory(length=self.datamodule.total_dataloader_samples, feat_dim=emb_dim, memory_momentum=memory_momentum, num_classes=10)
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder= self.init_encoders()
@@ -59,10 +60,10 @@ class NPIDPCLModule(pl.LightningModule):
         """
         if self.hparams.instance_encoder == 'resnet18':
             print('using resnet18')
-            encoder = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
+            encoder = custom_resnet18(latent_size = self.hparams.emb_dim, num_channels=self.hparams.num_channels, num_classes=10)
         elif self.hparams.instance_encoder =='resnet50':
             print('using resnet50')
-            encoder = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
+            encoder = custom_resnet50(latent_size = self.hparams.emb_dim, num_channels=self.hparams.num_channels, num_classes=10)
         
         return encoder
        
@@ -219,20 +220,30 @@ class NPIDPCLModule(pl.LightningModule):
         features = nn.functional.normalize(features) # BxD
         bs, feat_dim = features.shape[:2]
         # number of negatives is equal to the batch size multipled by the number of negatives for each sample
+        '''
         neg_idx = self.memory_bank.multinomial.draw(bs * self.hparams.num_negatives)
-
+        neg_feat = torch.index_select(self.memory_bank.feature_bank, 0,
+                                      neg_idx).view(bs, self.hparams.num_negatives,
+                                                    feat_dim)  # BxKxC
+        '''
+        neg_idx = self.memory_bank.multinomial.draw(self.hparams.num_negatives)
+        neg_feat = torch.index_select(self.memory_bank.feature_bank, 0,
+                                      neg_idx).view(bs, self.hparams.num_negatives/bs,
+                                                    feat_dim)  # BxKxC
         # Obtain positive features 
         pos_feat = torch.index_select(self.memory_bank.feature_bank, 0,
                                       idx)  # BXC
 
         # Obtain negative features
-        neg_feat = torch.index_select(self.memory_bank.feature_bank, 0,
-                                      neg_idx).view(bs, self.hparams.num_negatives,
-                                                    feat_dim)  # BxKxC
         
+        
+        
+
         # Obtain positive and negative logits of the data
+        # shape (Bx1)
         pos_logits = torch.einsum('nc,nc->n',
                                   [pos_feat, features]).unsqueeze(-1)
+        # shape (BxKxc and BxCx1) to give BxKx1 which is then squeezed to (BxK)
         neg_logits = torch.bmm(neg_feat, features.unsqueeze(2)).squeeze(2)
 
 

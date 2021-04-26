@@ -82,6 +82,11 @@ class CIFAR10DataModule(LightningDataModule):
             60000
         """
         return 60_000
+    
+    @property # Obtain the total samples according to the batch size and dataloader
+    def total_dataloader_samples(self):
+        return split_size(self.batch_size,self.total_samples)
+    
 
     @property
     def num_classes(self):
