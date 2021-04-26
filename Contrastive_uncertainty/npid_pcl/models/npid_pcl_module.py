@@ -15,6 +15,8 @@ from Contrastive_uncertainty.npid_pcl.models.resnet_models import custom_resnet1
 from Contrastive_uncertainty.npid_pcl.models.simple_memory import SimpleMemory
 from Contrastive_uncertainty.npid_pcl.models.offline_label_bank import OfflineLabelMemory
 from Contrastive_uncertainty.npid_pcl.utils.pl_metrics import precision_at_k
+from Contrastive_uncertainty.npid_pcl.callbacks.general_callbacks import quickloading
+
 
 # Based on code from https://github.com/open-mmlab/OpenSelfSup/blob/master/openselfsup/models/npid_pcl.py
 class NPIDPCLModule(pl.LightningModule):
@@ -40,11 +42,6 @@ class NPIDPCLModule(pl.LightningModule):
         self.save_hyperparameters()
         self.datamodule = datamodule
 
-        # Instantiate memory bank
-
-        self.memory_bank = OfflineLabelMemory(length=self.datamodule.total_dataloader_samples, feat_dim=emb_dim, memory_momentum=memory_momentum, num_classes=10)
-        # create the encoders
-        # num_classes is the output fc dimension
         self.encoder= self.init_encoders()
         if use_mlp:  # hack: brute-force replacement
             dim_mlp = self.encoder.fc.weight.shape[1]
@@ -52,8 +49,6 @@ class NPIDPCLModule(pl.LightningModule):
             
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
-
-        
     def init_encoders(self):
         """
         Override to add your own encoders
@@ -90,8 +85,11 @@ class NPIDPCLModule(pl.LightningModule):
     @torch.no_grad()
     def compute_features(self,dataloader):
         print('Computing features ...')
-        features = torch.zeros(self.datasize(dataloader), self.hparams.emb_dim, device = self.device)
-        for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
+
+        
+        features = torch.zeros(self.data_length, self.hparams.emb_dim, device=self.device)
+        loader = quickloading(self.quick_load,dataloader) # Used to get a single batch or used to get the entire dataset
+        for i, (images, labels, indices) in enumerate(tqdm(loader)):
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
             images = images.to(self.device)
@@ -185,8 +183,18 @@ class NPIDPCLModule(pl.LightningModule):
         features = features.numpy()
         # Nawid - compute K-means
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node
-        self.memory_bank.init_memory(self,feature=features,label=cluster_result['im2cluster'][0].cpu().numpy())
-        self.weights = self.set_reweight(labels=cluster_result['im2cluster'][0].cpu().numpy())
+        # Obtain inputs for the memory bank in the correct format
+        
+        cluster_labels = cluster_result['im2cluster'][0]
+        indices = torch.arange(len(features), dtype=torch.long, device=self.device) # indices for the features
+        # Update memory bank with initial values or moving average
+        import ipdb; ipdb.set_trace()
+        if self.current_epoch ==0:
+            self.memory_bank.init_memory(self,feature=features,label=cluster_labels.cpu().numpy())
+        #else:
+        #    self.memory_bank.update_samples_memory(indices,feature=features, label=cluster_labels)
+        
+        self.weights = self.set_reweight(labels=cluster_result['im2cluster'][0].cpu())
         return cluster_result
 
     def set_reweight(self, labels, reweight_pow=0.5):
@@ -201,6 +209,8 @@ class NPIDPCLModule(pl.LightningModule):
             labels, minlength=self.hparams.num_cluster[0]).astype(np.float32)
         inv_hist = (1. / (hist + 1e-10))**reweight_pow
         weight = inv_hist / inv_hist.sum()
+        # Obtain weights in tensor form
+        weights = torch.from_numpy(weight).to(self.device)
         return weight
 
     def forward(self, img, idx,cluster_result):
@@ -226,18 +236,21 @@ class NPIDPCLModule(pl.LightningModule):
                                       neg_idx).view(bs, self.hparams.num_negatives,
                                                     feat_dim)  # BxKxC
         '''
+        '''
         neg_idx = self.memory_bank.multinomial.draw(self.hparams.num_negatives)
         neg_feat = torch.index_select(self.memory_bank.feature_bank, 0,
                                       neg_idx).view(bs, self.hparams.num_negatives/bs,
                                                     feat_dim)  # BxKxC
+        '''        
         # Obtain positive features 
         pos_feat = torch.index_select(self.memory_bank.feature_bank, 0,
                                       idx)  # BXC
 
         # Obtain negative features
-        
-        
-        
+        neg_idx = self.memory_bank.multinomial.draw(self.hparams.num_negatives)
+        neg_feat = torch.index_select(self.memory_bank.feature_bank, 0,
+                                      neg_idx).view(self.hparams.num_negatives/bs,
+                                                    feat_dim)  # KxC
 
         # Obtain positive and negative logits of the data
         # shape (Bx1)
@@ -246,7 +259,9 @@ class NPIDPCLModule(pl.LightningModule):
         # shape (BxKxc and BxCx1) to give BxKx1 which is then squeezed to (BxK)
         neg_logits = torch.bmm(neg_feat, features.unsqueeze(2)).squeeze(2)
 
+        neg_logits = torch.einsum('nc,kc->nk', [features, neg_feat.detach()]) # Nawid - negative logits (dot product between key and negative samples in a query bank)
 
+        # Concatenate (nx1) and (nk) to get (n x k+1)
         logits = torch.cat([pos_logits, neg_logits], dim=1)
         # apply temperature
         logits /= self.hparams.softmax_temperature
@@ -262,7 +277,8 @@ class NPIDPCLModule(pl.LightningModule):
         anchor_pseudo_labels = cluster_labels[idx]
         
         # Concatenate the instance positives (memory of anchor) as well as the negative instances to get all the different memory samples
-        memory_feat = torch.cat((pos_feat,neg_feat.view(-1,feat_dim)),dim=0)
+        # (Bxc) and (Kxc) concatenate to make (B+Kxc)
+        memory_feat = torch.cat((pos_feat,neg_feat),dim=0)
         # Obtain the labels of the negative memory features from the label bank of the memory bank using the negative indice
         memory_labels = torch.index_select(self.memory_bank.label_bank, 0,
                                       neg_idx)
@@ -272,9 +288,7 @@ class NPIDPCLModule(pl.LightningModule):
 
         # update memory bank
         with torch.no_grad():
-            cluster_labels = cluster_result['im2cluster'][0]
-            pseudo_labels = cluster_labels[idx]
-            self.memory_bank.update_samples_memory(idx, features.detach(),pseudo_labels)
+            self.memory_bank.update_samples_memory(idx, features.detach(),anchor_pseudo_labels.detach())
 
         return logits, labels
 
@@ -316,7 +330,7 @@ class NPIDPCLModule(pl.LightningModule):
         loss = - (self.hparams.softmax_temperature / 0.07) * mean_log_prob_pos
         
         # Used to reweigh the loss by how common the different data points are
-        weights = torch.from_numpy(self.weights).to(self.device)
+        
         weightings = torch.index_select(weights,0,anchor_labels.squeeze(1))
         loss = loss*weightings
         # Nawid - changes to shape (anchor_count, batch)
@@ -373,6 +387,19 @@ class NPIDPCLModule(pl.LightningModule):
         #return self.auxillary_data
 
     def on_fit_start(self):
+        #import ipdb; ipdb.set_trace()
+        # Decides whether to test quickly or slowly
+        if self.trainer.fast_dev_run:
+            self.data_length = self.datamodule.batch_size
+            self.quick_load = True
+        else:
+            self.length = self.datamodule.total_dataloader_samples
+            self.quick_load = False
+        
+        self.memory_bank = OfflineLabelMemory(length=self.data_length, feat_dim=self.hparams.emb_dim, memory_momentum=self.hparams.memory_momentum, num_classes=10)
+        # create the encoders
+        # num_classes is the output fc dimension
+
         dataloader = self.datamodule.val_dataloader()
         self.auxillary_data = self.aux_data(dataloader)
     

@@ -24,9 +24,9 @@ class OfflineLabelMemory(nn.Module):
         #if self.rank == 0:
         # Make feature bank
         self.feature_bank = torch.zeros((length, feat_dim),
-                                        dtype=torch.float32).cuda()
+                                        dtype=torch.float32, device='cuda')
         # Make label bank
-        self.label_bank = torch.zeros((length, ), dtype=torch.long).cuda()
+        self.label_bank = torch.zeros((length, ), dtype=torch.long, device='cuda')
         
         
         self.feat_dim = feat_dim
@@ -52,15 +52,16 @@ class OfflineLabelMemory(nn.Module):
     
     def update_samples_memory(self, ind, feature, label):
         """Update samples memory."""
+
         assert self.initialized
         feature_norm = feature / (feature.norm(dim=1).view(-1, 1) + 1e-10
                                   )  # normalize
-        #import ipdb; ipdb.set_trace()
+        import ipdb; ipdb.set_trace()
         # change indices to cpu
-        ind = ind.cpu()
+        #ind = ind.cpu()
         #if self.rank == 0:
         # Select the old features
-        feature_old = self.feature_bank[ind, ...].cuda()
+        feature_old = self.feature_bank[ind, ...]#.cuda()
         # Update the old features
         feature_new = self.memory_momentum * feature_old + \
             (1 - self.memory_momentum) * feature_norm
@@ -70,8 +71,8 @@ class OfflineLabelMemory(nn.Module):
         self.feature_bank[ind, ...] = feature_norm #.cpu()
         
         # update feature bank  
-        newlabel_cpu = label #.cpu()
-        self.label_bank[ind] = newlabel_cpu.clone()  # copy to cpu
+        newlabel = label #.cpu()
+        self.label_bank[ind] = newlabel.clone()  # copy to cpu
         
     
 
