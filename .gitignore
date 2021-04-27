@@ -17,4 +17,5 @@ wandb
 cifar-10-batches-py
 FashionMNIST
 MNIST
+KMNIST
 Images

@@ -1,0 +1,5 @@
+from Contrastive_uncertainty.unsup_con_memory.train.train_unsup_con_memory import train
+from Contrastive_uncertainty.unsup_con_memory.config.unsup_con_memory_params import unsup_con_memory_hparams
+
+# calls the function
+train(unsup_con_memory_hparams)

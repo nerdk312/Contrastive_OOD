@@ -3,7 +3,6 @@ from warnings import warn
 from torchvision import transforms
 
 
-
 def imagenet_normalization():
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     return normalize
@@ -26,6 +25,10 @@ def fashionmnist_normalization():
 
 def mnist_normalization():
     normalize = transforms.Normalize(mean =(0.1307,),std =(0.3081,))
+    return normalize
+
+def kmnist_normalization():
+    normalize = transforms.Normalize(mean =(0.1918,),std =(0.3385,))
     return normalize
 
 def svhn_normalization():

@@ -1,0 +1,12 @@
+name: FashionMNIST_unsupcon_memory_clusters
+description: Examining how the Mahalanobis score changes as the clusters change
+program: run
+method: grid
+metric:
+  goal: minimize
+  name: Validation Loss
+parameters:
+  num_cluster:
+    values: [10,100,1000]
+project:
+   'evaluation'

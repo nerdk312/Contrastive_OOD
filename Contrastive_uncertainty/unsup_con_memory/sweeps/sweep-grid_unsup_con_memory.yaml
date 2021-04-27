@@ -1,0 +1,16 @@
+name: FashionMNIST_unsupcon_memory_clusters
+description: Examining how the Mahalanobis score changes as the clusters change
+program: run_unsup_con_memory.py
+method: grid
+metric:
+  goal: minimize
+  name: Validation Loss
+parameters:
+  num_cluster:
+    values: [10,100,1000]
+  dataset:
+    values: ['FashionMNIST']
+  OOD_dataset:
+    values: ['MNIST']
+project:
+   'evaluation'

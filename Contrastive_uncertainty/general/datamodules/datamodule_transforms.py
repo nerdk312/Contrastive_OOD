@@ -1,6 +1,7 @@
 import random
 from warnings import warn
-from Contrastive_uncertainty.general.datamodules.dataset_normalizations import  cifar10_normalization, fashionmnist_normalization,mnist_normalization,svhn_normalization
+from Contrastive_uncertainty.general.datamodules.dataset_normalizations import  cifar10_normalization,\
+    fashionmnist_normalization,mnist_normalization,kmnist_normalization, svhn_normalization
 
 
 from PIL import ImageFilter
@@ -167,6 +168,45 @@ class Moco2EvalMNISTTransforms:
             transforms.CenterCrop(height),
             transforms.ToTensor(),
             mnist_normalization(),
+        ])
+
+    def __call__(self, inp):
+        q = self.test_transform(inp)
+        k = self.test_transform(inp)
+        return q, k
+
+class Moco2TrainKMNISTTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        # image augmentation functions
+        self.train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            kmnist_normalization()
+        ])
+
+    def __call__(self, inp):
+        q = self.train_transform(inp)
+        k = self.train_transform(inp)
+        return q, k
+
+
+class Moco2EvalKMNISTTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        self.test_transform = transforms.Compose([
+            transforms.Resize(height + 12),
+            transforms.CenterCrop(height),
+            transforms.ToTensor(),
+            kmnist_normalization(),
         ])
 
     def __call__(self, inp):
