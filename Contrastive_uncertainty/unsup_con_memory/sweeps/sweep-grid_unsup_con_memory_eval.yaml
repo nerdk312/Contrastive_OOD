@@ -1,6 +1,6 @@
-name: FashionMNIST_unsupcon_memory_clusters
+name: FashionMNIST_unsupcon_memory_clusters_evaluation
 description: Examining how the Mahalanobis score changes as the clusters change
-program: run
+program: run_unsup_con_memory.py
 method: grid
 metric:
   goal: minimize
@@ -8,5 +8,11 @@ metric:
 parameters:
   num_cluster:
     values: [10,100,1000]
+  dataset:
+    values: ['KMNIST']
+  OOD_dataset:
+    values: ['MNIST']
+  pretrained_network:
+    values: []
 project:
    'evaluation'

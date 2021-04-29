@@ -8,8 +8,8 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.PCL.run.pcl_run_setup import run_name, Datamodule_selection,Channel_selection,callback_dictionary
-from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
+from Contrastive_uncertainty.imp.run.imp_run_setup import run_name, Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.imp.models.imp_module import IMPModule
 
 
 def training(params):
@@ -31,24 +31,25 @@ def training(params):
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
     
-    
+    '''
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['Mahalanobis'],callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']]
-    
+    '''
+    desired_callbacks = []
 
     #desired_callbacks = []
     # Hack to be able to use the num clusters with wandb sweep since wandb sweep cannot use a list of lists I believe
+    '''
     if isinstance(config['num_cluster'], list) or isinstance(config['num_cluster'], tuple):
         num_clusters = config['num_cluster']
     else:  
         num_clusters = [config['num_cluster']]
+    '''
 
-    model = PCLModule(datamodule=datamodule,optimizer=config['optimizer'],
+    model = IMPModule(datamodule=datamodule,optimizer=config['optimizer'],
     learning_rate=config['learning_rate'],momentum=config['momentum'],
-    weight_decay=config['weight_decay'],emb_dim=config['emb_dim'],
-    num_negatives=config['num_negatives'],encoder_momentum=config['encoder_momentum'],
-    softmax_temperature=config['softmax_temperature'], 
-    num_cluster=num_clusters, use_mlp=config['use_mlp'],
+    weight_decay=config['weight_decay'],emb_dim=config['emb_dim'], 
+    use_mlp=config['use_mlp'],
     num_channels=channels, instance_encoder=config['instance_encoder'],
     pretrained_network=config['pretrained_network'])
         

@@ -14,7 +14,7 @@ from Contrastive_uncertainty.cross_entropy.run.cross_entropy_run_setup import ru
 
 
 def train(params):
-    wandb.init(entity="nerdk312",config = params,project= params['project']) # Required to have access to wandb config, which is needed to set up a sweep
+    run = wandb.init(entity="nerdk312",config = params,project= params['project'], reinit=True) # Required to have access to wandb config, which is needed to set up a sweep
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     config = wandb.config
 
@@ -86,5 +86,6 @@ def train(params):
     trainer.fit(tuner,datamodule)
     '''
     #trainer.test(datamodule=dm)
+    run.finish()
 
 

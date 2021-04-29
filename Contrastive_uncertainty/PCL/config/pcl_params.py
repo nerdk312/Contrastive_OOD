@@ -21,8 +21,8 @@ dataset = 'FashionMNIST',
 OOD_dataset = 'MNIST',
 
 # Miscellaneous arguments
-seed = 42,
-epochs = 500,
+seed = 26,
+epochs = 300,
 
 # Trainer configurations
 fast_run = False,
@@ -30,7 +30,7 @@ quick_callback = False,
 training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
-val_check = 15,
+val_check = 20,
 model_saving = 200, # Used to control how often the model is saved
 
 num_classes = 10,

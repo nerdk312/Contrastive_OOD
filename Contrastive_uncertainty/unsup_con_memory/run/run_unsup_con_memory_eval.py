@@ -1,0 +1,5 @@
+from Contrastive_uncertainty.unsup_con_memory.evaluate.eval_unsup_con_memory import evaluate
+from Contrastive_uncertainty.unsup_con_memory.config.unsup_con_memory_eval_params import unsup_con_memory_eval_hparams
+
+# calls the function
+evaluate(unsup_con_memory_eval_hparams)

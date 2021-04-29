@@ -1,4 +1,4 @@
-name: FashionMNIST_unsupcon_memory_clusters
+name: FashionMNISTvsKMNIST_unsupcon_memory_clusters
 description: Examining how the Mahalanobis score changes as the clusters change
 program: run_unsup_con_memory.py
 method: grid
@@ -11,6 +11,6 @@ parameters:
   dataset:
     values: ['FashionMNIST']
   OOD_dataset:
-    values: ['MNIST']
+    values: ['KMNIST']
 project:
    'evaluation'
