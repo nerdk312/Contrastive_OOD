@@ -56,7 +56,13 @@ class Mahalanobis_OOD(pl.Callback):
         
     def on_validation_epoch_end(self,trainer,pl_module):
     #def on_fit_start(self,trainer,pl_module):
-        #import ipdb; ipdb.set_trace()
+        self.forward_callback(trainer=trainer, pl_module=pl_module) 
+    
+    def on_test_epoch_end(self,trainer,pl_module):
+        self.forward_callback(trainer=trainer, pl_module=pl_module) 
+
+    # Performs all the computation in the callback
+    def forward_callback(self,trainer,pl_module):
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
         ood_loader = self.OOD_Datamodule.test_dataloader()
@@ -87,6 +93,9 @@ class Mahalanobis_OOD(pl.Callback):
             None,
             num_clusters
         )
+        # Checks whether it is training epoch or test epoch
+        if Trainer._running_stage.value == 'test':
+            self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)   
 
         #self.distance_confusion_matrix(trainer,indices_dtest,labels_test)
         #self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)
@@ -216,11 +225,25 @@ class Mahalanobis_OOD(pl.Callback):
             class_names=self.class_names),
             "global_step": trainer.global_step
                   })
-
+    '''
     def distance_OOD_confusion_matrix(self,trainer,predictions,labels):
         wandb.log({self.log_name +"OOD_conf_mat_id": OOD_conf_matrix(probs = None,
             preds=predictions, y_true=labels,
             class_names=self.class_names,OOD_class_names =self.OOD_class_names),
+            "global_step": trainer.global_step
+                  })
+    '''
+    def supervised_distance_OOD_confusion_matrix(self,trainer,predictions,labels):
+        wandb.log({self.log_name +"OOD_conf_mat_id_supervised": OOD_conf_matrix(probs = None,
+            preds=predictions, y_true=labels,
+            class_names=self.class_names,OOD_class_names =self.OOD_class_names),
+            "global_step": trainer.global_step
+                  })
+    
+    def unsupervised_distance_OOD_confusion_matrix(self,trainer,predictions,labels):
+        wandb.log({self.log_name +"OOD_conf_mat_id_unsupervised": OOD_conf_matrix(probs = None,
+            preds=predictions, y_true=labels,
+            class_names=None,OOD_class_names =self.OOD_class_names),
             "global_step": trainer.global_step
                   })
     

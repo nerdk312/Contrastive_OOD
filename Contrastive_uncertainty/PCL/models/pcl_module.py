@@ -417,6 +417,7 @@ class PCLModule(base_module):
         #return self.auxillary_data
     '''
     def aux_data(self,dataloader):
+        #import ipdb;ipdb.set_trace()
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
     
