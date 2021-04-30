@@ -122,6 +122,11 @@ class SupConPCLModule(base_module):
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
+    @property
+    def name(self):
+        ''' return name of model'''
+        return 'SupConPCL'
+
     def datasize(self, dataloader): # obtains a dataset size for the k-means based on the batch size
         batch_size = self.datamodule.batch_size
         dataset_size = len(dataloader.dataset)

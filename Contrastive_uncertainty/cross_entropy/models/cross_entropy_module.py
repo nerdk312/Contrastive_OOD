@@ -43,6 +43,11 @@ class CrossEntropyModule(pl.LightningModule):
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
 
+    @property
+    def name(self):
+        ''' return name of model'''
+        return 'CrossEntropy'
+
     def init_encoders(self):
         """
         Override to add your own encoders

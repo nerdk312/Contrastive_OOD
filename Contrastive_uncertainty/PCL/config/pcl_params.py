@@ -37,4 +37,5 @@ num_classes = 10,
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
 
-project = 'evaluation')  # evaluation
+project = 'evaluation',
+group = None)  # evaluation

@@ -8,15 +8,19 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-#from Contrastive_uncertainty.Moco.models.moco2_module import MocoV2
+from Contrastive_uncertainty.cross_entropy.datamodules.datamodule_dict import dataset_dict
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import CrossEntropyModule
-from Contrastive_uncertainty.cross_entropy.run.cross_entropy_run_setup import run_name, Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.cross_entropy.run.cross_entropy_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
 
 
 def train(params):
-    run = wandb.init(entity="nerdk312",config = params,project= params['project'], reinit=True) # Required to have access to wandb config, which is needed to set up a sweep
+    run = wandb.init(entity="nerdk312",config = params,project= params['project'], reinit=True,group=params['group']) # Required to have access to wandb config, which is needed to set up a sweep
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     config = wandb.config
+    wandb.run.notes = wandb.run.group
+    #wandb.run.notes = 'Chimera Shadow Garden'
+    #run._notes = 'hello'
+    #import ipdb; ipdb.set_trace()
 
     folder = 'Images'
     if not os.path.exists(folder):
@@ -26,9 +30,10 @@ def train(params):
     #wandb.run.name = run_name(config)
     pl.seed_everything(config['seed'])
 
-    datamodule = Datamodule_selection(config['dataset'],config)
-    OOD_datamodule = Datamodule_selection(config['OOD_dataset'],config)
-    channels = Channel_selection(config['dataset'])
+    datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
+    OOD_datamodule = Datamodule_selection(dataset_dict,config['OOD_dataset'],config)
+    channels = Channel_selection(dataset_dict,config['dataset'])
+
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
@@ -53,7 +58,8 @@ def train(params):
     online_evaluator = SSLOnlineEvaluator()
     #online_evaluator.to_device = to_device
     '''
-
+    
+    
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
@@ -63,7 +69,7 @@ def train(params):
     # Updates new learning rate from the learning rate finder for the saving of the config as well as the run name
     wandb.config.update({"learning_rate": model.hparams.learning_rate},allow_val_change=True)
     '''
-    wandb.run.name = run_name(config)
+    wandb.run.name = train_run_name(model.name,config)
     '''    
     trainer.test(model,datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process

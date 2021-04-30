@@ -119,7 +119,12 @@ class PCLModule(base_module):
         
         # Quick test of obtaining clusters (when using fast dev run)    
         #self.auxillary_data = self.aux_data()
-        
+
+    @property
+    def name(self):
+        ''' return name of model'''
+        return 'PCL'
+
     def init_encoders(self):
         """
         Override to add your own encoders

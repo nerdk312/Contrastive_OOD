@@ -8,12 +8,14 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
+from Contrastive_uncertainty.npid.datamodules.datamodule_dict import dataset_dict
 from Contrastive_uncertainty.npid.models.npid_module  import NPIDModule
-from Contrastive_uncertainty.npid.run.npid_run_setup  import run_name, Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.npid.run.npid_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
 
 def train(params):
-    wandb.init(entity="nerdk312",config = params,project= params['project']) # Required to have access to wandb config, which is needed to set up a sweep
+    run = wandb.init(entity="nerdk312",config = params,project= params['project'],reinit=True,group=params['group']) # Required to have access to wandb config, which is needed to set up a sweep    wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
+    wandb.run.notes = wandb.run.group
     config = wandb.config
 
     folder = 'Images'
@@ -24,9 +26,10 @@ def train(params):
     #wandb.run.name = run_name(config)
     pl.seed_everything(config['seed'])
 
-    datamodule = Datamodule_selection(config['dataset'],config)
-    OOD_datamodule = Datamodule_selection(config['OOD_dataset'],config)
-    channels = Channel_selection(config['dataset'])
+    datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
+    OOD_datamodule = Datamodule_selection(dataset_dict,config['OOD_dataset'],config)
+    channels = Channel_selection(dataset_dict,config['dataset'])
+
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     '''
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
@@ -37,7 +40,7 @@ def train(params):
     desired_callbacks = []
     
     model = NPIDModule(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
-        memory_momentum = config['memory_momentum'], num_cluster=config['num_cluster'],
+        memory_momentum = config['memory_momentum'],
         softmax_temperature = config['softmax_temperature'],
         optimizer = config['optimizer'],learning_rate = config['learning_rate'],
         momentum = config['momentum'], weight_decay = config['weight_decay'],
@@ -64,7 +67,7 @@ def train(params):
     # Updates new learning rate from the learning rate finder for the saving of the config as well as the run name
     wandb.config.update({"learning_rate": model.hparams.learning_rate},allow_val_change=True)
     '''
-    wandb.run.name = run_name(config)
+    wandb.run.name = train_run_name(model.name,config)
     '''    
     trainer.test(model,datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process

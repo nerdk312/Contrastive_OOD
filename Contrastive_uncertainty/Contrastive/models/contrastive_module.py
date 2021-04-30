@@ -58,6 +58,11 @@ class ContrastiveModule(pl.LightningModule):
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
+    @property
+    def name(self):
+        ''' return name of model'''
+        return 'Moco'
+
     def init_encoders(self):
         """
         Override to add your own encoders

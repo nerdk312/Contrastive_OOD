@@ -36,7 +36,8 @@ class NPIDModule(pl.LightningModule):
         self.datamodule = datamodule
 
         # Instantiate memory bank
-        self.memory_bank = SimpleMemory(length=self.datamodule.total_samples,feat_dim=emb_dim, momentum=memory_momentum)
+        #import ipdb; ipdb.set_trace()
+        self.memory_bank = SimpleMemory(length=self.datamodule.total_samples,feat_dim=emb_dim, memory_momentum=memory_momentum)
 
         # create the encoders
         # num_classes is the output fc dimension
@@ -48,7 +49,12 @@ class NPIDModule(pl.LightningModule):
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
 
-        
+    
+    @property
+    def name(self):
+        ''' return name of model'''
+        return 'NPID'
+
     def init_encoders(self):
         """
         Override to add your own encoders

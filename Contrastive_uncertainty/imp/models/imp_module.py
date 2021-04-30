@@ -105,7 +105,12 @@ class IMPModule(base_module):
             
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
-        
+    
+    @property
+    def name(self):
+        ''' return name of model'''
+        return 'IMP'
+
     def init_encoders(self):
         """
         Override to add your own encoders

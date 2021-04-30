@@ -49,6 +49,12 @@ class NPIDPCLModule(pl.LightningModule):
             
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
+    
+    @property
+    def name(self):
+        ''' return name of model'''
+        return 'NPIDPCL'
+
     def init_encoders(self):
         """
         Override to add your own encoders
@@ -391,7 +397,7 @@ class NPIDPCLModule(pl.LightningModule):
             self.data_length = self.datamodule.total_dataloader_samples
             self.quick_load = False
             self.datamodule.train_shuffle = True
-        
+        import ipdb; ipdb.set_trace()        
         self.memory_bank = OfflineLabelMemory(length=self.data_length, feat_dim=self.hparams.emb_dim, memory_momentum=self.hparams.memory_momentum, num_classes=10)
         # create the encoders
         # num_classes is the output fc dimension

@@ -51,6 +51,11 @@ class UnSupConModule(pl.LightningModule):
         
         self.auxillary_data = None # Basic instantiation before model starts training
 
+    @property
+    def name(self):
+        ''' return name of model'''
+        return 'UnSupCon'
+
     def init_encoders(self):
         """
         Override to add your own encoders

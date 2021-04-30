@@ -8,13 +8,18 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.PCL.run.pcl_run_setup import run_name, Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.PCL.datamodules.datamodule_dict import dataset_dict
+
+
 from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
+from Contrastive_uncertainty.PCL.run.pcl_run_setup import \
+    train_run_name,eval_run_name, Datamodule_selection, Channel_selection, callback_dictionary
 
 
 def training(params):
-    run = wandb.init(entity="nerdk312",config = params,project= params['project'],reinit=True) # Required to have access to wandb config, which is needed to set up a sweep    wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
+    run = wandb.init(entity="nerdk312",config = params,project= params['project'],reinit=True,group=params['group']) # Required to have access to wandb config, which is needed to set up a sweep
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
+    wandb.run.notes = wandb.run.group
     config = wandb.config
 
     folder = 'Images'
@@ -24,9 +29,10 @@ def training(params):
     # Run setup
     pl.seed_everything(config['seed'])
 
-    datamodule = Datamodule_selection(config['dataset'],config)
-    OOD_datamodule = Datamodule_selection(config['OOD_dataset'],config)
-    channels = Channel_selection(config['dataset'])
+    datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
+    OOD_datamodule = Datamodule_selection(dataset_dict,config['OOD_dataset'],config)
+    channels = Channel_selection(dataset_dict,config['dataset'])
+
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
@@ -60,7 +66,7 @@ def training(params):
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks)#,auto_lr_find = True)
     
-    wandb.run.name = run_name(config)
+    wandb.run.name = train_run_name(model.name,config)
     
     trainer.fit(model,datamodule)
     trainer.test(datamodule=datamodule,
