@@ -23,7 +23,6 @@ class CrossEntropyModule(pl.LightningModule):
         num_channels:int = 3, # number of channels for the specific dataset
         num_classes:int = 10, # Attribute required for the finetuning value
         label_smoothing:bool = False,
-        class_dict:dict = None,
         instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
         ):
@@ -31,7 +30,6 @@ class CrossEntropyModule(pl.LightningModule):
         super().__init__()
         # Nawid - required to use for the fine tuning
         self.num_classes = num_classes
-        self.class_names = [v for k,v in class_dict.items()]
         self.save_hyperparameters()
 
         self.datamodule = datamodule

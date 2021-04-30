@@ -14,10 +14,10 @@ from Contrastive_uncertainty.cross_entropy.run.cross_entropy_run_setup import tr
 
 
 def train(params):
-    run = wandb.init(entity="nerdk312",config = params,project= params['project'], reinit=True,group=params['group']) # Required to have access to wandb config, which is needed to set up a sweep
+    run = wandb.init(entity="nerdk312",config = params, project= params['project'], reinit=True,group=params['group'], notes=params['notes'])  # Required to have access to wandb config, which is needed to set up a sweep
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     config = wandb.config
-    wandb.run.notes = wandb.run.group
+    #wandb.run.notes = wandb.run.group
     #wandb.run.notes = 'Chimera Shadow Garden'
     #run._notes = 'hello'
     #import ipdb; ipdb.set_trace()
@@ -47,7 +47,7 @@ def train(params):
         momentum = config['momentum'], weight_decay = config['weight_decay'],
         datamodule = datamodule,num_classes = config['num_classes'],
         label_smoothing=config['label_smoothing'],num_channels = channels,
-        class_dict = class_names_dict,instance_encoder = config['instance_encoder'],
+        instance_encoder = config['instance_encoder'],
         pretrained_network = config['pretrained_network'])
         
 

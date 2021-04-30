@@ -33,5 +33,6 @@ pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
 
 project = 'evaluation',# evaluation, Moco_training
-group = None
+group = None,
+notes = None,
 )

@@ -231,9 +231,11 @@ class PCLModule(base_module):
                 # get positive prototypes
                 pos_proto_id = im2cluster[index] # Nawid - get the true cluster assignment for each of the different samples
                 pos_prototypes = prototypes[pos_proto_id] # Nawid- prototypes is a kxd array of k , d dimensional clusters. Therefore this chooses the true clusters for the positive samples. Therefore this is a [B x d] matrix
-
+                
                 # sample negative prototypes
+                
                 all_proto_id = [i for i in range(im2cluster.max())] # Nawid - obtains all the cluster ids which were present
+                print('All PROTO ID NUMBER',len(all_proto_id))
                 neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist()) # Nawid - all the negative clusters are the set of all prototypes minus the set of all the negative prototypes
                 neg_proto_id = sample(neg_proto_id, self.hparams.num_negatives) #sample r negative prototypes
                 #neg_proto_id = neg_proto_id.to(self.device)

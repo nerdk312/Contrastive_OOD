@@ -14,9 +14,9 @@ from Contrastive_uncertainty.sup_con.run.sup_con_run_setup import train_run_name
     Datamodule_selection, Channel_selection,callback_dictionary
 
 def train(params):
-    run = wandb.init(entity="nerdk312",config = params,project= params['project'],reinit=True,group=params['group']) # Required to have access to wandb config, which is needed to set up a sweep
+    run = wandb.init(entity="nerdk312",config = params,project= params['project'],reinit=True,group=params['group'], notes=params['group']) # Required to have access to wandb config, which is needed to set up a sweep
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
-    wandb.run.notes = wandb.run.group
+    #wandb.run.notes = wandb.run.group
     config = wandb.config
 
     folder = 'Images'

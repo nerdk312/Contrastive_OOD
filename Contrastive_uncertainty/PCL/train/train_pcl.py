@@ -17,9 +17,9 @@ from Contrastive_uncertainty.PCL.run.pcl_run_setup import \
 
 
 def training(params):
-    run = wandb.init(entity="nerdk312",config = params,project= params['project'],reinit=True,group=params['group']) # Required to have access to wandb config, which is needed to set up a sweep
+    run = wandb.init(entity="nerdk312",config = params,project= params['project'],reinit=True,group=params['group'], notes=params['notes']) # Required to have access to wandb config, which is needed to set up a sweep
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
-    wandb.run.notes = wandb.run.group
+    #wandb.run.notes = wandb.run.group
     config = wandb.config
 
     folder = 'Images'
@@ -44,10 +44,10 @@ def training(params):
 
     #desired_callbacks = []
     # Hack to be able to use the num clusters with wandb sweep since wandb sweep cannot use a list of lists I believe
-    if isinstance(config['num_cluster'], list) or isinstance(config['num_cluster'], tuple):
-        num_clusters = config['num_cluster']
+    if isinstance(config['num_multi_cluster'], list) or isinstance(config['num_multi_cluster'], tuple):
+        num_clusters = config['num_multi_cluster']
     else:  
-        num_clusters = [config['num_cluster']]
+        num_clusters = [config['num_multi_cluster']]
 
     model = PCLModule(datamodule=datamodule,optimizer=config['optimizer'],
     learning_rate=config['learning_rate'],momentum=config['momentum'],

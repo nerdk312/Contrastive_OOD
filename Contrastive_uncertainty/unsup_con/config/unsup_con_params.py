@@ -35,5 +35,6 @@ pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 num_inference_cluster = [10,20,30,50,100], # Number of clusters for the inference callback
 
 project = 'evaluation',# evaluation, Moco_training
-group = 'Marley'
+group = None,
+notes = None
 )

@@ -10,15 +10,15 @@ emb_dim = 128,
 num_negatives = 4096,#65536,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
-num_cluster = [5000,10000],
+num_multi_cluster = [5000,10000],
 use_mlp = True,
 
 instance_encoder = 'resnet50',
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
 bsz = 256,
-dataset = 'FashionMNIST',
-OOD_dataset = 'MNIST',
+dataset = 'CIFAR10',
+OOD_dataset = 'SVHN',
 
 # Miscellaneous arguments
 seed = 26,
@@ -38,4 +38,5 @@ num_inference_cluster = [10,100,1000], # Number of clusters for the inference ca
 
 
 project = 'evaluation',
-group = None)  # evaluation
+group = None,
+notes = None,)  # evaluation
