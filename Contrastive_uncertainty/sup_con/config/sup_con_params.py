@@ -31,7 +31,7 @@ val_check = 20,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
-
+model_type ='SupCon',
 project = 'evaluation',# evaluation, Moco_training
 group = None,
 notes = None,

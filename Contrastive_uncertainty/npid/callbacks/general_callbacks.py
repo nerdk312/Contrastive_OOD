@@ -33,9 +33,22 @@ class ModelSaving(pl.Callback):
         self.save_model(pl_module,epoch)
 
     def save_model(self,pl_module,epoch):
-        filename = f"CurrentEpoch:{epoch}_" + wandb.run.name + '.pt' 
-        print('filename:',filename)
+        # Obtain the run path for this particular wandb run
+        
+        folder = 'Models'
+        folder = os.path.join(folder, wandb.run.path)
+        
+        # makedirs used to make multiple subfolders in comparison to mkdir which makes a single folder
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        filename = f'TestModel:{epoch}.pt'
+        #filename = f"CurrentEpoch:{epoch}_" + wandb.run.name + '.pt'
+        
+        # Saves the filename in a certain location
+        filename = os.path.join(folder,filename)
+
+        #print('filename:',filename)
         torch.save({
             'encoder_state_dict':pl_module.encoder.state_dict(),
         },filename)
-        wandb.save(filename)
+        #wandb.save(filename)

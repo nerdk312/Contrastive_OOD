@@ -32,7 +32,7 @@ val_check = 10,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
-
+model_type ='NPID',
 project = 'evaluation',# evaluation, Moco_training
 group =None,
 )
