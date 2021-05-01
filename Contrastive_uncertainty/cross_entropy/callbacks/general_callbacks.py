@@ -30,14 +30,36 @@ class ModelSaving(pl.Callback):
         #self.epoch_last_check = 0
     # save the state dict in the local directory as well as in wandb
         
+    
+    #def on_fit_start(self, trainer,pl_module):
     def on_test_epoch_end(self, trainer, pl_module): # save during the test stage
         epoch =  trainer.current_epoch
         self.save_model(pl_module,epoch)
 
-    def save_model(self,pl_module,epoch):
-        filename = f"CurrentEpoch:{epoch}_" + wandb.run.name + '.pt' 
-        print('filename:',filename)
+    def save_model(self, pl_module,epoch):
+        
+        # Obtain the run path for this particular wandb run
+        
+        folder = 'Models'
+        folder = os.path.join(folder, wandb.run.path)
+        
+        # makedirs used to make multiple subfolders in comparison to mkdir which makes a single folder
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        filename = f'TestModel:{epoch}.pt'
+        #filename = f"CurrentEpoch:{epoch}_" + wandb.run.name + '.pt'
+        
+        # Saves the filename in a certain location
+        filename = os.path.join(folder,filename)
+
+        #print('filename:',filename)
         torch.save({
             'encoder_state_dict':pl_module.encoder.state_dict(),
         },filename)
-        wandb.save(filename)
+        #wandb.save(filename)
+        '''
+        # Used to obtain the config for a previous run
+        api = wandb.Api()
+        previous_run = api.run(path='nerdk312/practice/1sjjlp95')
+        previous_config = previous_run.config
+        '''
