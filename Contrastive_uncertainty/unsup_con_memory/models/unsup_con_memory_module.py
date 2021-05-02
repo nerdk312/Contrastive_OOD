@@ -36,7 +36,7 @@ class UnSupConMemoryModule(pl.LightningModule):
         pretrained_network:str = None,
         num_cluster: list = [10],
         ):
-
+        
         super().__init__()
         # Nawid - required to use for the fine tuning
         self.save_hyperparameters()
@@ -324,11 +324,14 @@ class UnSupConMemoryModule(pl.LightningModule):
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
             if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
-        
+    # Currently pass the test step situation as the features are not the same as those in the memory bank
     def test_step(self, batch, batch_idx):
+        pass
+        '''
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
             if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
+        '''
 
 
     def configure_optimizers(self):
@@ -354,6 +357,7 @@ class UnSupConMemoryModule(pl.LightningModule):
         #return self.auxillary_data
 
     def on_fit_start(self):
+        #import ipdb; ipdb.set_trace()
         # Decides whether to test quickly or slowly
         if self.trainer.fast_dev_run:
             self.data_length = self.datamodule.batch_size
@@ -364,7 +368,10 @@ class UnSupConMemoryModule(pl.LightningModule):
             self.quick_load = False
             self.datamodule.train_shuffle = True
         
-        self.memory_bank = OfflineLabelMemory(length=self.data_length, feat_dim=self.hparams.emb_dim, memory_momentum=self.hparams.memory_momentum, num_classes=self.hparams.num_cluster[0])
+        # Checks if code in training stage, so it produces the memory bank during the first fit stage, not during the fit for the test phase
+        if self.trainer.training:
+            self.memory_bank = OfflineLabelMemory(length=self.data_length, feat_dim=self.hparams.emb_dim, memory_momentum=self.hparams.memory_momentum, num_classes=self.hparams.num_cluster[0])
+            
         # create the encoders
         # num_classes is the output fc dimension
 

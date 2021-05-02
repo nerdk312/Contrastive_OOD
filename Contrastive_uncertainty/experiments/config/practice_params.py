@@ -58,5 +58,5 @@ num_cluster = [10],
 
 # Either goes through all the models or goes through baselines
 
-single_model = 'PCL'
+single_model = 'UnSupConMemory'
 )  # evaluation
