@@ -13,4 +13,5 @@ from Contrastive_uncertainty.general.datamodules.datamodule_transforms import \
     Moco2TrainSVHNTransforms, Moco2EvalSVHNTransforms, \
     Moco2TrainFashionMNISTTransforms, Moco2EvalFashionMNISTTransforms, \
     Moco2TrainMNISTTransforms, Moco2EvalMNISTTransforms, \
+    Moco2TrainKMNISTTransforms,Moco2EvalKMNISTTransforms,\
     GaussianBlur, dataset_with_indices

@@ -52,8 +52,10 @@ class Mahalanobis_OOD(pl.Callback):
         # Obtain class names list for the case of the OOD data
         OOD_class_dict = self.OOD_Datamodule.idx2class
         self.OOD_class_names = [v for k,v in OOD_class_dict.items()] # names of the categories of the dataset
-
-        
+    '''
+    def on_fit_start(self,trainer,pl_module):
+        self.forward_callback(trainer=trainer, pl_module=pl_module) 
+    '''
     def on_validation_epoch_end(self,trainer,pl_module):
     #def on_fit_start(self,trainer,pl_module):
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
@@ -93,9 +95,11 @@ class Mahalanobis_OOD(pl.Callback):
             None,
             num_clusters
         )
+        '''
         # Checks whether it is training epoch or test epoch
         if Trainer._running_stage.value == 'test':
             self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)   
+        '''
 
         #self.distance_confusion_matrix(trainer,indices_dtest,labels_test)
         #self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)

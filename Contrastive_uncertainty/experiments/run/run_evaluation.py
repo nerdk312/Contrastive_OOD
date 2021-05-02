@@ -29,7 +29,10 @@ for run_path in run_paths:
     
     # Selects the previous model and then performs the evaluate function
     assert model_type in acceptable_single_models, 'model type response not in list of acceptable responses'
+    model_dict[model_type]['evaluate'](run_path)
+    '''
     try:
         model_dict[model_type]['evaluate'](run_path)
     except:
         print('f{run_path} evaluation did not work')
+    '''
