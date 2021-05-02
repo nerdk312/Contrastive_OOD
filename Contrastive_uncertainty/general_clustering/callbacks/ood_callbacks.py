@@ -22,6 +22,7 @@ from Contrastive_uncertainty.general.general_pl_callbacks.ood_callbacks import M
 
 from Contrastive_uncertainty.general_clustering.callbacks.general_callbacks import quickloading
 from Contrastive_uncertainty.general_clustering.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.general_clustering.utils.hybrid_utils import OOD_conf_matrix
 
 
 
@@ -54,10 +55,11 @@ class Mahalanobis_OOD(pl.Callback):
         self.OOD_class_names = [v for k,v in OOD_class_dict.items()] # names of the categories of the dataset
     '''
     def on_fit_start(self,trainer,pl_module):
+        #import ipdb; ipdb.set_trace()
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
     '''
+    
     def on_validation_epoch_end(self,trainer,pl_module):
-    #def on_fit_start(self,trainer,pl_module):
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
     
     def on_test_epoch_end(self,trainer,pl_module):
@@ -70,9 +72,14 @@ class Mahalanobis_OOD(pl.Callback):
         ood_loader = self.OOD_Datamodule.test_dataloader()
             
         features_train, labels_train = self.get_features(pl_module, train_loader)  # using feature befor MLP-head
+        
         features_test, labels_test = self.get_features(pl_module, train_loader)
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         
+
+        #self.centroid_distances(features_train, labels_train)
+
+        #import ipdb; ipdb.set_trace()
         # Obtain the fpr95, aupr, test predictions, OOD predictions (basic version does not log the confidence scores or the confusion matrices)
         fpr95, auroc, aupr, indices_dtest, indices_dood = self.get_eval_results(
             np.copy(features_train),
@@ -86,7 +93,7 @@ class Mahalanobis_OOD(pl.Callback):
 
         # Calculates the mahalanobis distance using unsupervised approach
         
-        # Perform unsupervised clustering with different values        
+        # Perform unsupervised clustering with different values       
         for num_clusters in self.num_inference_clusters:
             _, _, _, UL_indices_dtest, UL_indices_dood = self.get_eval_results(
             np.copy(features_train),
@@ -95,8 +102,21 @@ class Mahalanobis_OOD(pl.Callback):
             None,
             num_clusters
         )
-        '''
+             
+        # input the ood predictions as well as the OOD labels to see how it performs
+        
+        #self.unsupervised_distance_OOD_confusion_matrix(trainer,num_clusters, UL_indices_dood, labels_ood) 
+        #self.unsupervised_distance_OOD_confusion_matrix(trainer, UL_indices_dood, labels_ood)
+       
+        
         # Checks whether it is training epoch or test epoch
+        print('trainer testing?', trainer.testing)
+        if trainer.testing:
+            # Calculates the confusion matrix for where the OOD examples are being predicted
+            self.supervised_distance_OOD_confusion_matrix(trainer, indices_dood, labels_ood)
+            # Calculates the distances of the centroids from the centre of the hypersphere
+            self.centroid_distances(features_train, labels_train) 
+        '''   
         if Trainer._running_stage.value == 'test':
             self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)   
         '''
@@ -191,8 +211,47 @@ class Mahalanobis_OOD(pl.Callback):
         dood = np.min(dood, axis=0)
 
         return din, dood, indices_din, indices_dood
+    # Used to obtain cluster centroids of the data
+    def get_cluster_centroids(self,ftrain,ypred):
+        centroids = []
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        centroids = np.array([np.mean(i, axis=0) for i in xc])
+        
+        
+        #centroids = [np.expand_dims(np.mean(i, axis=0),0) for i in xc]  # Nawid - find the average of the feature vectors of each class
+        return centroids
 
-    def get_eval_results(self,ftrain, ftest, food, labelstrain,num_clusters):
+    # Used to calculate the distances from centroids
+    def centroid_distances(self,ftrain,ypred):
+        # Makes barchart of deviations from the average vector of the training set
+        avg_vector = np.mean(ftrain, axis=0)
+        avg_vector = np.reshape(avg_vector, (1, -1))
+        centroids = self.get_cluster_centroids(ftrain,ypred)
+        diff = np.abs(centroids - avg_vector) # Calculates the absolute difference element wise to ensure that the mean does not cancel out
+        total_diff = np.mean(diff, axis=1)
+        labels = [i for i in np.unique(ypred)] 
+        data =[[label, val] for (label ,val) in zip(labels,total_diff)] # iterates through the different labels as well as the different values for the labels
+        table = wandb.Table(data=data, columns = ["label", "value"])
+        wandb.log({"Centroid Distances Average vector" : wandb.plot.bar(table, "label", "value",
+                               title="Centroid Distances Average vector")})
+        
+
+        # Makes barchart of deviations from the vector of all zeros where I assume the centre of the hypersphere is a vector of zeros
+        zero_vector = np.zeros_like(avg_vector)
+        zero_diff = np.abs(centroids - zero_vector) # Calculates the absolute difference element wise to ensure that the mean does not cancel out
+        total_zero_diff = np.mean(zero_diff, axis=1)
+        data_zero =[[label, val_zero] for (label ,val_zero) in zip(labels,total_zero_diff)] # iterates through the different labels as well as the different values for the labels
+        table_zero = wandb.Table(data=data_zero, columns = ["label", "value"])
+
+        wandb.log({"Centroid Distances Zero vector" : wandb.plot.bar(table_zero, "label", "value",
+                               title="Centroid Distances Zero vector")})
+        
+        #import ipdb; ipdb.set_trace()
+        #return total_diff
+    
+
+        
+    def get_eval_results(self,ftrain, ftest, food, labelstrain, num_clusters):
         """
             None.
         """
@@ -244,10 +303,10 @@ class Mahalanobis_OOD(pl.Callback):
             "global_step": trainer.global_step
                   })
     
-    def unsupervised_distance_OOD_confusion_matrix(self,trainer,predictions,labels):
-        wandb.log({self.log_name +"OOD_conf_mat_id_unsupervised": OOD_conf_matrix(probs = None,
+    def unsupervised_distance_OOD_confusion_matrix(self,trainer,num_clusters,predictions,labels):
+        wandb.log({f'{self.log_name}_OOD_conf_mat_id_unsupervised:{num_clusters}_clusters': OOD_conf_matrix(probs = None,
             preds=predictions, y_true=labels,
-            class_names=None,OOD_class_names =self.OOD_class_names),
+            class_names=None,OOD_class_names =None),
             "global_step": trainer.global_step
                   })
     
