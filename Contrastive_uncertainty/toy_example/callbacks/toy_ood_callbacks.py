@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 import wandb
 from sklearn.metrics import roc_auc_score
 
-from Contrastive_uncertainty.Moco.moco_callbacks import quickloading, \
-                                                         get_fpr, get_pr_sklearn, get_roc_sklearn
+from Contrastive_uncertainty.general.general_pl_callbacks.general_callbacks import quickloading
+from Contrastive_uncertainty.general.general_pl_callbacks.ood_callbacks import get_fpr,\
+    get_pr_sklearn, get_roc_sklearn
 
 
 class OOD_ROC(pl.Callback):

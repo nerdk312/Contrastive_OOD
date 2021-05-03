@@ -17,11 +17,11 @@ weight_decay = 1e-4,
 
 # Miscellaneous arguments
 seed = 26,
-epochs = 25,
+epochs = 4,
 bsz = 128,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
-model = 'OVAUniformCluster',
+model = 'Softmax',
 
 # Trainer configurations
 fast_run = False,

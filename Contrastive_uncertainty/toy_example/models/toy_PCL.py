@@ -9,7 +9,7 @@ import faiss
 from Contrastive_uncertainty.toy_example.models.toy_encoder import Backbone
 from Contrastive_uncertainty.toy_example.models.toy_module import Toy
 
-from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
 
 
 

@@ -20,7 +20,7 @@ epochs = 100,
 bsz = 64,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
-model = 'NCA_Original',
+model = 'Softmax',
 
 # Trainer configurations
 fast_run = False,

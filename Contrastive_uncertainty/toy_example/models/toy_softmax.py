@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from Contrastive_uncertainty.toy_example.models.toy_encoder import Backbone
-from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k
+from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k
 from Contrastive_uncertainty.toy_example.models.toy_module import Toy
 
 class SoftmaxToy(Toy):
@@ -40,7 +40,6 @@ class SoftmaxToy(Toy):
         return encoder
     
     def loss_function(self, batch, auxillary_data=None):
-        
         (img_1, img_2), labels, indices = batch
         logits = self.forward(img_1, labels)
         loss = F.cross_entropy(logits, labels.long())
@@ -65,6 +64,9 @@ class SoftmaxToy(Toy):
         z = F.relu(z)
         logits = self.classifier(z)
         return logits
+    
+    def _momentum_update_key_encoder(self):
+        pass
     
     @torch.no_grad()
     def update_embeddings(self, x, labels): # Assume y is one hot encoder

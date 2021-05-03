@@ -7,7 +7,7 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.Moco.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
 
 
 class Toy(pl.LightningModule):
