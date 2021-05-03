@@ -14,10 +14,10 @@ from Contrastive_uncertainty.PCL.train.train_pcl import training as PCL_training
 from Contrastive_uncertainty.unsup_con_memory.train.train_unsup_con_memory import train as UnSupConMemory_training
 
 def train(base_dict):    
-    acceptable_single_models = ['baselines','CE','Moco','SupCon','PCL','UnSupConMemory']
+    acceptable_single_models = ['Baselines','CE','Moco','SupCon','PCL','UnSupConMemory']
 
     # Dict for the model name, parameters and specific training loop
-    '''
+    
     model_dict = {'CE':{'params':cross_entropy_hparams,'train':CE_training},                
                     'Moco':{'params':contrastive_hparams,'train':Moco_training},
                     'SupCon':{'params':sup_con_hparams,'train':SupCon_training},
@@ -29,7 +29,7 @@ def train(base_dict):
                     'PCL':{'params':pcl_hparams,'train':PCL_training},                
                     'UnSupConMemory':{'params':unsup_con_memory_hparams,'train':UnSupConMemory_training}
                     }
-                    
+    '''                
     
     # Update the parameters of each model
 
@@ -51,7 +51,7 @@ def train(base_dict):
 
     # BASELINES
     # Go through all the models in the current dataset and current OOD dataset
-    if base_dict['single_model']== 'baselines':
+    if base_dict['single_model']== 'Baselines':
         for model_k, model_v in model_dict.items():
             params = model_dict[model_k]['params']
             train_method = model_dict[model_k]['train']
