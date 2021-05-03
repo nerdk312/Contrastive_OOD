@@ -9,8 +9,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'CIFAR10',
-OOD_dataset = 'SVHN',
+dataset = 'KMNIST',
+OOD_dataset = 'MNIST',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -28,8 +28,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'CIFAR10_baselines_PCL_UNSUP',
-notes = 'Experiment baselines for CIFAR10 only PCL and unsupcon', # Add notes to the specific models each time
+group = 'KMNIST_Baselines',
+notes = 'Experiment baselines for KMNIST VS MNIST', # Add notes to the specific models each time
 
 
 # Cross entropy Specific parameters
@@ -58,5 +58,5 @@ num_cluster = [10],
 
 # Either goes through all the models or goes through baselines
 
-single_model = 'baselines'
+single_model = 'Baselines'
 )  # evaluation
