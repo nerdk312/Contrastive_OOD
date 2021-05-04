@@ -80,6 +80,7 @@ class PCLModule(base_module):
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
         num_cluster: list = [100],
+        num_cluster_negatives: int = 65536,
         use_mlp: bool = False,
         num_channels:int = 3, # number of channels for the specific dataset
         instance_encoder:str = 'resnet50',
@@ -237,7 +238,7 @@ class PCLModule(base_module):
                 all_proto_id = [i for i in range(im2cluster.max())] # Nawid - obtains all the cluster ids which were present
                 #print('All PROTO ID NUMBER',len(all_proto_id))
                 neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist()) # Nawid - all the negative clusters are the set of all prototypes minus the set of all the negative prototypes
-                neg_proto_id = sample(neg_proto_id, self.hparams.num_negatives) #sample r negative prototypes
+                neg_proto_id = sample(neg_proto_id, self.hparams.num_cluster_negatives) #sample r negative prototypes
                 #neg_proto_id = neg_proto_id.to(self.device)
                 neg_prototypes = prototypes[neg_proto_id] # Nawid - sample negative prototypes
 

@@ -38,7 +38,7 @@ class ModelSaving(pl.Callback):
             os.makedirs(folder)
         
         # Choose different name based on whether on test stage or validation stage
-        filename = f'TestModel:{epoch}.pt' if trainer.testing else f'Model:{epoch}.pt'
+        filename = f'TestModel:{epoch}.ckpt' if trainer.testing else f'Model:{epoch}.ckpt'
         filename = os.path.join(folder,filename)
         #import ipdb; ipdb.set_trace()
         trainer.save_checkpoint(filename)

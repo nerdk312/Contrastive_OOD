@@ -9,7 +9,7 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet18',
 bsz = 16,
-dataset = 'STL10',
+dataset = 'CIFAR10',
 OOD_dataset = 'SVHN',
 pretrained_network = None,
 
@@ -49,6 +49,7 @@ contrast_mode ='one',
 
 # PCL specific parameters
 num_multi_cluster = [5000,10000],
+num_cluster_negatives = 4096,
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
 

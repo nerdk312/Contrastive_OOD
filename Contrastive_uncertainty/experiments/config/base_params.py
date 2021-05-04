@@ -29,7 +29,7 @@ model_saving = 200, # Used to control how often the model is saved
 # Wandb parameters in common
 project = 'evaluation',
 group = 'STL10_Baselines',
-notes = 'Experiment baselines for STL10 VS SVHN', # Add notes to the specific models each time
+notes = 'Experiment baselines for STL10 VS SVHN, using small cluster sizes due to the small size of the dataset', # Add notes to the specific models each time
 
 
 # Cross entropy Specific parameters
@@ -49,6 +49,7 @@ contrast_mode ='one',
 
 # PCL specific parameters
 num_multi_cluster = [200,400], 
+num_cluster_negatives = 128,
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
 

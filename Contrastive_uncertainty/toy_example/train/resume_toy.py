@@ -8,6 +8,7 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
+# Library required for selecting parts of a sentence
 import re
 
 
@@ -20,12 +21,7 @@ from Contrastive_uncertainty.toy_example.models.toy_PCL import PCLToy
 from Contrastive_uncertainty.toy_example.models.toy_supcon import SupConToy
 from Contrastive_uncertainty.toy_example.models.toy_ova import OVAToy
 
-
-
-
-
-
-def resume(run_path):
+def resume(run_path, trainer_dict):
     api = wandb.Api()
     previous_run = api.run(path=run_path)
     previous_config = previous_run.config
@@ -73,13 +69,17 @@ def resume(run_path):
     config['pretrained_network'] = model_dir
 
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function
-    model = SoftmaxToy.load_from_checkpoint(model_dir)
+    #model = SoftmaxToy.load_from_checkpoint(model_dir)
     
-    #model = Model_selection(datamodule, config)
+    model = Model_selection(datamodule, config)
     #model = model.load_from_checkpoint(model_dir)
     #import ipdb; ipdb.set_trace()
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
 
+    # Updating the config parameters with the parameters in the trainer dict
+    for trainer_k, trainer_v in trainer_dict.items():
+        if trainer_k in config:
+            config[trainer_k] = trainer_v
     
 
     #desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
@@ -87,12 +87,16 @@ def resume(run_path):
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
 
     total_epochs = previous_epoch + config['epochs']    
+
+    
+
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = total_epochs, check_val_every_n_epoch = config['val_check'],
-                        gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks)
-    trainer.current_epoch = previous_epoch
-
+                        gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks,
+                        resume_from_checkpoint=model_dir) # Additional line to make checkpoint file (in order to obtain all the information)
+    # trainer.current_epoch = previous_epoch
+    # import ipdb; ipdb.set_trace()
     trainer.fit(model,datamodule)
     trainer.test(datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
@@ -109,14 +113,15 @@ def previous_model_directory(model_dir,run_path):
     max_val = 0
     # Iterate through all the different epochs and obtain the max value
     for i in model_list:
-        m = re.search(':(.+?).pt',i)
-        val = int(m.group(1))
-        if val > max_val:
-            max_val = val
-    if f'TestModel:{max_val}.pt' in model_list:
-        specific_model = f'TestModel:{max_val}.pt'
+        m = re.search(':(.+?).ckpt',i)
+        if m is not None:
+            val = int(m.group(1))
+            if val > max_val:
+                max_val = val
+    if f'TestModel:{max_val}.ckpt' in model_list:
+        specific_model = f'TestModel:{max_val}.ckpt'
     else:
-        specific_model = f'Model:{max_val}.pt'
+        specific_model = f'Model:{max_val}.ckpt'
     
     model_dir = os.path.join(model_dir,specific_model)
     return model_dir
