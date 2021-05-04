@@ -41,9 +41,11 @@ class ModelSaving(pl.Callback):
         filename = f'TestModel:{epoch}.pt' if trainer.testing else f'Model:{epoch}.pt'
         filename = os.path.join(folder,filename)
         #import ipdb; ipdb.set_trace()
-
+        trainer.save_checkpoint(filename)
+        '''
         torch.save({
             'optimizer_state_dict':pl_module.optimizers().state_dict(),
             'encoder_state_dict':pl_module.encoder.state_dict(),
             'classifier_state_dict':pl_module.classifier.state_dict(),
         },filename)
+        '''

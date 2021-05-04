@@ -16,6 +16,8 @@ class SoftmaxToy(Toy):
         hidden_dim: int =  20,
         emb_dim: int = 2,
         num_classes:int = 2,
+        pretrained_network:str = None,
+
         ):
         super().__init__(datamodule, optimizer, learning_rate,
                          momentum, weight_decay)
@@ -30,7 +32,11 @@ class SoftmaxToy(Toy):
         # num_classes is the output fc dimension
         self.encoder= self.init_encoders()
         self.classifier = nn.Linear(self.hparams.emb_dim, self.hparams.num_classes)
-
+        '''
+        if self.hparams.pretrained_network is not None:
+            self.encoder_loading(self.hparams.pretrained_network)
+            print('loaded model')
+        '''
     # Instantiate classifier
     def init_encoders(self):
         """
@@ -102,8 +108,36 @@ class SoftmaxToy(Toy):
         distances = self.euclidean_dist(z, centroids)
     
         return distances  # shape: (batch, num classes)
-        
-        
+    
+
+    # Loads both network as a target state dict
+    def encoder_loading(self,pretrained_network):
+        #import ipdb;ipdb.set_trace()
+        checkpoint = torch.load(pretrained_network)
+        self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
+        self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
+        #import ipdb;ipdb.set_trace()
+        #self.optimizers().optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        print('checkpoint loaded')
+
+    def configure_optimizers(self):
+        if self.hparams.optimizer =='sgd':
+            optimizer = torch.optim.SGD(self.parameters(), self.hparams.learning_rate,
+                                        momentum=self.hparams.momentum,
+                                        weight_decay=self.hparams.weight_decay)
+            
+            
+        elif self.hparams.optimizer =='adam':
+            optimizer = torch.optim.Adam(self.parameters(), self.hparams.learning_rate,
+                                        weight_decay=self.hparams.weight_decay)
+        '''
+        # Load optimizer checkpoint 
+        if self.hparams.pretrained_network is not None:
+            checkpoint = torch.load(self.hparams.pretrained_network)
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            print('optimizer checkpoint loaded')
+        '''
+        return optimizer
     '''
     def on_init(self, datamodule):
         return None

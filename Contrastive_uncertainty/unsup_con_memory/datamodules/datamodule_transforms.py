@@ -14,4 +14,5 @@ from Contrastive_uncertainty.general_clustering.datamodules.datamodule_transform
     Moco2TrainFashionMNISTTransforms, Moco2EvalFashionMNISTTransforms, \
     Moco2TrainMNISTTransforms, Moco2EvalMNISTTransforms, \
     Moco2TrainKMNISTTransforms, Moco2EvalKMNISTTransforms,\
+    Moco2TrainSTL10Transforms, Moco2EvalSTL10Transforms, \
     GaussianBlur, dataset_with_indices

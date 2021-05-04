@@ -41,6 +41,16 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
 
 
 def Model_selection(datamodule,config):
+    model_dict = {'Softmax': SoftmaxToy(datamodule=datamodule,
+                optimizer= config['optimizer'],learning_rate= config['learning_rate'],
+                momentum=config['momentum'], weight_decay=config['weight_decay'],
+                hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
+                num_classes = config['num_classes'],pretrained_network=config['pretrained_network']),
+                
+                
+    }
+    
+    '''
     model_dict = {'Moco':MocoToy(datamodule=datamodule,
                 optimizer=config['optimizer'], learning_rate=config['learning_rate'],
                 momentum=config['momentum'], weight_decay=config['weight_decay'],
@@ -117,5 +127,5 @@ def Model_selection(datamodule,config):
                 num_cluster = config['num_cluster']),
 
     }
-    
+    '''
     return model_dict[config['model']]

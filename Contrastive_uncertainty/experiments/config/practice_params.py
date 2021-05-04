@@ -9,8 +9,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet18',
 bsz = 16,
-dataset = 'FashionMNIST',
-OOD_dataset = 'MNIST',
+dataset = 'STL10',
+OOD_dataset = 'SVHN',
 pretrained_network = None,
 
 # Miscellaneous arguments in common

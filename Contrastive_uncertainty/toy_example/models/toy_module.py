@@ -75,5 +75,6 @@ class Toy(pl.LightningModule):
         elif self.hparams.optimizer =='adam':
             optimizer = torch.optim.Adam(self.parameters(), self.hparams.learning_rate,
                                         weight_decay=self.hparams.weight_decay)
+        # Save model at this location
         return optimizer
     

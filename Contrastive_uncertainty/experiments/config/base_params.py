@@ -9,8 +9,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'KMNIST',
-OOD_dataset = 'MNIST',
+dataset = 'STL10',
+OOD_dataset = 'SVHN',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -28,8 +28,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'KMNIST_Baselines',
-notes = 'Experiment baselines for KMNIST VS MNIST', # Add notes to the specific models each time
+group = 'STL10_Baselines',
+notes = 'Experiment baselines for STL10 VS SVHN', # Add notes to the specific models each time
 
 
 # Cross entropy Specific parameters
@@ -48,7 +48,7 @@ use_mlp =True,
 contrast_mode ='one',
 
 # PCL specific parameters
-num_multi_cluster = [2000,4000],
+num_multi_cluster = [200,400], 
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
 

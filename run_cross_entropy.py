@@ -1,5 +1,0 @@
-from Contrastive_uncertainty.cross_entropy.train.train_cross_entropy import train
-from Contrastive_uncertainty.cross_entropy.config.cross_entropy_params  import cross_entropy_hparams
-
-# calls the function
-train(cross_entropy_hparams)
