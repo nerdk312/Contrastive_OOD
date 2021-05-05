@@ -84,6 +84,7 @@ class CrossEntropyModule(pl.LightningModule):
             loss = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
             loss = torch.mean(loss)
         else:
+            #import ipdb; ipdb.set_trace()
             loss = F.cross_entropy(logits.float(), labels.long())
 
         class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))

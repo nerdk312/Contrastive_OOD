@@ -29,7 +29,7 @@ def train(base_dict):
                     'PCL':{'params':pcl_hparams,'train':PCL_training},                
                     'UnSupConMemory':{'params':unsup_con_memory_hparams,'train':UnSupConMemory_training}
                     }
-    '''                
+    '''             
     
     # Update the parameters of each model
 

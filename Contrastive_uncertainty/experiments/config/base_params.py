@@ -9,8 +9,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'STL10',
-OOD_dataset = 'SVHN',
+dataset = 'EMNIST',
+OOD_dataset = 'MNIST',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -28,12 +28,12 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'STL10_Baselines',
-notes = 'Experiment baselines for STL10 VS SVHN, using small cluster sizes due to the small size of the dataset', # Add notes to the specific models each time
+group = 'EMNIST baselines',
+notes = 'Experiment baselines for EMNIST VS MNIST', # Add notes to the specific models each time
 
 
 # Cross entropy Specific parameters
-num_classes = 10,
+num_classes = 26,
 label_smoothing = False,
 
 # Contrastive specific parameters
@@ -48,14 +48,14 @@ use_mlp =True,
 contrast_mode ='one',
 
 # PCL specific parameters
-num_multi_cluster = [200,400], 
-num_cluster_negatives = 128,
-num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
+num_multi_cluster = [2000,4000], 
+num_cluster_negatives = 1024,
+num_inference_cluster = [26,100,1000], # Number of clusters for the inference callback
 
 
 # unsupcon memory parameters
 memory_momentum = 0.5,
-num_cluster = [10],
+num_cluster = [26],
 
 # Either goes through all the models or goes through baselines
 

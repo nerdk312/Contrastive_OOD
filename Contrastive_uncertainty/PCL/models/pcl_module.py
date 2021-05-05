@@ -222,7 +222,7 @@ class PCLModule(base_module):
 
         # dequeue and enqueue
         self._dequeue_and_enqueue(k) # Nawid - queue values
-         
+        #import ipdb; ipdb.set_trace()
         # prototypical contrast - Nawid - performs the protoNCE
         if cluster_result is not None:
             proto_labels = []
@@ -376,7 +376,6 @@ class PCLModule(base_module):
     def loss_function(self,batch,cluster_result=None):
         metrics = {}
         (img_1,img_2), labels,indices = batch
-
         # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
         output, target, output_proto, target_proto = self(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
 

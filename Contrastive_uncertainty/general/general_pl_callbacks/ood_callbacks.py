@@ -590,11 +590,20 @@ class Mahalanobis_OOD(pl.Callback):
                   })
     '''
     def supervised_distance_OOD_confusion_matrix(self,trainer,predictions,labels):
-        wandb.log({self.log_name +"OOD_conf_mat_id_supervised": OOD_conf_matrix(probs = None,
-            preds=predictions, y_true=labels,
-            class_names=self.class_names,OOD_class_names =self.OOD_class_names),
-            "global_step": trainer.global_step
-                  })
+        # Used for the case of EMNIST where the number of labels differs compared to the OOD class
+        if len(self.class_names) == len(self.OOD_class_names):
+            wandb.log({self.log_name +"OOD_conf_mat_id_supervised": OOD_conf_matrix(probs = None,
+                preds=predictions, y_true=labels,
+                class_names=self.class_names,OOD_class_names =self.OOD_class_names),
+                "global_step": trainer.global_step
+                      })
+        else:
+            wandb.log({self.log_name +"OOD_conf_mat_id_supervised": OOD_conf_matrix(probs = None,
+                preds=predictions, y_true=labels,
+                class_names=None,OOD_class_names=None),
+                "global_step": trainer.global_step
+                      })
+        
     
     def unsupervised_distance_OOD_confusion_matrix(self,trainer,num_clusters,predictions,labels):
         wandb.log({f'{self.log_name}_OOD_conf_mat_id_unsupervised:{num_clusters}_clusters': OOD_conf_matrix(probs = None,

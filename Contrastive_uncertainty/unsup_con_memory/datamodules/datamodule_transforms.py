@@ -2,11 +2,11 @@ import random
 from warnings import warn
 
 
-
 from PIL import ImageFilter
 from torchvision import transforms
 from Contrastive_uncertainty.unsup_con_memory.datamodules.dataset_normalizations import \
-    cifar10_normalization, fashionmnist_normalization,mnist_normalization,svhn_normalization
+    cifar10_normalization, fashionmnist_normalization, mnist_normalization, svhn_normalization,\
+    emnist_normalization
 
 from Contrastive_uncertainty.general_clustering.datamodules.datamodule_transforms import \
     Moco2TrainCIFAR10Transforms, Moco2EvalCIFAR10Transforms, \
@@ -15,4 +15,5 @@ from Contrastive_uncertainty.general_clustering.datamodules.datamodule_transform
     Moco2TrainMNISTTransforms, Moco2EvalMNISTTransforms, \
     Moco2TrainKMNISTTransforms, Moco2EvalKMNISTTransforms,\
     Moco2TrainSTL10Transforms, Moco2EvalSTL10Transforms, \
+    Moco2TrainEMNISTTransforms, Moco2EvalEMNISTTransforms,\
     GaussianBlur, dataset_with_indices

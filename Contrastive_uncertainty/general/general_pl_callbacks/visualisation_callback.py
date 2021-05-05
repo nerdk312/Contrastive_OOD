@@ -40,7 +40,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         self.num_classes = num_classes
         self.quick_callback = quick_callback
 
-    
+    #def on_fit_start(self, trainer, pl_module):
     def on_test_epoch_end(self, trainer, pl_module):
         representations, labels = self.obtain_representations(pl_module)
         #concat_representations, concat_labels, class_concat_labels = self..OOD_representations() # obtain representations and labels which have both data
@@ -107,17 +107,17 @@ class Visualisation(pl.Callback): # General class for visualisation
 
     def pca_visualisation(self, representations, labels, num_classes, name):
         pca = PCA(n_components=3)
-
         pca_result = pca.fit_transform(representations)
         pca_one = pca_result[:,0]
         pca_two = pca_result[:,1]
         pca_three = pca_result[:,2]
-
+        #import ipdb; ipdb.set_trace()
+        
         plt.figure(figsize=(16,10))
         sns.scatterplot(
         x=pca_one, y=pca_two,
         hue = labels,
-        palette=sns.color_palette("hls",num_classes),
+        #palette=sns.color_palette('hls',n_colors =10),
         legend="full",
         alpha=0.3
         )
@@ -161,7 +161,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         sns.scatterplot(
         x=tsne_one, y=tsne_two,
         hue=labels,
-        palette=sns.color_palette("hls", num_classes),
+        #palette=sns.color_palette("hls", num_classes),
         legend="full",
         alpha=0.3
         )

@@ -1,7 +1,9 @@
 import random
 from warnings import warn
 from Contrastive_uncertainty.general.datamodules.dataset_normalizations import  cifar10_normalization,\
-    fashionmnist_normalization,mnist_normalization,kmnist_normalization, svhn_normalization, stl10_normalization
+    fashionmnist_normalization,mnist_normalization,kmnist_normalization, svhn_normalization, stl10_normalization,\
+    emnist_normalization
+    
 
 
 from PIL import ImageFilter
@@ -257,6 +259,45 @@ class Moco2EvalKMNISTTransforms:
         q = self.test_transform(inp)
         k = self.test_transform(inp)
         return q, k
+
+class Moco2TrainEMNISTTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        # image augmentation functions
+        self.train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            emnist_normalization()
+        ])
+
+    def __call__(self, inp):
+        q = self.train_transform(inp)
+        k = self.train_transform(inp)
+        return q, k
+
+
+class Moco2EvalEMNISTTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        self.test_transform = transforms.Compose([
+            transforms.Resize(height + 12),
+            transforms.CenterCrop(height),
+            transforms.ToTensor(),
+            emnist_normalization(),
+        ])
+
+    def __call__(self, inp):
+        q = self.test_transform(inp)
+        k = self.test_transform(inp)
+        return q, k
         
 
 class GaussianBlur(object):
@@ -280,6 +321,26 @@ def dataset_with_indices(cls):
     #import ipdb; ipdb.set_trace()
     def __getitem__(self, index):
         data, target = cls.__getitem__(self, index)
+        return data, target, index
+    
+    return type(cls.__name__, (cls,), {
+        '__getitem__': __getitem__,
+    }) 
+    '''type(name,bases,dict)
+    name is the name of the class which corresponds to the __name__ attribute__
+    bases: tupe of clases from which corresponds to the __bases__ attribute
+    '''
+
+# Subtracts target by 1 to make it so that number of classes go from 0 to 25 rather than 1 to 26
+def dataset_with_indices_emnist(cls):
+    """
+    Modifies the given Dataset class to return a tuple data, target, index
+    instead of just data, target.
+    """
+    #import ipdb; ipdb.set_trace()
+    def __getitem__(self, index):
+        data, target = cls.__getitem__(self, index)
+        target = target -1 #
         return data, target, index
     
     return type(cls.__name__, (cls,), {

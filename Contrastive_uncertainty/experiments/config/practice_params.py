@@ -8,9 +8,9 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet18',
-bsz = 16,
-dataset = 'CIFAR10',
-OOD_dataset = 'SVHN',
+bsz = 64,
+dataset = 'EMNIST',
+OOD_dataset = 'MNIST',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -33,13 +33,13 @@ notes = None, # Add notes to the specific models each time
 
 
 # Cross entropy Specific parameters
-num_classes = 10,
+num_classes = 26,
 label_smoothing = False,
 
 # Contrastive specific parameters
 Contrastive = True,
 supervised_contrastive = False,
-num_negatives = 32,
+num_negatives = 128,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
 use_mlp =True,
