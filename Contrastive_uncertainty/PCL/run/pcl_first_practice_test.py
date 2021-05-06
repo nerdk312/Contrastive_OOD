@@ -1,5 +1,9 @@
-from Contrastive_uncertainty.PCL.train.train_pcl import training
+from Contrastive_uncertainty.general_clustering.train.train_general_clustering import train
 from Contrastive_uncertainty.PCL.config.pcl_params import pcl_hparams
+from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
+from Contrastive_uncertainty.PCL.models.pcl_model_instance import ModelInstance
+
+
 
 
 pcl_hparams['bsz'] = 128
@@ -14,4 +18,4 @@ pcl_hparams['val_check'] = 1
 pcl_hparams['project'] = 'practice'  # evaluation, Moco_training
 pcl_hparams['pretrained_network'] = None  # 'Pretrained_models/finetuned_network.pt'
 pcl_hparams['quick_callback'] = False #True
-training(pcl_hparams)
+train(pcl_hparams,PCLModule, ModelInstance)

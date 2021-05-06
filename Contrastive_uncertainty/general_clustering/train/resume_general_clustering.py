@@ -12,10 +12,10 @@ from pytorch_lightning.loggers import WandbLogger
 import re
 
 
-from Contrastive_uncertainty.PCL.datamodules.datamodule_dict import dataset_dict
-from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
-from Contrastive_uncertainty.PCL.run.pcl_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
-from Contrastive_uncertainty.PCL.utils.hybrid_utils import previous_model_directory
+from Contrastive_uncertainty.cross_entropy.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import CrossEntropyModule
+from Contrastive_uncertainty.cross_entropy.run.cross_entropy_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.cross_entropy.utils.hybrid_utils import previous_model_directory
 
 def resume(run_path, trainer_dict):
     api = wandb.Api()
@@ -43,30 +43,25 @@ def resume(run_path, trainer_dict):
 
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    
+    '''
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['Mahalanobis'],callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']] 
-    
+    '''
+    desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
+                        callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']]
+
 
     # CHANGE SECTION
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function
     #model = SoftmaxToy.load_from_checkpoint(model_dir)
 
-    #desired_callbacks = []
-    # Hack to be able to use the num clusters with wandb sweep since wandb sweep cannot use a list of lists I believe
-    if isinstance(config['num_multi_cluster'], list) or isinstance(config['num_multi_cluster'], tuple):
-        num_clusters = config['num_multi_cluster']
-    else:  
-        num_clusters = [config['num_multi_cluster']]
-
-    model = PCLModule(datamodule=datamodule, optimizer=config['optimizer'],
-    learning_rate=config['learning_rate'], momentum=config['momentum'],
-    weight_decay=config['weight_decay'], emb_dim=config['emb_dim'],
-    num_negatives=config['num_negatives'], encoder_momentum=config['encoder_momentum'],
-    softmax_temperature=config['softmax_temperature'], 
-    num_cluster=num_clusters,num_cluster_negatives=config['num_cluster_negatives'],
-    use_mlp=config['use_mlp'],num_channels=channels, 
-    instance_encoder=config['instance_encoder'], pretrained_network=config['pretrained_network'])    
+    model = CrossEntropyModule(emb_dim = config['emb_dim'], 
+        optimizer = config['optimizer'],learning_rate = config['learning_rate'],
+        momentum = config['momentum'], weight_decay = config['weight_decay'],
+        datamodule = datamodule,num_classes = config['num_classes'],
+        label_smoothing=config['label_smoothing'],num_channels = channels,
+        instance_encoder = config['instance_encoder'],
+        pretrained_network = config['pretrained_network'])    
 
 
     # Updating the config parameters with the parameters in the trainer dict

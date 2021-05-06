@@ -15,4 +15,5 @@ sup_con_hparams['val_check'] = 1
 sup_con_hparams['project'] = 'practice'  # evaluation, contrastive_training
 sup_con_hparams['pretrained_network'] = None  # 'Pretrained_models/finetuned_network.pt'
 sup_con_hparams['quick_callback'] = True
+
 train(sup_con_hparams,SupConModule, ModelInstance)

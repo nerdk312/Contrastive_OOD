@@ -11,11 +11,13 @@ from tqdm import tqdm
 import faiss
 import numpy as np
 
+from Contrastive_uncertainty.general_clustering.models.simple_memory import SimpleMemory
+from Contrastive_uncertainty.general_clustering.models.offline_label_bank import OfflineLabelMemory
+from Contrastive_uncertainty.general_clustering.utils.pl_metrics import precision_at_k
+from Contrastive_uncertainty.general_clustering.callbacks.general_callbacks import quickloading
+
 from Contrastive_uncertainty.unsup_con_memory.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
-from Contrastive_uncertainty.unsup_con_memory.models.simple_memory import SimpleMemory
-from Contrastive_uncertainty.unsup_con_memory.models.offline_label_bank import OfflineLabelMemory
-from Contrastive_uncertainty.unsup_con_memory.utils.pl_metrics import precision_at_k
-from Contrastive_uncertainty.unsup_con_memory.callbacks.general_callbacks import quickloading
+
 
 
 # Based on code from https://github.com/open-mmlab/OpenSelfSup/blob/master/openselfsup/models/unsup_con_memory.py

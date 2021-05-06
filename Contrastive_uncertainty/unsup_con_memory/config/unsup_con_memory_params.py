@@ -32,7 +32,7 @@ test_ratio = 1.0,
 val_check = 10,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
-
+num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
 model_type ='UnSupConMemory',
 project = 'evaluation',# evaluation, Moco_training
