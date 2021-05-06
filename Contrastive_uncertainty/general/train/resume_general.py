@@ -11,13 +11,12 @@ from pytorch_lightning.loggers import WandbLogger
 # Library required for selecting parts of a sentence
 import re
 
+from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.general_clustering.utils.hybrid_utils import previous_model_directory
 
-from Contrastive_uncertainty.cross_entropy.datamodules.datamodule_dict import dataset_dict
-from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import CrossEntropyModule
-from Contrastive_uncertainty.cross_entropy.run.cross_entropy_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
-from Contrastive_uncertainty.cross_entropy.utils.hybrid_utils import previous_model_directory
 
-def resume(run_path, trainer_dict):
+def resume(run_path, trainer_dict,model_module,model_function):
     api = wandb.Api()
     previous_run = api.run(path=run_path)
     previous_config = previous_run.config
@@ -53,16 +52,8 @@ def resume(run_path, trainer_dict):
 
     # CHANGE SECTION
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function
-    #model = SoftmaxToy.load_from_checkpoint(model_dir)
-
-    model = CrossEntropyModule(emb_dim = config['emb_dim'], 
-        optimizer = config['optimizer'],learning_rate = config['learning_rate'],
-        momentum = config['momentum'], weight_decay = config['weight_decay'],
-        datamodule = datamodule,num_classes = config['num_classes'],
-        label_smoothing=config['label_smoothing'],num_channels = channels,
-        instance_encoder = config['instance_encoder'],
-        pretrained_network = config['pretrained_network'])    
-
+    # model = model_module.load_from_checkpoint(model_dir)
+    model = model_function(model_module, config, datamodule, channels)  
 
     # Updating the config parameters with the parameters in the trainer dict
     for trainer_k, trainer_v in trainer_dict.items():
@@ -71,8 +62,8 @@ def resume(run_path, trainer_dict):
     
     # Obtain checkpoint for the model        
     model_dir = 'Models'
-    model_dir = previous_model_directory(model_dir, run_path)
-    config['pretrained_network'] = model_dir
+    model_dir = previous_model_directory(model_dir, run_path) # Used to preload the model
+
     wandb.config.update(config, allow_val_change=True) # Updates the config (particularly used to increase the number of epochs present)
     
 

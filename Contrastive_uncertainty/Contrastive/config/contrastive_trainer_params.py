@@ -3,7 +3,7 @@ trainer_hparams = dict(
 seed = 26,
 epochs = 2,
 # Trainer configurations
-fast_run = True,
+fast_run = False,
 quick_callback = True,
 training_ratio = 1.0,
 validation_ratio = 1.0,
