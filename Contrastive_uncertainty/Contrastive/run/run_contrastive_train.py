@@ -1,0 +1,7 @@
+from Contrastive_uncertainty.general.train.train_general import train
+from Contrastive_uncertainty.Contrastive.config.contrastive_params import contrastive_hparams
+from Contrastive_uncertainty.Contrastive.models.contrastive_module import ContrastiveModule
+from Contrastive_uncertainty.Contrastive.models.contrastive_model_instance import ModelInstance
+
+# calls the function
+train(contrastive_hparams,ContrastiveModule, ModelInstance)

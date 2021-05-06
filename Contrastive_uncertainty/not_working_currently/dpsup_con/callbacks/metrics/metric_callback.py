@@ -20,4 +20,4 @@ from sklearn.preprocessing import normalize
 from tqdm import tqdm
 import copy
 
-from Contrastive_uncertainty.general.general_pl_callbacks.metrics.metric_callback import MetricLogger,evaluation_metrics, evaltypes
+from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger,evaluation_metrics, evaltypes

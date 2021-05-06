@@ -1,5 +1,7 @@
-from Contrastive_uncertainty.sup_con.train.train_sup_con import train
+from Contrastive_uncertainty.general.train.train_general import train
 from Contrastive_uncertainty.sup_con.config.sup_con_params import sup_con_hparams
+from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
+from Contrastive_uncertainty.sup_con.models.sup_con_model_instance import ModelInstance
 
 
 sup_con_hparams['bsz'] = 16
@@ -13,4 +15,4 @@ sup_con_hparams['val_check'] = 1
 sup_con_hparams['project'] = 'practice'  # evaluation, contrastive_training
 sup_con_hparams['pretrained_network'] = None  # 'Pretrained_models/finetuned_network.pt'
 sup_con_hparams['quick_callback'] = True
-train(sup_con_hparams)
+train(sup_con_hparams,SupConModule, ModelInstance)

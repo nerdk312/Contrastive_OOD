@@ -17,7 +17,7 @@ from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
 import sklearn.metrics as skm
 
-from Contrastive_uncertainty.general.general_pl_callbacks.ood_callbacks import Mahalanobis_OOD, Euclidean_OOD, \
+from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Euclidean_OOD, \
     get_fpr, get_pr_sklearn, get_roc_sklearn
 
 from Contrastive_uncertainty.general_clustering.callbacks.general_callbacks import quickloading

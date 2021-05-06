@@ -24,4 +24,4 @@ from tqdm import tqdm
 
 from scipy.spatial.distance import cdist # Required for TwoMoons visualisation involving pairwise distances
 
-from Contrastive_uncertainty.general.general_pl_callbacks.visualisation_callback import Visualisation
+from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation

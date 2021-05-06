@@ -8,8 +8,8 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.cross_entropy.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
-from Contrastive_uncertainty.cross_entropy.utils.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
-from Contrastive_uncertainty.cross_entropy.utils.pl_metrics import precision_at_k,mean
+from Contrastive_uncertainty.general.utils.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
+from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k,mean
 
 
 class CrossEntropyModule(pl.LightningModule):

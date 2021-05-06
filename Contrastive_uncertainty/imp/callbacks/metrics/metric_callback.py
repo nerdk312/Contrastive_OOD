@@ -13,4 +13,4 @@ import wandb
 from PIL import Image
 import faiss
 
-from Contrastive_uncertainty.general.general_pl_callbacks.metrics.metric_callback import MetricLogger,evaluation_metrics,evaltypes
+from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger,evaluation_metrics,evaltypes
