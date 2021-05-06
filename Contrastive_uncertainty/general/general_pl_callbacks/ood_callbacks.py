@@ -345,18 +345,27 @@ class Mahalanobis_OOD(pl.Callback):
         # Obtain class names list for the case of the OOD data
         OOD_class_dict = self.OOD_Datamodule.idx2class
         self.OOD_class_names = [v for k,v in OOD_class_dict.items()] # names of the categories of the dataset
-    
-    
+
+
+    '''
     def on_fit_start(self,trainer,pl_module):
         #import ipdb; ipdb.set_trace()
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
+    '''
     
     
     def on_validation_epoch_end(self,trainer,pl_module):
-        self.forward_callback(trainer=trainer, pl_module=pl_module) 
+        # Skip if fast testing as this can lead to issues with the code
+        if trainer.fast_dev_run:
+            pass
+        else:
+            self.forward_callback(trainer=trainer, pl_module=pl_module) 
     
     def on_test_epoch_end(self,trainer,pl_module):
-        self.forward_callback(trainer=trainer, pl_module=pl_module) 
+        if trainer.fast_dev_run:
+            pass
+        else:
+            self.forward_callback(trainer=trainer, pl_module=pl_module) 
 
     # Performs all the computation in the callback
     def forward_callback(self,trainer,pl_module):

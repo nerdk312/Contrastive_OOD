@@ -18,57 +18,47 @@ from sklearn.metrics import roc_auc_score
 
 from Contrastive_uncertainty.Contrastive.utils.hybrid_utils import OOD_conf_matrix
 
-
-
-
 # Used to save the model in the directory as well as in wandb
 class ModelSaving(pl.Callback):
-    def __init__(self,interval):
+    def __init__(self, interval):
         super().__init__()
         self.interval = interval
         self.counter = interval
         #self.epoch_last_check = 0
-    # save the state dict in the local directory as well as in wandb
-    '''
+    
+    
     def on_validation_epoch_end(self,trainer,pl_module): # save every interval
         epoch = trainer.current_epoch 
-        if epoch > self.counter:
-            self.save_model(pl_module,epoch)
-            self.counter += self.interval # Increase the interval
-    '''            
-    
-    def on_test_epoch_end(self, trainer, pl_module): # save during the test stage
-        epoch =  trainer.current_epoch
-        self.save_model(pl_module,epoch)
-
-        '''
-        if (epoch - self.epoch_last_check) < self.interval-1: #  Called at the end of training
-            # Skip
-            return
+        # Check if it is equal to or more than the value
+        if epoch >= self.counter:
+            self.save_model(trainer, pl_module, epoch)
+            self.counter = epoch + self.interval # Increase the interval
         
-        self.save_model(pl_module,epoch)
-        self.epoch_last_check = epoch
-        '''
-    
-    def save_model(self, pl_module,epoch):
+    def on_test_epoch_end(self, trainer, pl_module):  # save during the test stage
+        epoch = trainer.current_epoch
+        self.save_model(trainer,pl_module, epoch)
+
+        
+    def save_model(self, trainer, pl_module,epoch):
         folder = 'Models'
         folder = os.path.join(folder, wandb.run.path)
         # makedirs used to make multiple subfolders in comparison to mkdir which makes a single folder
         if not os.path.exists(folder):
             os.makedirs(folder)
-        filename = f'TestModel:{epoch}.pt'
-        #filename = f"CurrentEpoch:{epoch}_" + wandb.run.name + '.pt' 
-        #print('filename:',filename)
-        # Saves the filename in a certain location
+
+        # Choose different name based on whether on test stage or validation stage
+        filename = f'TestModel:{epoch}.ckpt' if trainer.testing else f'Model:{epoch}.ckpt'
         filename = os.path.join(folder,filename)
 
+        # Saves the checkpoint to enable to continue loading
+        trainer.save_checkpoint(filename)
+        '''
         torch.save({
             'online_encoder_state_dict':pl_module.encoder_q.state_dict(),
             'target_encoder_state_dict':pl_module.encoder_k.state_dict(),
         },filename)
-        #wandb.save(filename)
-
-    #def on_test_epoch_end(self, trainer, pl_module):
+        '''
+        
         
 # Calculation of MMD based on the definition 2/ equation 1 in the paper        
 # http://www.gatsby.ucl.ac.uk/~gretton/papers/GreBorRasSchetal12.pdf?origin=publication_detail
@@ -82,18 +72,16 @@ class MMD_distance(pl.Callback):
     def on_test_epoch_end(self,trainer, pl_module):
         self.calculate_MMD(pl_module)
     '''
-
     # Log MMD whilst the network is training
-    def on_validation_epoch_end(self,trainer,pl_module):
+    def on_validation_epoch_end(self, trainer,pl_module):
         self.calculate_MMD(pl_module)
 
-    
-    def calculate_MMD(self,pl_module):
+    def calculate_MMD(self, pl_module):
         dataloader = self.Datamodule.train_dataloader()
         with torch.no_grad():
             MMD_values = []
-            low = torch.tensor(-1.0).to(device = pl_module.device)
-            high = torch.tensor(1.0).to(device = pl_module.device)
+            low = torch.tensor(-1.0).to(device=pl_module.device)
+            high = torch.tensor(1.0).to(device=pl_module.device)
             uniform_distribution = torch.distributions.uniform.Uniform(low,high) # causes all samples to be on the correct device when obtainig smaples https://stackoverflow.com/questions/59179609/how-to-make-a-pytorch-distribution-on-gpu
             #uniform_distribution =  torch.distributions.uniform.Uniform(-1,1).sample(output.shape)
             loader = quickloading(self.quick_callback,dataloader) # Used to get a single batch or used to get the entire dataset

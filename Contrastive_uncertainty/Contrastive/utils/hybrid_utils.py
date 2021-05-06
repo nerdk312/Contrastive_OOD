@@ -7,4 +7,5 @@ import wandb
 
 from Contrastive_uncertainty.general.utils.hybrid_utils import binary_cross_entropy, BCELoss, \
                                                                label_smoothing, reset_wandb_env, \
-                                                               LabelSmoothingCrossEntropy, OOD_conf_matrix
+                                                               LabelSmoothingCrossEntropy, OOD_conf_matrix,\
+                                                               previous_model_directory

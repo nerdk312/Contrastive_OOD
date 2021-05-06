@@ -37,10 +37,11 @@ class CrossEntropyModule(pl.LightningModule):
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder = self.init_encoders()
-
+        '''
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
             print('loaded model')
+        '''
     @property
     def name(self):
         ''' return name of model'''

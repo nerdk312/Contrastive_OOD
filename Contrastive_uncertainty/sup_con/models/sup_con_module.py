@@ -37,9 +37,10 @@ class SupConModule(pl.LightningModule):
         if use_mlp:  # hack: brute-force replacement
             dim_mlp = self.encoder.fc.weight.shape[1]
             self.encoder.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder.fc)
-            
+        '''  
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
+        '''
     @property
     def name(self):
         ''' return name of model'''

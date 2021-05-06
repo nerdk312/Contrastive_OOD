@@ -20,7 +20,7 @@ from Contrastive_uncertainty.general.general_pl_callbacks.general_callbacks impo
                                                                            Uniformity, SupConLoss, Centroid_distance, \
                                                                            quickloading
 
-
+'''
 # Override method from the general section
 class ModelSaving(pl.Callback):
     def __init__(self,interval):
@@ -57,9 +57,7 @@ class ModelSaving(pl.Callback):
             'encoder_state_dict':pl_module.encoder.state_dict(),
         },filename)
         #wandb.save(filename)
-        '''
-        # Used to obtain the config for a previous run
-        api = wandb.Api()
-        previous_run = api.run(path='nerdk312/practice/1sjjlp95')
-        previous_config = previous_run.config
-        '''
+        
+        
+'''
+        

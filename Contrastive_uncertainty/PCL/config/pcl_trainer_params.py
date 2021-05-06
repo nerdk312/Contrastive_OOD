@@ -1,7 +1,7 @@
 trainer_hparams = dict(
 # Miscellaneous arguments
 seed = 26,
-epochs = 90,
+epochs = 2,
 # Trainer configurations
 fast_run = False,
 quick_callback = False,

@@ -19,7 +19,7 @@ from sklearn.metrics import roc_auc_score
 from Contrastive_uncertainty.general.general_pl_callbacks.general_callbacks import ModelSaving, MMD_distance, \
                                                                            Uniformity, SupConLoss, Centroid_distance, \
                                                                            quickloading
-
+'''
 # Override method from the general section
 class ModelSaving(pl.Callback):
     def __init__(self,interval):
@@ -53,3 +53,4 @@ class ModelSaving(pl.Callback):
             'encoder_state_dict':pl_module.encoder.state_dict(),
         },filename)
         #wandb.save(filename)
+'''

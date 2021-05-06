@@ -26,9 +26,9 @@ def resume(run_path, trainer_dict):
     previous_run = api.run(path=run_path)
     previous_config = previous_run.config
     # Obtain the previous logged value
-    history = previous_run.history()
-    previous_epoch = history.epoch.iloc[-1]
-    #import ipdb; ipdb.set_trace()
+    #history = previous_run.history()
+    #previous_epoch = history.epoch.iloc[-1]
+    
 
     run = wandb.init(id=previous_run.id,resume='allow',project=previous_config['project'])
     
@@ -80,19 +80,21 @@ def resume(run_path, trainer_dict):
     for trainer_k, trainer_v in trainer_dict.items():
         if trainer_k in config:
             config[trainer_k] = trainer_v
+    #import ipdb; ipdb.set_trace()
+    wandb.config.update(config, allow_val_change=True) # Updates the config (particularly used to increase the number of epochs present)
     
 
     #desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
     desired_callbacks = [callback_dict['Saving']]
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
 
-    total_epochs = previous_epoch + config['epochs']    
+    #total_epochs = previous_epoch + config['epochs']    
 
     
 
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
-                        max_epochs = total_epochs, check_val_every_n_epoch = config['val_check'],
+                        max_epochs = config['epochs'], check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks,
                         resume_from_checkpoint=model_dir) # Additional line to make checkpoint file (in order to obtain all the information)
     # trainer.current_epoch = previous_epoch

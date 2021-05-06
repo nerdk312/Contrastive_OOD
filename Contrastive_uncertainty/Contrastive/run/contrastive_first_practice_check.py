@@ -5,7 +5,7 @@ from Contrastive_uncertainty.Contrastive.config.contrastive_params import contra
 contrastive_hparams['bsz'] = 16
 contrastive_hparams['instance_encoder'] = 'resnet18'
 contrastive_hparams['epochs'] = 1
-contrastive_hparams['fast_run'] = False
+contrastive_hparams['fast_run'] = True
 contrastive_hparams['training_ratio'] = 0.01
 contrastive_hparams['validation_ratio'] = 0.2
 contrastive_hparams['test_ratio'] = 0.2

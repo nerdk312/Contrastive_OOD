@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import wandb
-
+import re
 
 # Obtained from https://github.com/eladhoffer/utils.pytorch/blob/master/cross_entropy.py
 def binary_cross_entropy(inputs, target, weight=None, reduction='mean', smooth_eps=None, from_logits=False):
@@ -163,3 +163,26 @@ def OOD_conf_matrix(probs=None, y_true=None, preds=None, class_names=None,OOD_cl
         wandb.Table(columns=["Actual", "Predicted", "nPredictions"], data=data),
         fields,
     )
+
+def previous_model_directory(model_dir, run_path):
+    model_dir = os.path.join(model_dir, run_path)
+    
+    # Obtain directory
+    model_list = os.listdir(model_dir)
+    # Save the counter for the max epoch value
+    
+    max_val = 0
+    # Iterate through all the different epochs and obtain the max value
+    for i in model_list:
+        m = re.search(':(.+?).ckpt',i)
+        if m is not None:
+            val = int(m.group(1))
+            if val > max_val:
+                max_val = val
+    if f'TestModel:{max_val}.ckpt' in model_list:
+        specific_model = f'TestModel:{max_val}.ckpt'
+    else:
+        specific_model = f'Model:{max_val}.ckpt'
+    
+    model_dir = os.path.join(model_dir,specific_model)
+    return model_dir
