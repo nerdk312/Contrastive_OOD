@@ -27,7 +27,7 @@ def resume(run_path, trainer_dict,model_module,model_function):
     #history = previous_run.history()
     #previous_epoch = history.epoch.iloc[-1]
 
-    run = wandb.init(id=previous_run.id,resume='allow',project=previous_config['project'])
+    run = wandb.init(id=previous_run.id,resume='allow',project=previous_config['project'],group=previous_config['group'], notes=previous_config['notes'])
     
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     config = previous_config
@@ -82,3 +82,4 @@ def resume(run_path, trainer_dict,model_module,model_function):
     trainer.fit(model,datamodule)
     trainer.test(datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
+    run.finish()

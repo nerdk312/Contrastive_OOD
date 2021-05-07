@@ -33,8 +33,8 @@ class ModelSaving(pl.Callback):
         if epoch >= self.counter:
             self.save_model(trainer, pl_module, epoch)
             self.counter = epoch + self.interval # Increase the interval
-    def on_fit_start(self, trainer, pl_module):
-    #def on_test_epoch_end(self, trainer, pl_module):  # save during the test stage
+    
+    def on_test_epoch_end(self, trainer, pl_module):  # save during the test stage
         epoch = trainer.current_epoch
         self.save_model(trainer,pl_module, epoch)
 

@@ -1,5 +1,0 @@
-from Contrastive_uncertainty.cross_entropy.evaluate.evaluate_cross_entropy import evaluation
-from Contrastive_uncertainty.cross_entropy.config.cross_entropy_params  import cross_entropy_hparams
-
-# calls the function
-evaluation(cross_entropy_hparams)

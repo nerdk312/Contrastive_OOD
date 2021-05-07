@@ -13,7 +13,7 @@ import re
 
 from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
 from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
-from Contrastive_uncertainty.general_clustering.utils.hybrid_utils import previous_model_directory
+from Contrastive_uncertainty.general.utils.hybrid_utils import previous_model_directory
 
 
 def resume(run_path, trainer_dict,model_module,model_function):
@@ -24,7 +24,7 @@ def resume(run_path, trainer_dict,model_module,model_function):
     #history = previous_run.history()
     #previous_epoch = history.epoch.iloc[-1]
 
-    run = wandb.init(id=previous_run.id,resume='allow',project=previous_config['project'])
+    run = wandb.init(id=previous_run.id,resume='allow',project=previous_config['project'],group=previous_config['group'], notes=previous_config['notes'])
     
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     config = previous_config
@@ -42,10 +42,7 @@ def resume(run_path, trainer_dict,model_module,model_function):
 
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    '''
-    desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
-                        callback_dict['Mahalanobis'],callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']] 
-    '''
+    
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']]
 
