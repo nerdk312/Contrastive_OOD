@@ -43,7 +43,7 @@ class Visualisation(pl.Callback): # General class for visualisation
     #def on_fit_start(self, trainer, pl_module):
     def on_test_epoch_end(self, trainer, pl_module):
         representations, labels = self.obtain_representations(pl_module)
-        #concat_representations, concat_labels, class_concat_labels = self..OOD_representations() # obtain representations and labels which have both data
+        #concat_representations, concat_labels, class_concat_labels = self.OOD_representations() # obtain representations and labels which have both data
 
         # +1 in num classes to represent outlier data, *2 represents class specific outliers
         self.pca_visualisation(representations, labels, self.num_classes, 'inliers')
@@ -84,7 +84,7 @@ class Visualisation(pl.Callback): # General class for visualisation
             )
         loader = quickloading(self.quick_callback, dataloader)
 
-        self.concat_representations = self.compute_representations(loader)
+        self.concat_representations = self.compute_representations(pl_module, loader)
         return self.concat_representations, concat_labels, class_concat_labels
 
     @torch.no_grad()

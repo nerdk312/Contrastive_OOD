@@ -346,6 +346,7 @@ class Mahalanobis_OOD(pl.Callback):
         OOD_class_dict = self.OOD_Datamodule.idx2class
         self.OOD_class_names = [v for k,v in OOD_class_dict.items()] # names of the categories of the dataset
 
+        self.OOD_dataname = self.OOD_Datamodule.name
 
     '''
     def on_fit_start(self,trainer,pl_module):
@@ -578,14 +579,14 @@ class Mahalanobis_OOD(pl.Callback):
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
         
         if labelstrain is None:
-            wandb.log({self.unsupervised_log_name + 'AUROC_'+f'{num_clusters}_clusters': auroc})
+            wandb.log({self.unsupervised_log_name + 'AUROC_'+f'{num_clusters}_clusters_{self.OOD_dataname}': auroc})
         else:
-            wandb.log({self.log_name + 'AUROC': auroc})
+            wandb.log({self.log_name + f'AUROC_{self.OOD_dataname}': auroc})
         return fpr95, auroc, aupr, indices_dtest, indices_dood
         
     
     def distance_confusion_matrix(self,trainer,predictions,labels):
-        wandb.log({self.log_name +"conf_mat_id": wandb.plot.confusion_matrix(probs = None,
+        wandb.log({self.log_name +f"conf_mat_id_{self.OOD_dataname}": wandb.plot.confusion_matrix(probs = None,
             preds=predictions, y_true=labels,
             class_names=self.class_names),
             "global_step": trainer.global_step
@@ -601,13 +602,13 @@ class Mahalanobis_OOD(pl.Callback):
     def supervised_distance_OOD_confusion_matrix(self,trainer,predictions,labels):
         # Used for the case of EMNIST where the number of labels differs compared to the OOD class
         if len(self.class_names) == len(self.OOD_class_names):
-            wandb.log({self.log_name +"OOD_conf_mat_id_supervised": OOD_conf_matrix(probs = None,
+            wandb.log({self.log_name +f"OOD_conf_mat_id_supervised_{self.OOD_dataname}": OOD_conf_matrix(probs = None,
                 preds=predictions, y_true=labels,
                 class_names=self.class_names,OOD_class_names =self.OOD_class_names),
                 "global_step": trainer.global_step
                       })
         else:
-            wandb.log({self.log_name +"OOD_conf_mat_id_supervised": OOD_conf_matrix(probs = None,
+            wandb.log({self.log_name +f"OOD_conf_mat_id_supervised_{self.OOD_dataname}": OOD_conf_matrix(probs = None,
                 preds=predictions, y_true=labels,
                 class_names=None,OOD_class_names=None),
                 "global_step": trainer.global_step
@@ -615,7 +616,7 @@ class Mahalanobis_OOD(pl.Callback):
         
     
     def unsupervised_distance_OOD_confusion_matrix(self,trainer,num_clusters,predictions,labels):
-        wandb.log({f'{self.log_name}_OOD_conf_mat_id_unsupervised:{num_clusters}_clusters': OOD_conf_matrix(probs = None,
+        wandb.log({f'{self.log_name}_OOD_conf_mat_id_unsupervised:{num_clusters}_clusters_{self.OO_dataname}': OOD_conf_matrix(probs = None,
             preds=predictions, y_true=labels,
             class_names=None,OOD_class_names =None),
             "global_step": trainer.global_step
@@ -634,11 +635,11 @@ class Mahalanobis_OOD(pl.Callback):
         true_table = wandb.Table(data=true_data, columns=["scores"])
         # Examine if the centroid was obtained in supervised or unsupervised manner
         if labels_train is not None:    
-            true_histogram_name = self.true_histogram 
-            ood_histogram_name = self.ood_histogram
+            true_histogram_name = self.true_histogram
+            ood_histogram_name = self.ood_histogram + f'_{self.OOD_dataname}'
         else:
-            true_histogram_name = self.true_histogram + f'_{num_clusters}_clusters'
-            ood_histogram_name = self.ood_histogram + f'_{num_clusters}_clusters'
+            true_histogram_name = self.true_histogram + f'_{num_clusters}_clusters_{self.OOD_dataname}'
+            ood_histogram_name = self.ood_histogram + f'_{num_clusters}_clusters_{self.OOD_dataname}'
 
         #import ipdb; ipdb.set_trace()
         wandb.log({true_histogram_name: wandb.plot.histogram(true_table, "scores",title=true_histogram_name)})
@@ -654,9 +655,9 @@ class Mahalanobis_OOD(pl.Callback):
 class Euclidean_OOD(Mahalanobis_OOD):
     def __init__(self, Datamodule,OOD_Datamodule,num_inference_clusters,quick_callback):
         super().__init__(Datamodule,OOD_Datamodule,num_inference_clusters,quick_callback)
-        self.log_name = "Euclidean_"
-        self.true_histogram = 'Euclidean_True_data_scores'
-        self.ood_histogram = 'Euclidean_OOD_data_scores'
+        self.log_name = f"Euclidean_{self.OOD_dataname}"
+        self.true_histogram = f'Euclidean_True_data_scores_{self.OOD_dataname}'
+        self.ood_histogram = f'Euclidean_OOD_data_scores_{self.OOD_dataname}'
 
 
     def get_scores_multi_cluster(self,ftrain, ftest, food, ypred):

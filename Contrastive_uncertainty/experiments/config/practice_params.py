@@ -18,7 +18,7 @@ seed = 26,
 epochs = 300,
 
 # Trainer configurations in common
-fast_run = True,
+fast_run = False,
 quick_callback = True,
 training_ratio = 1.0,
 validation_ratio = 1.0,
