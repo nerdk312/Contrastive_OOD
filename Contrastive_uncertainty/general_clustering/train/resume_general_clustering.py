@@ -52,12 +52,8 @@ def resume(run_path, trainer_dict,model_module,model_function):
     # CHANGE SECTION
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function
     # model = model_module.load_from_checkpoint(model_dir)
-    if isinstance(config['num_multi_cluster'], list) or isinstance(config['num_multi_cluster'], tuple):
-        num_clusters = config['num_multi_cluster']
-    else:  
-        num_clusters = [config['num_multi_cluster']]  
 
-    model = model_function(model_module,config,datamodule,channels,num_clusters) 
+    model = model_function(model_module,config,datamodule,channels) 
 
     # Updating the config parameters with the parameters in the trainer dict
     for trainer_k, trainer_v in trainer_dict.items():

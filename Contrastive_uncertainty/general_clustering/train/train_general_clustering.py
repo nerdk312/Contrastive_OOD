@@ -15,7 +15,7 @@ from Contrastive_uncertainty.general_clustering.datamodules.datamodule_dict impo
 
 # Train takes in params, a particular training module as well a model_function to instantiate the model
 def train(params,model_module,model_function):
-    run = wandb.init(entity="nerdk312",config = params, project= params['project'], reinit=True,group=params['group'], notes=params['notes'])  # Required to have access to wandb config, which is needed to set up a sweep
+    run = wandb.init(entity="nerdk312", config = params, project=params['project'], reinit=True, group=params['group'], notes=params['notes'])  # Required to have access to wandb config, which is needed to set up a sweep
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     config = wandb.config
 
@@ -40,13 +40,9 @@ def train(params,model_module,model_function):
     # desired_callbacks = []
     # model_function takes in the model module and the config and uses it to instantiate the model
     
-    # Hack to be able to use the num clusters with wandb sweep since wandb sweep cannot use a list of lists I believe
-    if isinstance(config['num_multi_cluster'], list) or isinstance(config['num_multi_cluster'], tuple):
-        num_clusters = config['num_multi_cluster']
-    else:  
-        num_clusters = [config['num_multi_cluster']]    
+        
     # Need to add the num clusters argument also for this case
-    model = model_function(model_module,config,datamodule,channels,num_clusters)
+    model = model_function(model_module,config,datamodule,channels)
 
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
 

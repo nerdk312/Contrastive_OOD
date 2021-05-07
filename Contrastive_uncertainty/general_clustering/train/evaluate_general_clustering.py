@@ -42,12 +42,7 @@ def evaluation(run_path, model_module, model_function):
     # CHANGE SECTION
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function
     # model = model_module.load_from_checkpoint(model_dir)
-    if isinstance(config['num_multi_cluster'], list) or isinstance(config['num_multi_cluster'], tuple):
-        num_clusters = config['num_multi_cluster']
-    else:  
-        num_clusters = [config['num_multi_cluster']]  
-
-    model = model_function(model_module,config,datamodule,channels,num_clusters) 
+    model = model_function(model_module,config,datamodule,channels) 
 
     # Obtain checkpoint for the model        
     model_dir = 'Models'

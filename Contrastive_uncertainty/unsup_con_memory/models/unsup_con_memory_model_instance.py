@@ -1,5 +1,11 @@
 # Function which instantiates cross entropy model
-def ModelInstance(model_module,config,datamodule,channels,num_clusters):
+def ModelInstance(model_module,config,datamodule,channels):
+    # Hack to be able to use the num clusters with wandb sweep since wandb sweep cannot use a list of lists I believe
+    if isinstance(config['num_cluster'], list) or isinstance(config['num_cluster'], tuple):
+        num_clusters = config['num_cluster']
+    else:  
+        num_clusters = [config['num_cluster']]
+
     model = model_module(emb_dim = config['emb_dim'],num_negatives = config['num_negatives'],
         memory_momentum = config['memory_momentum'],num_cluster=num_clusters, 
         softmax_temperature = config['softmax_temperature'],
