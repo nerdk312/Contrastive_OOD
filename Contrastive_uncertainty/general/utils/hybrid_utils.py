@@ -185,4 +185,5 @@ def previous_model_directory(model_dir, run_path):
         specific_model = f'Model:{max_val}.ckpt'
     
     model_dir = os.path.join(model_dir,specific_model)
+    #import ipdb;ipdb.set_trace()
     return model_dir

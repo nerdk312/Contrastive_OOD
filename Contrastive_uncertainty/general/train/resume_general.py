@@ -34,7 +34,7 @@ def resume(run_path, trainer_dict,model_module,model_function):
         os.mkdir(folder)
     # Run setup
     pl.seed_everything(config['seed'])
-
+    #import ipdb;ipdb.set_trace()
     # Callback information
     datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
     OOD_datamodule = Datamodule_selection(dataset_dict,config['OOD_dataset'],config)

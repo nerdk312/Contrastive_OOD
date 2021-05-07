@@ -1,4 +1,3 @@
-
 # Function which instantiates cross entropy model
 def ModelInstance(model_module,config,datamodule,channels):
     model = model_module(emb_dim = config['emb_dim'], 

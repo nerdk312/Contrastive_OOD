@@ -99,10 +99,10 @@ class PCLModule(base_module):
             dim_mlp = self.encoder_q.fc.weight.shape[1]
             self.encoder_q.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_q.fc)
             self.encoder_k.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_k.fc)
-
+        '''
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
-
+        '''
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
             param_k.data.copy_(param_q.data)  # initialize
             # Double checking if the training of the model was done correctly

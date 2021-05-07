@@ -12,12 +12,14 @@ from pytorch_lightning.loggers import WandbLogger
 import re
 
 
-from Contrastive_uncertainty.cross_entropy.datamodules.datamodule_dict import dataset_dict
-from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import CrossEntropyModule
-from Contrastive_uncertainty.cross_entropy.run.cross_entropy_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
-from Contrastive_uncertainty.cross_entropy.utils.hybrid_utils import previous_model_directory
+from Contrastive_uncertainty.general_clustering.run.general_clustering_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.general_clustering.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.general_clustering.utils.hybrid_utils import previous_model_directory
 
-def resume(run_path, trainer_dict):
+
+
+
+def resume(run_path, trainer_dict,model_module,model_function):
     api = wandb.Api()
     previous_run = api.run(path=run_path)
     previous_config = previous_run.config
@@ -35,7 +37,7 @@ def resume(run_path, trainer_dict):
         os.mkdir(folder)
     # Run setup
     pl.seed_everything(config['seed'])
-
+    #import ipdb;ipdb.set_trace()
     # Callback information
     datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
     OOD_datamodule = Datamodule_selection(dataset_dict,config['OOD_dataset'],config)
@@ -43,26 +45,19 @@ def resume(run_path, trainer_dict):
 
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    '''
-    desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
-                        callback_dict['Mahalanobis'],callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']] 
-    '''
+    
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']]
 
-
     # CHANGE SECTION
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function
-    #model = SoftmaxToy.load_from_checkpoint(model_dir)
+    # model = model_module.load_from_checkpoint(model_dir)
+    if isinstance(config['num_multi_cluster'], list) or isinstance(config['num_multi_cluster'], tuple):
+        num_clusters = config['num_multi_cluster']
+    else:  
+        num_clusters = [config['num_multi_cluster']]  
 
-    model = CrossEntropyModule(emb_dim = config['emb_dim'], 
-        optimizer = config['optimizer'],learning_rate = config['learning_rate'],
-        momentum = config['momentum'], weight_decay = config['weight_decay'],
-        datamodule = datamodule,num_classes = config['num_classes'],
-        label_smoothing=config['label_smoothing'],num_channels = channels,
-        instance_encoder = config['instance_encoder'],
-        pretrained_network = config['pretrained_network'])    
-
+    model = model_function(model_module,config,datamodule,channels,num_clusters) 
 
     # Updating the config parameters with the parameters in the trainer dict
     for trainer_k, trainer_v in trainer_dict.items():
@@ -71,8 +66,8 @@ def resume(run_path, trainer_dict):
     
     # Obtain checkpoint for the model        
     model_dir = 'Models'
-    model_dir = previous_model_directory(model_dir, run_path)
-    config['pretrained_network'] = model_dir
+    model_dir = previous_model_directory(model_dir, run_path) # Used to preload the model
+
     wandb.config.update(config, allow_val_change=True) # Updates the config (particularly used to increase the number of epochs present)
     
 
