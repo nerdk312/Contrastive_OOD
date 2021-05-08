@@ -29,7 +29,7 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloa
 from scipy.spatial.distance import cdist # Required for TwoMoons visualisation involving pairwise distances
 
 class Visualisation(pl.Callback): # General class for visualisation
-    def __init__(self, datamodule, ood_datamodule,num_classes,quick_callback):
+    def __init__(self, datamodule, ood_datamodule,quick_callback):
         self.datamodule = datamodule
         self.ood_datamodule = ood_datamodule
         self.ood_datamodule.test_transforms= self.datamodule.test_transforms   # Make it so that the OOD datamodule has the same transform as the true module
@@ -37,22 +37,28 @@ class Visualisation(pl.Callback): # General class for visualisation
         self.datamodule.setup()
         self.ood_datamodule.setup()
         # setup data
-        self.num_classes = num_classes
         self.quick_callback = quick_callback
 
     #def on_fit_start(self, trainer, pl_module):
     def on_test_epoch_end(self, trainer, pl_module):
+        # Obtain representations for the normal case as well as the concatenated representations
+        
         representations, labels = self.obtain_representations(pl_module)
-        #concat_representations, concat_labels, class_concat_labels = self.OOD_representations() # obtain representations and labels which have both data
-
+        
+        # PCA visalisation
+        self.pca_visualisation(representations, labels, 'inliers')
+        # T-SNE visualisation
+        self.tsne_visualisation(representations, labels, 'inliers')
         # +1 in num classes to represent outlier data, *2 represents class specific outliers
-        self.pca_visualisation(representations, labels, self.num_classes, 'inliers')
         #self.pca_visualisation(concat_representations, concat_labels,config['num_classes']+1,'general')
-        #self.pca_visualisation(concat_representations, class_concat_labels,2* config['num_classes'],'class')
 
-        self.tsne_visualisation(representations, labels, self.num_classes, 'inliers')
+        # Obtain the concatenated representations for the case where the different values can be used for the task
+        if not self.quick_callback:
+            concat_representations, concat_labels, class_concat_labels = self.OOD_representations(pl_module) # obtain representations and labels which have both data
+            self.pca_visualisation(concat_representations, class_concat_labels, 'class')
+            self.tsne_visualisation(concat_representations, class_concat_labels, 'class')
 
-    def obtain_representations(self, pl_module): #  separate from init so that two moons does not make representations automatically using dataloader rather it uses X_vis
+    def obtain_representations(self, pl_module):  # separate from init so that two moons does not make representations automatically using dataloader rather it uses X_vis
         # self.data = self.datamodule.test_dataloader() # instantiate val dataloader
 
         self.data = self.datamodule.test_dataset
@@ -66,7 +72,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         self.representations, self.labels = self.compute_representations(pl_module, loader)
         return self.representations, self.labels
 
-    def OOD_representations(self):
+    def OOD_representations(self,pl_module):
         true_dataset = self.datamodule.test_dataset  #  Test set of the true datamodule
 
         #ood_datamodule.test_dataset.targets  =  -(ood_datamodule.test_dataset.targets +1)# represent the OOD class with negative values
@@ -74,8 +80,8 @@ class Visualisation(pl.Callback): # General class for visualisation
         datasets = [true_dataset, ood_dataset]
 
         # General level OOD labels and class specific OOD labels
-        concat_labels = torch.cat([true_dataset.targets, torch.zeros_like(ood_datamodule.test_dataset.targets).fill_(-1)]) # update the targets to be values of -1 to represent the anomaly that they are anomalous values
-        class_concat_labels = torch.cat([true_dataset.targets, -(ood_datamodule.test_dataset.targets +1)]) # Increase values by 1 to get values 1 to 10 and then change negative to prevent overlapping with the real class labels
+        concat_labels = torch.cat([true_dataset.targets, torch.zeros_like(self.ood_datamodule.test_dataset.targets).fill_(-1)]) # update the targets to be values of -1 to represent the anomaly that they are anomalous values
+        class_concat_labels = torch.cat([true_dataset.targets, -(self.ood_datamodule.test_dataset.targets +1)]) # Increase values by 1 to get values 1 to 10 and then change negative to prevent overlapping with the real class labels
 
         concat_datasets = torch.utils.data.ConcatDataset(datasets)
 
@@ -84,13 +90,14 @@ class Visualisation(pl.Callback): # General class for visualisation
             )
         loader = quickloading(self.quick_callback, dataloader)
 
-        self.concat_representations = self.compute_representations(pl_module, loader)
+        self.concat_representations, _ = self.compute_representations(pl_module, loader)
         return self.concat_representations, concat_labels, class_concat_labels
 
     @torch.no_grad()
     def compute_representations(self, pl_module, loader):
         features = []
         collated_labels = []
+        #import ipdb; ipdb.set_trace()
         for i, (images, labels,indices) in enumerate(tqdm(loader)): # Obtain data and labels from dataloader
             assert len(loader)>0, 'loader is empty'
             if isinstance(images, tuple) or isinstance(images, list):
@@ -105,13 +112,12 @@ class Visualisation(pl.Callback): # General class for visualisation
         return features.cpu(), collated_labels.cpu()
 
 
-    def pca_visualisation(self, representations, labels, num_classes, name):
+    def pca_visualisation(self, representations, labels, name):
         pca = PCA(n_components=3)
         pca_result = pca.fit_transform(representations)
         pca_one = pca_result[:,0]
         pca_two = pca_result[:,1]
         pca_three = pca_result[:,2]
-        #import ipdb; ipdb.set_trace()
         
         plt.figure(figsize=(16,10))
         sns.scatterplot(
@@ -151,7 +157,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         wandb.log({wandb_3D_pca: wandb.Image(pca_3D_filename)})
         plt.close()
 
-    def tsne_visualisation(self, representations, labels, num_classes, name):
+    def tsne_visualisation(self, representations, labels, name):
         tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
         tsne_results = tsne.fit_transform(representations)
         tsne_one = tsne_results[:,0]

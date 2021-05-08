@@ -24,7 +24,7 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
                 
                 'Euclidean': Euclidean_OOD(Datamodule,OOD_Datamodule,num_inference_clusters=inference_clusters,quick_callback=quick_callback),'MMD': MMD_distance(Datamodule, quick_callback=quick_callback),
                 
-                'Visualisation': Visualisation(Datamodule, OOD_Datamodule,num_classes,quick_callback=quick_callback),'Uniformity': Uniformity(2, Datamodule, quick_callback=quick_callback),
+                'Visualisation': Visualisation(Datamodule, OOD_Datamodule,quick_callback=quick_callback),'Uniformity': Uniformity(2, Datamodule, quick_callback=quick_callback),
                 
                 'Centroid': Centroid_distance(Datamodule, quick_callback=quick_callback), 'SupCon': SupConLoss(Datamodule, quick_callback=quick_callback)}
     
