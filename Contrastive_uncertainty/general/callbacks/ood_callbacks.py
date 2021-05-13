@@ -487,7 +487,7 @@ class Mahalanobis_OOD(pl.Callback):
                 * (
                     np.linalg.pinv(np.cov(x.T, bias=True)).dot(
                         (ftest - np.mean(x, axis=0, keepdims=True)).T
-                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot preduct by the distance of the data point from the mean (distance calculation)
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
                 ).T,
                 axis=-1,
             )

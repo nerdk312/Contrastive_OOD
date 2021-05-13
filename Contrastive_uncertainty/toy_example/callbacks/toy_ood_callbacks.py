@@ -212,7 +212,8 @@ class Mahalanobis_OOD(pl.Callback):
             np.copy(features_ood),
             np.copy(labels_train),
         )
-
+        self.centre_distances(features_train,labels_train)
+        self.get_ood_euclidean_scores_multi_cluster(features_train,features_ood,labels_train)
         return fpr95,auroc,aupr 
 
     def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
@@ -280,6 +281,68 @@ class Mahalanobis_OOD(pl.Callback):
 
         return din, dood, indices_din, indices_dood
     
+    # Used to calculate the distances between vectors
+    def centre_distances(self,ftrain,ypred):
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)]
+        
+        avg_vector = np.mean(ftrain, axis=0)
+        avg_vector = np.reshape(avg_vector, (1, -1))
+        zero_vector = np.zeros_like(avg_vector)
+        # concatenate the avg vector as well as the zero vector
+        test_vector = np.concatenate((avg_vector,zero_vector),axis=0) 
+
+        din = [
+            np.sum(
+                (test_vector - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (test_vector - np.mean(x, axis=0, keepdims=True)).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot preduct by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid - done for all the different classes
+        ]
+        # a list is given where each entry in the list represents the scores of a particular class
+        # In each entry of the list, there are n values, which correspond to the n vectors which I am testing
+        
+        # Get the first scalar in each class for the case of avg vector difference
+        avg_vector_diff = [din[i][0] for i in range(len(din))]
+        labels = [i for i in np.unique(ypred)] 
+        data =[[label, val] for (label ,val) in zip(labels,avg_vector_diff)] # iterates through the different labels as well as the different values for the labels
+        table = wandb.Table(data=data, columns = ["label", "value"])
+        wandb.log({"Mahalanobis Centroid Distances Average vector" : wandb.plot.bar(table, "label", "value",
+                               title="Mahalanobis Centroid Distances Average vector")})
+        
+
+        zero_vector_diff = [din[i][1] for i in range(len(din))] 
+        data_zero =[[label, val_zero] for (label ,val_zero) in zip(labels,zero_vector_diff)] # iterates through the different labels as well as the different values for the labels
+        table = wandb.Table(data=data_zero, columns = ["label", "value"])
+        wandb.log({"Mahalanobis Centroid Distances Zero vector" : wandb.plot.bar(table, "label", "value",
+                               title="Mahalanobis Centroid Distances Zero vector")})
+
+
+    # Used for making a confusion matrix based on the squared distance between point
+    def get_ood_euclidean_scores_multi_cluster(self,ftrain, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        
+        dood = [
+            np.sum(
+                np.square(food - np.mean(x, axis=0, keepdims=True)),
+                axis=-1,
+            )
+            for x in xc # Nawid- this calculates the score for all the OOD examples 
+        ]
+        # Calculate the indices corresponding to the values
+        
+        indices_dood = np.argmin(dood, axis=0)
+        dood = np.min(dood, axis=0) # Nawid - calculate the minimum distance
+        
+        return dood, indices_dood
+
+
+
     # Changes OOD scores to confidence scores 
     def log_confidence_scores(self,Dtest,DOOD):
         '''
