@@ -35,39 +35,13 @@ class base_module(pl.LightningModule):
         self.auxillary_data = None #self.aux_data() #self.on_train_epoch_start(self.datamodule)
         
         
-    def training_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
-        for k,v in metrics.items():
-                if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
-        loss = metrics['Loss']
-        return loss
-        
-    def validation_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
-        #import ipdb; ipdb.set_trace()
-        for k,v in metrics.items():
-                if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
-        
-    def test_step(self, batch, batch_idx):
-        metrics = self.loss_function(batch, self.auxillary_data)
-        for k,v in metrics.items():
-                if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
+    
 
-    def loss_function(self, batch, auxillary_data=None):
-        raise NotImplementedError
-
-    def configure_optimizers(self):
-        if self.hparams.optimizer =='sgd':
-            optimizer = torch.optim.SGD(self.parameters(), self.hparams.learning_rate,
-                                        momentum=self.hparams.momentum,
-                                        weight_decay=self.hparams.weight_decay)
-        elif self.hparams.optimizer =='adam':
-            optimizer = torch.optim.Adam(self.parameters(), self.hparams.learning_rate,
-                                        weight_decay=self.hparams.weight_decay)
-        return optimizer
+    
 
 
-class PCLModule(base_module):
+
+class MultiPCLModule(base_module):
     def __init__(self,
         datamodule,
         optimizer:str = 'sgd',
@@ -86,11 +60,13 @@ class PCLModule(base_module):
         pretrained_network:str = None):
 
 
-        super().__init__(datamodule, optimizer, learning_rate,
-                         momentum, weight_decay)
+        super().__init__()
         
         # Nawid - required to use for the fine tuning
         self.save_hyperparameters()
+
+
+        self.datamodule = datamodule # Used for the purpose of obtaining data loader for the case of epoch starting
 
         # create the encoders
         # num_classes is the output fc dimension
@@ -99,6 +75,7 @@ class PCLModule(base_module):
             dim_mlp = self.encoder_q.fc.weight.shape[1]
             self.encoder_q.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_q.fc)
             self.encoder_k.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_k.fc)
+        
         '''
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
@@ -123,7 +100,7 @@ class PCLModule(base_module):
     @property
     def name(self):
         ''' return name of model'''
-        return 'PCL'
+        return 'PCLMulti'
 
     def init_encoders(self):
         """
@@ -172,7 +149,6 @@ class PCLModule(base_module):
 
         return int(new_dataset_size)
 
-    
     def forward(self, im_q, im_k=None, is_eval=False, cluster_result=None, index=None):
         """
         Input:
@@ -223,43 +199,52 @@ class PCLModule(base_module):
         self._dequeue_and_enqueue(k) # Nawid - queue values
         #import ipdb; ipdb.set_trace()
         # prototypical contrast - Nawid - performs the protoNCE
-        if cluster_result is not None:
-            proto_labels = []
-            proto_logits = []
-            for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
-                #import ipdb; ipdb.set_trace()
-                # get positive prototypes
-                pos_proto_id = im2cluster[index] # Nawid - get the true cluster assignment for each of the different samples
-                pos_prototypes = prototypes[pos_proto_id] # Nawid- prototypes is a kxd array of k , d dimensional clusters. Therefore this chooses the true clusters for the positive samples. Therefore this is a [B x d] matrix
-                
-                # sample negative prototypes
-                
-                all_proto_id = [i for i in range(im2cluster.max())] # Nawid - obtains all the cluster ids which were present
-                #print('All PROTO ID NUMBER',len(all_proto_id))
-                neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist()) # Nawid - all the negative clusters are the set of all prototypes minus the set of all the negative prototypes
-                neg_proto_id = sample(neg_proto_id, self.hparams.num_cluster_negatives) #sample r negative prototypes
-                #neg_proto_id = neg_proto_id.to(self.device)
-                neg_prototypes = prototypes[neg_proto_id] # Nawid - sample negative prototypes
 
-                proto_selected = torch.cat([pos_prototypes, neg_prototypes],dim=0) # Nawid - concatenate positive and negative prototypes, so this is  a [bxd] concatenated with [rxd] to make a [b + r xd]
 
-                # compute prototypical logits
-                logits_proto = torch.mm(q,proto_selected.t().to(self.device)) # Nawid - dot product between query and the prototypes (where the selected prototypes are transposed). The matrix multiplication is  [b x d] . [dx b +r] to make a [b x b +r]
+        # Using the protolabels for the task
+        
+        proto_labels = []
+        proto_logits = []
+        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+            #import ipdb; ipdb.set_trace()
+            # get positive prototypes
+            pos_proto_id = im2cluster[index] # Nawid - get the true cluster assignment for each of the different samples
+            pos_prototypes = prototypes[pos_proto_id] # Nawid- prototypes is a kxd array of k , d dimensional clusters. Therefore this chooses the true clusters for the positive samples. Therefore this is a [B x d] matrix
+            
+            # sample negative prototypes
+            
+            all_proto_id = [i for i in range(im2cluster.max())] # Nawid - obtains all the cluster ids which were present
+            #print('All PROTO ID NUMBER',len(all_proto_id))
+            neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist()) # Nawid - all the negative clusters are the set of all prototypes minus the set of all the negative prototypes
+            neg_proto_id = sample(neg_proto_id, self.hparams.num_cluster_negatives) #sample r negative prototypes
+            #neg_proto_id = neg_proto_id.to(self.device)
+            neg_prototypes = prototypes[neg_proto_id] # Nawid - sample negative prototypes
+            proto_selected = torch.cat([pos_prototypes, neg_prototypes],dim=0) # Nawid - concatenate positive and negative prototypes, so this is  a [bxd] concatenated with [rxd] to make a [b + r xd]
+            # compute prototypical logits
+            logits_proto = torch.mm(q,proto_selected.t().to(self.device)) # Nawid - dot product between query and the prototypes (where the selected prototypes are transposed). The matrix multiplication is  [b x d] . [dx b +r] to make a [b x b +r]
+            # targets for prototype assignment
+            labels_proto = torch.linspace(0, q.size(0)-1, steps=q.size(0),device = self.device).long()# Nawid - targets for the prototypes, this is a 1D vector with values from 0 to q-1 which represents that the value which shows that the diagonal should be the largest value
+            # scaling temperatures for the selected prototypes
+            #import ipdb; ipdb.set_trace()
+            temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
+            logits_proto /= temp_proto
+            proto_labels.append(labels_proto)
+            proto_logits.append(logits_proto)
+        return logits, labels, proto_logits, proto_labels
+        
 
-                # targets for prototype assignment
-                labels_proto = torch.linspace(0, q.size(0)-1, steps=q.size(0),device = self.device).long()# Nawid - targets for the prototypes, this is a 1D vector with values from 0 to q-1 which represents that the value which shows that the diagonal should be the largest value
-
-                # scaling temperatures for the selected prototypes
-                #import ipdb; ipdb.set_trace()
-                temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
-                logits_proto /= temp_proto
-
-                proto_labels.append(labels_proto)
-                proto_logits.append(logits_proto)
-            return logits, labels, proto_logits, proto_labels
-        else:
-            return logits, labels, None, None
-
+    
+    def callback_vector(self,x): # vector for the representation before using separate branches for the task
+        """
+        Input:
+            x: a batch of images for classification
+        Output:
+            z: latent vector
+        """
+        z = self.encoder_k(x)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+    
     @torch.no_grad()
     def compute_features(self,dataloader):
         print('Computing features ...')
@@ -273,17 +258,6 @@ class PCLModule(base_module):
             feat = nn.functional.normalize(feat, dim=1) # Obtain 12 normalised features for clustering
             features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
-    
-    def callback_vector(self,x): # vector for the representation before using separate branches for the task
-        """
-        Input:
-            x: a batch of images for classification
-        Output:
-            z: latent vector
-        """
-        z = self.encoder_k(x)
-        z = nn.functional.normalize(z, dim=1)
-        return z
     
 
     def run_kmeans(self,x):
@@ -354,7 +328,7 @@ class PCLModule(base_module):
             results['im2cluster'].append(im2cluster) # Nawid - list of the what image each particular cluster is present in
 
         return results
-
+    # Obtains the features as well as performing K-means
     def cluster_data(self,dataloader):
         features = self.compute_features(dataloader)
         # placeholder for clustering result
@@ -364,7 +338,7 @@ class PCLModule(base_module):
             cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
             cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
         
-         #if using a single gpuif args.gpu == 0:
+        #if using a single gpuif args.gpu == 0:
         #import ipdb; ipdb.set_trace() 
         features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
         features = features.numpy()
@@ -406,8 +380,8 @@ class PCLModule(base_module):
     def on_train_epoch_start(self):
         dataloader = self.datamodule.val_dataloader()
         self.auxillary_data = self.aux_data(dataloader)
-        #return self.auxillary_data
-
+    
+    # Need to change code to take into account the on_fit start for the case of both different situations
     def on_fit_start(self):
         if self.trainer.testing:
             dataloader = self.datamodule.test_dataloader()
@@ -415,22 +389,12 @@ class PCLModule(base_module):
             dataloader = self.datamodule.val_dataloader()
         
         self.auxillary_data = self.aux_data(dataloader)
-        
-    '''    
-    def on_validation_epoch_start(self):
-        # If first epoch, perform clustering, else pass
-        if self.current_epoch ==0:
-            dataloader = self.datamodule.val_dataloader()
-            self.auxillary_data = self.aux_data(dataloader)
-        else: 
-            pass
-        #return self.auxillary_data
-    '''
+
+    # Performs the clustering of the data  
     def aux_data(self,dataloader):
-        #import ipdb;ipdb.set_trace()
+        
         cluster_result = self.cluster_data(dataloader)
         return cluster_result
-    
             
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):
@@ -438,3 +402,32 @@ class PCLModule(base_module):
         checkpoint = torch.load(pretrained_network)
         self.encoder_q.load_state_dict(checkpoint['target_encoder_state_dict'])
         self.encoder_k.load_state_dict(checkpoint['target_encoder_state_dict'])
+    
+    def configure_optimizers(self):
+        if self.hparams.optimizer =='sgd':
+            optimizer = torch.optim.SGD(self.parameters(), self.hparams.learning_rate,
+                                        momentum=self.hparams.momentum,
+                                        weight_decay=self.hparams.weight_decay)
+        elif self.hparams.optimizer =='adam':
+            optimizer = torch.optim.Adam(self.parameters(), self.hparams.learning_rate,
+                                        weight_decay=self.hparams.weight_decay)
+        return optimizer
+
+
+    def training_step(self, batch, batch_idx):
+        metrics = self.loss_function(batch, self.auxillary_data)
+        for k,v in metrics.items():
+                if v is not None: self.log('Training ' + k, v.item(),on_epoch=True)
+        loss = metrics['Loss']
+        return loss
+        
+    def validation_step(self, batch, batch_idx):
+        metrics = self.loss_function(batch, self.auxillary_data)
+        #import ipdb; ipdb.set_trace()
+        for k,v in metrics.items():
+                if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
+        
+    def test_step(self, batch, batch_idx):
+        metrics = self.loss_function(batch, self.auxillary_data)
+        for k,v in metrics.items():
+                if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)

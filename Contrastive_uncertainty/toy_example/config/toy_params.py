@@ -21,7 +21,7 @@ epochs = 4,
 bsz = 128,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
-model = 'Softmax',
+model = 'MultiPCL',
 
 # Trainer configurations
 fast_run = False,
