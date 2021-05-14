@@ -77,10 +77,6 @@ class MultiPCLBranchToy(Toy):
         self.encoder_q.final_fc = nn.Sequential(fc_layer_dict) 
         self.encoder_k.final_fc = nn.Sequential(fc_layer_dict) 
         
-        import ipdb; ipdb.set_trace()
-
-
-    
     '''
     fc_layer_dict['Proto'] = nn.Sequential(nn.Conv2d(1,20,5),nn.ReLU())
     self.encoder_q.final_fc = nn.Sequential(fc_layer_dict)
@@ -136,7 +132,7 @@ class MultiPCLBranchToy(Toy):
         self.queue_ptr[0] = ptr
 
     
-    def forward(self, im_q, im_k=None, is_eval=False, cluster_result=None, index=None):
+    def forward(self, im_q, im_k=None, cluster_result=None, index=None):
         """
         Input:
             im_q: a batch of query images
@@ -147,13 +143,6 @@ class MultiPCLBranchToy(Toy):
         Output:
             logits, targets, proto_logits, proto_targets
         """
-
-        if is_eval: # Nawid - obtain key outputs
-            k = self.encoder_k(im_q)
-            instance_k = self.encoder_k.final_fc[0](k) # Pass the representaiton through the instance encoder
-            instance_k = nn.functional.normalize(instance_k, dim=1) # Nawid - return normalised momentum embedding
-            return k
-
         # compute key features
         with torch.no_grad():  # no gradient to keys
             self._momentum_update_key_encoder()  # update the key encoder
@@ -161,8 +150,6 @@ class MultiPCLBranchToy(Toy):
             k = self.encoder_k(im_k)  # keys: NxC
             instance_k = self.encoder_k.final_fc[0](k)  # Pass the representaiton through the instance encoder
             instance_k = nn.functional.normalize(instance_k, dim=1) # Nawid - normalised key embeddings
-
-            
 
         # compute query features
         q = self.encoder_q(im_q)  # queries: NxC
@@ -209,27 +196,39 @@ class MultiPCLBranchToy(Toy):
             proto_logits.append(logits_proto)
 
         return logits, labels, proto_logits, proto_labels
-
+    
+    # Representation before passing through the final FC layers
+    def feature_vector(self, data):
+        z = self.encoder_k(data)
+        return z
+    
+    '''
     def feature_vector(self, data):
         z = self.encoder_q(data)
         return z
+    '''
 
     @torch.no_grad()
     def compute_features(self, dataloader):
         print('Computing features ...')
         #import ipdb;ipdb.set_trace()
-        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
+        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim,len(self.hparams.num_clusters), device = self.device)
         #import ipdb; ipdb.set_trace()
         for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
                 images = images.to(self.device)
-
-            feat = self(images,is_eval=True)   # Nawid - obtain momentum features
-            features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
+            # Obtain the general feature vector
+            feat = self.feature_vector(images)   # Nawid - obtain momentum features without going through the individual branches
+            # Iterate through the specific branches of the network
+            for n, clusters in enumerate(self.hparams.num_cluster):
+                proto_feat = self.encoder_k.final_fc_layer[n+1](feat)  # n+1 as the 0th item is the instance branch
+                proto_feat = nn.functional.normalize(proto_feat, dim=1) # normalise the representation
+                features[indices, n] = proto_feat 
+            #features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
 
-
+    # x in this case contains all the features of the data for the specific task
     def run_kmeans(self,x):
         """
         Args:
@@ -241,7 +240,8 @@ class MultiPCLBranchToy(Toy):
 
         for seed, num_cluster in enumerate(self.hparams.num_cluster): # Nawid - k-means clustering is performed several times for different values of k (according to the paper)
             # intialize faiss clustering parameters
-            d = x.shape[1] # Nawid - dimensionality of the vector
+            data = x[:,:,seed] # Get the specific data for the specifc branch
+            d = data.shape[1] # Nawid - dimensionality of the vector
             k = int(num_cluster) # Nawid - num cluster
             clus = faiss.Clustering(d, k) # Nawid -cluster object
             clus.verbose = True # Nawid - getter for the verbose property of clustering
@@ -251,15 +251,16 @@ class MultiPCLBranchToy(Toy):
             clus.max_points_per_centroid = 1000
             clus.min_points_per_centroid = 10
 
+
             res = faiss.StandardGpuResources()
             cfg = faiss.GpuIndexFlatConfig()
             cfg.useFloat16 = False
             cfg.device = 0 # gpu device number zero
             index = faiss.GpuIndexFlatL2(res, d, cfg)
 
-            clus.train(x, index)
+            clus.train(data, index)
 
-            D, I = index.search(x, 1) # for each sample, find cluster distance and assignments
+            D, I = index.search(data, 1) # for each sample, find cluster distance and assignments
             im2cluster = [int(n[0]) for n in I] # Nawid - places cluster assignments for each sample  (image sample is assigned to a cluster)
 
             # get cluster centroids
