@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from random import sample
 from tqdm import tqdm
 import faiss
+import collections
 
 from Contrastive_uncertainty.toy_example.models.toy_encoder import Backbone
 from Contrastive_uncertainty.toy_example.models.toy_module import Toy
@@ -13,7 +14,7 @@ from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mea
 
 
 
-class MultiPCLToy(Toy):
+class MultiPCLBranchToy(Toy):
     def __init__(self,
         datamodule,
         optimizer:str = 'sgd',
@@ -42,9 +43,8 @@ class MultiPCLToy(Toy):
         
         self.save_hyperparameters()
 
-        
+        self.hparams.emb_dim
         self.encoder_q, self.encoder_k = self.init_encoders()
-        #import ipdb; ipdb.set_trace()
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
             param_k.data.copy_(param_q.data)  # initialize
             param_k.requires_grad = False  # not update by gradient
@@ -55,8 +55,36 @@ class MultiPCLToy(Toy):
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
+        '''
+        self.encoder_q.fc_layer_dict = collections.OrderedDict([])
+        self.encoder_k.fc_layer_dict = collections.OrderedDict([])
+        self.encoder_q.fc_layer_dict['Instance'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+        self.encoder_k.fc_layer_dict['Instance'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+        
+        for cluster_num in self.hparams.num_cluster:
+            self.encoder_q.fc_layer_dict[f'Proto_{cluster_num}'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+            self.encoder_k.fc_layer_dict[f'Proto_{cluster_num}'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+        
 
+        
+        '''
+        fc_layer_dict = collections.OrderedDict([])
+        fc_layer_dict['Instance'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+        
+        for cluster_num in self.hparams.num_cluster:
+            fc_layer_dict[f'Proto_{cluster_num}'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+        
+        self.encoder_q.final_fc = nn.Sequential(fc_layer_dict) 
+        self.encoder_k.final_fc = nn.Sequential(fc_layer_dict) 
+        
+        import ipdb; ipdb.set_trace()
+
+
+    
     '''
+    fc_layer_dict['Proto'] = nn.Sequential(nn.Conv2d(1,20,5),nn.ReLU())
+    self.encoder_q.final_fc = nn.Sequential(fc_layer_dict)
+
     fc_layer_dict = collections.OrderedDict([])
     fc_layer_dict['Instance'] = nn.Sequential(nn.Conv2d(1,20,5),nn.ReLU())
     fc_layer_dict['Proto'] = nn.Sequential(nn.Conv2d(1,20,5),nn.ReLU())
@@ -73,7 +101,7 @@ class MultiPCLToy(Toy):
     @property
     def name(self):
         ''' return name of model'''
-        return 'MultiPCL'
+        return 'MultiPCLBranch'
 
     def init_encoders(self):
         """
@@ -122,29 +150,31 @@ class MultiPCLToy(Toy):
 
         if is_eval: # Nawid - obtain key outputs
             k = self.encoder_k(im_q)
-            k = nn.functional.normalize(k, dim=1) # Nawid - return normalised momentum embedding
+            instance_k = self.encoder_k.final_fc[0](k) # Pass the representaiton through the instance encoder
+            instance_k = nn.functional.normalize(instance_k, dim=1) # Nawid - return normalised momentum embedding
             return k
 
         # compute key features
         with torch.no_grad():  # no gradient to keys
             self._momentum_update_key_encoder()  # update the key encoder
 
-
             k = self.encoder_k(im_k)  # keys: NxC
-            k = nn.functional.normalize(k, dim=1) # Nawid - normalised key embeddings
+            instance_k = self.encoder_k.final_fc[0](k)  # Pass the representaiton through the instance encoder
+            instance_k = nn.functional.normalize(instance_k, dim=1) # Nawid - normalised key embeddings
 
             
 
         # compute query features
         q = self.encoder_q(im_q)  # queries: NxC
-        q = nn.functional.normalize(q, dim=1) # Nawid - normalised query embeddings
+        instance_q = self.encoder_q.final_fc[0](q)
+        instance_q = nn.functional.normalize(instance_q, dim=1) # Nawid - normalised query embeddings
 
         # compute logits
         # Einstein sum is more intuitive
         # positive logits: Nx1
-        l_pos = torch.einsum('nc,nc->n', [q, k]).unsqueeze(-1) #Nawid - positive logit between output of key and query
+        l_pos = torch.einsum('nc,nc->n', [instance_q, instance_k]).unsqueeze(-1) #Nawid - positive logit between output of key and query
         # negative logits: Nxr
-        l_neg = torch.einsum('nc,ck->nk', [q, self.queue.clone().detach()]) # Nawid - negative logits (dot product between key and negative samples in a query bank)
+        l_neg = torch.einsum('nc,ck->nk', [instance_q, self.queue.clone().detach()]) # Nawid - negative logits (dot product between key and negative samples in a query bank)
 
         # logits: Nx(1+r)
         logits = torch.cat([l_pos, l_neg], dim=1) # Nawid - total logits - instance based loss to keep property of local smoothness
@@ -153,18 +183,20 @@ class MultiPCLToy(Toy):
         logits /= self.hparams.softmax_temperature
 
         # labels: positive key indicators
-        labels = torch.zeros(logits.shape[0], dtype=torch.long,device = self.device)
+        labels = torch.zeros(logits.shape[0], dtype=torch.long, device = self.device)
         #labels = labels.type_as(logits)
 
         # dequeue and enqueue
-        self._dequeue_and_enqueue(k) # Nawid - queue values
+        self._dequeue_and_enqueue(instance_k) # Nawid - queue values
          
         proto_labels = []
         proto_logits = []
         for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)   
             # compute similarity between query and the prototypes  (should be fine)
+            proto_q = self.encoder_q.final_fc[n+1](q)_ 
             all_proto_id = [i for i in range(im2cluster.max()+1)] # Need to increase by 1 in order to make the code work for the case
-            logits_proto = torch.mm(q,prototypes.t().to(self.device)) # [bxd] by [dxprotosize] = [bx protosize]
+            
+            logits_proto = torch.mm(proto_q, prototypes.t().to(self.device)) # [bxd] by [dxprotosize] = [bx protosize]
             # Need to get entries which are positive
             labels_proto = im2cluster[index]
             

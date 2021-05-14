@@ -56,6 +56,7 @@ class MultiPCLModule(base_module):
             self.encoder_q.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_q.fc)
             self.encoder_k.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_k.fc)
         
+        
         '''
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
@@ -150,7 +151,6 @@ class MultiPCLModule(base_module):
         with torch.no_grad():  # no gradient to keys
             self._momentum_update_key_encoder()  # update the key encoder
 
-
             k = self.encoder_k(im_k)  # keys: NxC
             k = nn.functional.normalize(k, dim=1) # Nawid - normalised key embeddings
 
@@ -177,39 +177,26 @@ class MultiPCLModule(base_module):
 
         # dequeue and enqueue
         self._dequeue_and_enqueue(k) # Nawid - queue values
-        #import ipdb; ipdb.set_trace()
-        # prototypical contrast - Nawid - performs the protoNCE
-
-
-        # Using the protolabels for the task
-        
+         
         proto_labels = []
         proto_logits = []
-        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)
+        for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)   
+            # compute similarity between query and the prototypes  (should be fine)
             #import ipdb; ipdb.set_trace()
-            # get positive prototypes
-            pos_proto_id = im2cluster[index] # Nawid - get the true cluster assignment for each of the different samples
-            pos_prototypes = prototypes[pos_proto_id] # Nawid- prototypes is a kxd array of k , d dimensional clusters. Therefore this chooses the true clusters for the positive samples. Therefore this is a [B x d] matrix
+            all_proto_id = [i for i in range(im2cluster.max()+1)] # Need to increase by 1 in order to make the code work for the case
+            logits_proto = torch.mm(q,prototypes.t().to(self.device)) # [bxd] by [dxprotosize] = [bx protosize]
+            # Need to get entries which are positive
+            import ipdb; ipdb.set_trace()
+            labels_proto = im2cluster[index]
             
-            # sample negative prototypes
-            
-            all_proto_id = [i for i in range(im2cluster.max())] # Nawid - obtains all the cluster ids which were present
-            #print('All PROTO ID NUMBER',len(all_proto_id))
-            neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist()) # Nawid - all the negative clusters are the set of all prototypes minus the set of all the negative prototypes
-            neg_proto_id = sample(neg_proto_id, self.hparams.num_cluster_negatives) #sample r negative prototypes
-            #neg_proto_id = neg_proto_id.to(self.device)
-            neg_prototypes = prototypes[neg_proto_id] # Nawid - sample negative prototypes
-            proto_selected = torch.cat([pos_prototypes, neg_prototypes],dim=0) # Nawid - concatenate positive and negative prototypes, so this is  a [bxd] concatenated with [rxd] to make a [b + r xd]
-            # compute prototypical logits
-            logits_proto = torch.mm(q,proto_selected.t().to(self.device)) # Nawid - dot product between query and the prototypes (where the selected prototypes are transposed). The matrix multiplication is  [b x d] . [dx b +r] to make a [b x b +r]
-            # targets for prototype assignment
-            labels_proto = torch.linspace(0, q.size(0)-1, steps=q.size(0),device = self.device).long()# Nawid - targets for the prototypes, this is a 1D vector with values from 0 to q-1 which represents that the value which shows that the diagonal should be the largest value
-            # scaling temperatures for the selected prototypes
-            #import ipdb; ipdb.set_trace()
-            temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
+            # Density uses the id of all the indices in proto, therefore it could be beneficial to use prototypes of the data for the specific task
+            #temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
+            temp_proto = density[torch.LongTensor(all_proto_id)]
+
             logits_proto /= temp_proto
             proto_labels.append(labels_proto)
             proto_logits.append(logits_proto)
+
         return logits, labels, proto_logits, proto_labels
         
 
