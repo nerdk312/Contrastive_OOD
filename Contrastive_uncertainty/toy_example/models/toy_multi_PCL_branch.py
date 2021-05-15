@@ -65,8 +65,6 @@ class MultiPCLBranchToy(Toy):
             self.encoder_q.fc_layer_dict[f'Proto_{cluster_num}'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
             self.encoder_k.fc_layer_dict[f'Proto_{cluster_num}'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
         
-
-        
         '''
         fc_layer_dict = collections.OrderedDict([])
         fc_layer_dict['Instance'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
@@ -180,18 +178,23 @@ class MultiPCLBranchToy(Toy):
         proto_logits = []
         for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)   
             # compute similarity between query and the prototypes  (should be fine)
-            proto_q = self.encoder_q.final_fc[n+1](q)_ 
+            #import ipdb; ipdb.set_trace()
+            proto_q = self.encoder_q.final_fc[n+1](q) 
             all_proto_id = [i for i in range(im2cluster.max()+1)] # Need to increase by 1 in order to make the code work for the case
-            
+            print('all proto id',len(all_proto_id))
             logits_proto = torch.mm(proto_q, prototypes.t().to(self.device)) # [bxd] by [dxprotosize] = [bx protosize]
             # Need to get entries which are positive
             labels_proto = im2cluster[index]
+            print('labels proto',labels_proto)
             
             # Density uses the id of all the indices in proto, therefore it could be beneficial to use prototypes of the data for the specific task
             #temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
-            temp_proto = density[torch.LongTensor(all_proto_id)]
-
-            logits_proto /= temp_proto
+            #temp_proto = density[torch.LongTensor(all_proto_id)]
+            print('logits proto',logits_proto.shape)
+            #print('temp proto',temp_proto)
+            print('density',density)
+            logits_proto /= density
+            #logits_proto /= temp_proto
             proto_labels.append(labels_proto)
             proto_logits.append(logits_proto)
 
@@ -212,7 +215,7 @@ class MultiPCLBranchToy(Toy):
     def compute_features(self, dataloader):
         print('Computing features ...')
         #import ipdb;ipdb.set_trace()
-        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim,len(self.hparams.num_clusters), device = self.device)
+        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim,len(self.hparams.num_cluster), device = self.device)
         #import ipdb; ipdb.set_trace()
         for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
             if isinstance(images, tuple) or isinstance(images, list):
@@ -222,9 +225,10 @@ class MultiPCLBranchToy(Toy):
             feat = self.feature_vector(images)   # Nawid - obtain momentum features without going through the individual branches
             # Iterate through the specific branches of the network
             for n, clusters in enumerate(self.hparams.num_cluster):
-                proto_feat = self.encoder_k.final_fc_layer[n+1](feat)  # n+1 as the 0th item is the instance branch
+                proto_feat = self.encoder_k.final_fc[n+1](feat)  # n+1 as the 0th item is the instance branch
                 proto_feat = nn.functional.normalize(proto_feat, dim=1) # normalise the representation
-                features[indices, n] = proto_feat 
+                # Fill the batch dimension as well as well as the feature dimension
+                features[indices,:, n] = proto_feat 
             #features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
 
@@ -308,9 +312,14 @@ class MultiPCLBranchToy(Toy):
             cluster_result['im2cluster'].append(torch.zeros(len(dataloader.dataset),dtype=torch.long,device = self.device))
             cluster_result['centroids'].append(torch.zeros(int(num_cluster),self.hparams.emb_dim,device = self.device))
             cluster_result['density'].append(torch.zeros(int(num_cluster),device = self.device))
+            
+            
+            #features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
         
-         #if using a single gpuif args.gpu == 0:
-        features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
+        #if using a single gpuif args.gpu == 0:
+        
+
+        #features[torch.norm(features,dim=1)>1.5] /= 2 #account for the few samples that are computed twice
         features = features.numpy()
         # Nawid - compute K-means
         cluster_result = self.run_kmeans(features)  #run kmeans clustering on master node

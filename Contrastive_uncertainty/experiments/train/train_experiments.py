@@ -3,6 +3,7 @@ from Contrastive_uncertainty.cross_entropy.config.cross_entropy_params import cr
 from Contrastive_uncertainty.Contrastive.config.contrastive_params import contrastive_hparams
 from Contrastive_uncertainty.sup_con.config.sup_con_params import sup_con_hparams
 from Contrastive_uncertainty.PCL.config.pcl_params import pcl_hparams
+from Contrastive_uncertainty.multi_PCL.config.multi_pcl_params import multi_pcl_hparams
 from Contrastive_uncertainty.unsup_con_memory.config.unsup_con_memory_params import unsup_con_memory_hparams
 
 # Importing the different lightning modules for the baselines
@@ -10,21 +11,20 @@ from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import Cr
 from Contrastive_uncertainty.Contrastive.models.contrastive_module import ContrastiveModule
 from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
 from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
+from Contrastive_uncertainty.multi_PCL.models.multi_pcl_module import MultiPCLModule
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_module import UnSupConMemoryModule
-
-
 
 # Model instances for the different methods
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance import ModelInstance as CEModelInstance
 from Contrastive_uncertainty.Contrastive.models.contrastive_model_instance import ModelInstance as ContrastiveModelInstance
 from Contrastive_uncertainty.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
 from Contrastive_uncertainty.PCL.models.pcl_model_instance import ModelInstance as PCLModelInstance
+from Contrastive_uncertainty.multi_PCL.models.multi_pcl_model_instance import ModelInstance as MultiPCLModelInstance
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_model_instance import ModelInstance as UnSupConMemoryModelInstance
 
 # Import training methods 
 from Contrastive_uncertainty.general.train.train_general import train as general_training
 from Contrastive_uncertainty.general_clustering.train.train_general_clustering import train as general_clustering_training
-
 
 def train(base_dict):    
     acceptable_single_models = ['Baselines','CE','Moco','SupCon','PCL','UnSupConMemory']
@@ -42,6 +42,9 @@ def train(base_dict):
                     
                     'PCL':{'params':pcl_hparams,'model_module':PCLModule,
                     'model_instance':PCLModelInstance,'train':general_clustering_training},
+
+                    'MultiPCL':{'params':multi_pcl_hparams,'model_module':MultiPCLModule,
+                    'model_instance':MultiPCLModelInstance,'train':general_clustering_training},
 
                     'UnSupConMemory':{'params':unsup_con_memory_hparams,'model_module':UnSupConMemoryModule,
                     'model_instance':UnSupConMemoryModelInstance,'train':general_clustering_training}

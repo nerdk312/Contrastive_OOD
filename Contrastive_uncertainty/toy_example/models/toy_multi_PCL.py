@@ -55,21 +55,6 @@ class MultiPCLToy(Toy):
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
-
-    '''
-    fc_layer_dict = collections.OrderedDict([])
-    fc_layer_dict['Instance'] = nn.Sequential(nn.Conv2d(1,20,5),nn.ReLU())
-    fc_layer_dict['Proto'] = nn.Sequential(nn.Conv2d(1,20,5),nn.ReLU())
-    self.encoder_q.final_fc = nn.Sequential(fc_layer_dict) 
-    '''
-    '''
-    model = nn.Sequential(collections.OrderedDict([ 
-          ('conv1',nn.Sequential(nn.Conv2d(1,20,5),nn.ReLU())), 
-          ('relu1', nn.ReLU()), 
-          ('conv2', nn.Conv2d(20,64,5)), 
-          ('relu2', nn.ReLU()) 
-        ]))
-    '''
     @property
     def name(self):
         ''' return name of model'''
@@ -134,7 +119,6 @@ class MultiPCLToy(Toy):
             k = nn.functional.normalize(k, dim=1) # Nawid - normalised key embeddings
 
             
-
         # compute query features
         q = self.encoder_q(im_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1) # Nawid - normalised query embeddings

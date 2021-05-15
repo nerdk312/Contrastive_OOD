@@ -9,7 +9,7 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'EMNIST',
+dataset = 'FashionMNIST',
 OOD_dataset = 'MNIST',
 pretrained_network = None,
 
@@ -28,12 +28,12 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'EMNIST baselines',
-notes = 'Experiment baselines for EMNIST VS MNIST', # Add notes to the specific models each time
+group = 'MultiPCL experiments',
+notes = 'MultiPCL grayscale datasets except EMNIST', # Add notes to the specific models each time
 
 
 # Cross entropy Specific parameters
-num_classes = 26,
+num_classes = 10,
 label_smoothing = False,
 
 # Contrastive specific parameters

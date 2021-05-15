@@ -1,4 +1,4 @@
-pcl_hparams = dict(
+multi_pcl_hparams = dict(
 # optimizer args
 optimizer = 'sgd',
 learning_rate= 0.03,#3e-4,
@@ -10,7 +10,7 @@ emb_dim = 128,
 num_negatives = 4096,#65536,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
-num_multi_cluster = [5000,10000],
+num_multi_cluster = [100,300],
 use_mlp = True,
 
 instance_encoder = 'resnet50',
@@ -35,10 +35,9 @@ model_saving = 200, # Used to control how often the model is saved
 
 
 num_classes = 10,
-num_cluster_negatives = 4096,
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
-model_type = 'PCL',
+model_type = 'MultiPCL',
 project = 'evaluation',
 group = None,
 notes = None,)  # evaluation

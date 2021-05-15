@@ -33,7 +33,6 @@ class MultiPCLModule(base_module):
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
         num_cluster: list = [100],
-        num_cluster_negatives: int = 65536,
         use_mlp: bool = False,
         num_channels:int = 3, # number of channels for the specific dataset
         instance_encoder:str = 'resnet50',
@@ -61,6 +60,7 @@ class MultiPCLModule(base_module):
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
         '''
+
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
             param_k.data.copy_(param_q.data)  # initialize
             # Double checking if the training of the model was done correctly
@@ -81,7 +81,7 @@ class MultiPCLModule(base_module):
     @property
     def name(self):
         ''' return name of model'''
-        return 'PCLMulti'
+        return 'MultiPCL'
 
     def init_encoders(self):
         """
@@ -182,11 +182,9 @@ class MultiPCLModule(base_module):
         proto_logits = []
         for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)   
             # compute similarity between query and the prototypes  (should be fine)
-            #import ipdb; ipdb.set_trace()
             all_proto_id = [i for i in range(im2cluster.max()+1)] # Need to increase by 1 in order to make the code work for the case
             logits_proto = torch.mm(q,prototypes.t().to(self.device)) # [bxd] by [dxprotosize] = [bx protosize]
             # Need to get entries which are positive
-            import ipdb; ipdb.set_trace()
             labels_proto = im2cluster[index]
             
             # Density uses the id of all the indices in proto, therefore it could be beneficial to use prototypes of the data for the specific task
@@ -226,7 +224,6 @@ class MultiPCLModule(base_module):
             features[indices] = feat # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
         return features.cpu()
     
-
     def run_kmeans(self,x):
         """
         Args:
@@ -315,7 +312,7 @@ class MultiPCLModule(base_module):
 
     def loss_function(self,batch,cluster_result=None):
         metrics = {}
-        (img_1,img_2), labels,indices = batch
+        (img_1,img_2), labels, indices = batch
         # compute output -  Nawid - obtain instance features and targets as  well as the information for the case of the proto loss
         output, target, output_proto, target_proto = self(im_q=img_1, im_k=img_2, cluster_result=cluster_result, index=indices) # Nawid- obtain output
 
