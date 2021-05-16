@@ -27,7 +27,7 @@ from Contrastive_uncertainty.general.train.train_general import train as general
 from Contrastive_uncertainty.general_clustering.train.train_general_clustering import train as general_clustering_training
 
 def train(base_dict):    
-    acceptable_single_models = ['Baselines','CE','Moco','SupCon','PCL','UnSupConMemory']
+    acceptable_single_models = ['Baselines','CE','Moco','SupCon','PCL','MultiPCL','UnSupConMemory']
 
     # Dict for the model name, parameters and specific training loop
     

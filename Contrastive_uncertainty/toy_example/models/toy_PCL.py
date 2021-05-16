@@ -171,6 +171,7 @@ class PCLToy(Toy):
                 # scaling temperatures for the selected prototypes
                 #import ipdb; ipdb.set_trace()
                 temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
+                #print('temp proto',temp_proto)
                 logits_proto /= temp_proto
 
                 proto_labels.append(labels_proto)

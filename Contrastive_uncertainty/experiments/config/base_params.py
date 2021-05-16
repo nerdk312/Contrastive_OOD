@@ -59,5 +59,5 @@ num_cluster = [26],
 
 # Either goes through all the models or goes through baselines
 
-single_model = 'Baselines'
+single_model = 'MultiPCL'
 )  # evaluation

@@ -48,7 +48,7 @@ use_mlp =True,
 contrast_mode ='one',
 
 # PCL specific parameters
-num_multi_cluster = [5000,10000],
+num_multi_cluster = [100,500],
 num_cluster_negatives = 4096,
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 

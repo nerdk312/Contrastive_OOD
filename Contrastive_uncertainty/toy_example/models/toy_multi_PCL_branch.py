@@ -179,21 +179,27 @@ class MultiPCLBranchToy(Toy):
         for n, (im2cluster, prototypes, density) in enumerate(zip(cluster_result['im2cluster'], cluster_result['centroids'], cluster_result['density'])): # Nawid - go through a loop of the results of the k-nearest neighbours (m different times)   
             # compute similarity between query and the prototypes  (should be fine)
             #import ipdb; ipdb.set_trace()
+            # Pass feature vector through the network into the proto layers
             proto_q = self.encoder_q.final_fc[n+1](q) 
-            all_proto_id = [i for i in range(im2cluster.max()+1)] # Need to increase by 1 in order to make the code work for the case
-            print('all proto id',len(all_proto_id))
+            proto_q = nn.functional.normalize(proto_q, dim=1) # normalise the representation
+            all_proto_id = torch.LongTensor([i for i in range(im2cluster.max()+1)]) # Need to increase by 1 in order to make the code work for the case
+
+            print('all proto id',len(all_proto_id),all_proto_id)
+            prototypes = prototypes[all_proto_id]
             logits_proto = torch.mm(proto_q, prototypes.t().to(self.device)) # [bxd] by [dxprotosize] = [bx protosize]
             # Need to get entries which are positive
             labels_proto = im2cluster[index]
-            print('labels proto',labels_proto)
+            #print('labels proto',labels_proto)
             
             # Density uses the id of all the indices in proto, therefore it could be beneficial to use prototypes of the data for the specific task
             #temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
             #temp_proto = density[torch.LongTensor(all_proto_id)]
-            print('logits proto',logits_proto.shape)
+            temp_proto = density[all_proto_id]
+            print('temp proto',temp_proto)
+            #print('logits proto',logits_proto.shape)
             #print('temp proto',temp_proto)
-            print('density',density)
-            logits_proto /= density
+            #print('density',density)
+            logits_proto /= temp_proto
             #logits_proto /= temp_proto
             proto_labels.append(labels_proto)
             proto_logits.append(logits_proto)

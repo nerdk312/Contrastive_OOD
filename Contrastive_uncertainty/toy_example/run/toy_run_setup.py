@@ -48,6 +48,14 @@ def Model_selection(datamodule,config):
                 momentum=config['momentum'], weight_decay=config['weight_decay'],
                 hidden_dim=config['hidden_dim'],emb_dim=config['emb_dim'],
                 num_classes = config['num_classes'],pretrained_network=config['pretrained_network']),
+
+                'PCL':PCLToy(datamodule=datamodule,
+                optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                momentum=config['momentum'], weight_decay=config['weight_decay'],
+                hidden_dim=config['hidden_dim'], emb_dim=config['emb_dim'],
+                num_negatives=config['num_negatives'], encoder_momentum=config['encoder_momentum'],
+                softmax_temperature=config['softmax_temperature'],
+                pretrained_network=config['pretrained_network']),
                 
                 'MultiPCL':MultiPCLToy(datamodule=datamodule,
                 optimizer=config['optimizer'], learning_rate=config['learning_rate'],

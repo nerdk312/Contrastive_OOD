@@ -155,7 +155,7 @@ class MultiPCLToy(Toy):
             # Density uses the id of all the indices in proto, therefore it could be beneficial to use prototypes of the data for the specific task
             #temp_proto = density[torch.cat([pos_proto_id, torch.LongTensor(neg_proto_id).to(self.device)], dim=0)]
             temp_proto = density[torch.LongTensor(all_proto_id)]
-
+            print('temp proto',temp_proto)
             logits_proto /= temp_proto
             proto_labels.append(labels_proto)
             proto_logits.append(logits_proto)
