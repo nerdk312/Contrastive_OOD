@@ -18,6 +18,7 @@ from Contrastive_uncertainty.toy_example.models.toy_ova_uniform_cluster import O
 from Contrastive_uncertainty.toy_example.models.toy_multi_PCL import MultiPCLToy
 from Contrastive_uncertainty.toy_example.models.toy_multi_PCL_branch import MultiPCLBranchToy
 from Contrastive_uncertainty.toy_example.models.toy_hpcl import HPCLToy
+from Contrastive_uncertainty.toy_example.models.toy_hpcl_branch import HPCLBranchToy
 
 def Datamodule_selection(dataset, config):
     # Information regarding the configuration of the data module for the specific task
@@ -75,6 +76,14 @@ def Model_selection(datamodule,config):
                 pretrained_network=config['pretrained_network']),
 
                 'HPCL':HPCLToy(datamodule=datamodule,
+                optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                momentum=config['momentum'], weight_decay=config['weight_decay'],
+                hidden_dim=config['hidden_dim'], emb_dim=config['emb_dim'],
+                num_negatives=config['num_negatives'], encoder_momentum=config['encoder_momentum'],
+                softmax_temperature=config['softmax_temperature'],
+                pretrained_network=config['pretrained_network']),
+
+                'HPCLBranch':HPCLBranchToy(datamodule=datamodule,
                 optimizer=config['optimizer'], learning_rate=config['learning_rate'],
                 momentum=config['momentum'], weight_decay=config['weight_decay'],
                 hidden_dim=config['hidden_dim'], emb_dim=config['emb_dim'],
