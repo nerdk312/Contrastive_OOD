@@ -3,22 +3,23 @@ from typing import Optional, Sequence
 import numpy as np
 import torch
 from pytorch_lightning import LightningDataModule
-from torch.utils.data import DataLoader, random_split, Subset
+from torch.utils.data import DataLoader, random_split
+from torchvision.datasets.cifar import CIFAR100
 
 
-from Contrastive_uncertainty.general_clustering.datamodules.dataset_normalizations import cifar10_normalization
-from Contrastive_uncertainty.general_clustering.datamodules.datamodule_transforms import dataset_with_indices,split_size
+from Contrastive_uncertainty.general.datamodules.dataset_normalizations import cifar100_normalization
+from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, dataset_with_indices_hierarchy
 from warnings import warn
 
 
 from torchvision import transforms as transform_lib
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import CIFAR100
 
 
 
-class CIFAR10DataModule(LightningDataModule):
+class CIFAR100DataModule(LightningDataModule):
 
-    name = 'cifar10'
+    name = 'cifar100'
     extra_args = {}
 
     def __init__(
@@ -66,15 +67,15 @@ class CIFAR10DataModule(LightningDataModule):
         """
         super().__init__(*args, **kwargs)
         self.dims = (3, 32, 32)
-        self.DATASET = CIFAR10
-        self.DATASET_with_indices = dataset_with_indices(self.DATASET)
+        self.DATASET = CIFAR100
+        self.DATASET_with_indices = dataset_with_indices_hierarchy(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.seed = seed
         self.data_dir = data_dir if data_dir is not None else os.getcwd()
         self.num_samples = 60000 - val_split
-        self.train_shuffle = True
+
 
     @property
     def total_samples(self):
@@ -83,19 +84,22 @@ class CIFAR10DataModule(LightningDataModule):
             60000
         """
         return 60_000
-    
-    @property # Obtain the total samples according to the batch size and dataloader
-    def total_dataloader_samples(self):
-        return split_size(self.batch_size,self.total_samples)
-    
 
     @property
     def num_classes(self):
         """
         Return:
-            10
+            100
         """
-        return 10
+        return 100
+    # Number of data channels
+    @property
+    def num_channels(self):
+        """
+        Return:
+            3
+        """
+        return 3
 
     def prepare_data(self):
         """
@@ -113,8 +117,8 @@ class CIFAR10DataModule(LightningDataModule):
         self.setup_test()
 
         # Obtain class indices
+        # Obtain class indices
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
-        # Obtains a class where there is 
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
         self.idx2class = {v:f'{i} - {k}'for i, (k, v) in zip(range(len(dataset.class_to_idx)),dataset.class_to_idx.items())}
         # Need to change key and value around to get in the correct order
@@ -123,72 +127,64 @@ class CIFAR10DataModule(LightningDataModule):
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
-        
         train_length = len(dataset)
-        new_dataset_size = split_size(self.batch_size,train_length)
-        indices = range(new_dataset_size)
-
-        self.train_dataset = Subset(dataset, indices)  # Obtain a subset of the data from 0th index to the index for the last value
-
-        '''
         self.train_dataset, _ = random_split(
             dataset,
             [train_length - self.val_split, self.val_split],
             generator=torch.Generator().manual_seed(self.seed)
         )
-        '''
-        #self.datasize =train_length - self.val_split
-
-    
 
     def setup_val(self):
-        # val transforms use the test transforms in this case
-        val_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
 
-        train_length = len(dataset)
-        new_dataset_size = split_size(self.batch_size,train_length)
-        indices = range(new_dataset_size)
-        self.val_dataset = Subset(dataset, indices) # Obtain a subset of the data from 0th index to the index for the last value
         '''
+        val_transforms = self.default_transforms() if self.val_transforms is None else self.val_transforms
+        dataset = self.DATASET(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
         train_length = len(dataset)
-        self.val_dataset, _ = random_split(
+        _, self.val_dataset = random_split(
             dataset,
             [train_length - self.val_split, self.val_split],
             generator=torch.Generator().manual_seed(self.seed)
         )
         '''
+        val_train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
+        val_train_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_train_transforms, **self.extra_args)
+        
+        train_length = len(val_train_dataset)
+        _, self.val_train_dataset = random_split(
+            val_train_dataset,
+            [train_length - self.val_split, self.val_split],
+            generator=torch.Generator().manual_seed(self.seed)
+        )
+
+        val_test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
+        val_test_dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_test_transforms, **self.extra_args)
+        
+        _, self.val_test_dataset = random_split(
+            val_test_dataset,
+            [train_length - self.val_split, self.val_split],
+            generator=torch.Generator().manual_seed(self.seed)
+        )
+
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
         self.test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)
+
         if isinstance(self.test_dataset.targets, list):
             self.test_dataset.targets = torch.Tensor(self.test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
         elif isinstance(self.test_dataset.targets,np.ndarray):
             self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
-        
 
-        test_length = len(self.test_dataset)
-        new_dataset_size = split_size(self.batch_size,test_length)
-        indices = range(new_dataset_size)
-
-        self.test_dataset = Subset(self.test_dataset,indices) # Obtain a subset of the data from 0th index to the index for the last value
-        
-        '''       
-        self.test_dataset, _ = random_split(
-            self.test_dataset,
-            [test_length - test_split, test_split],
-            generator=torch.Generator().manual_seed(self.seed)
-        )
-        '''
 
     def train_dataloader(self):
         """
         FashionMNIST train set removes a subset to use for validation
         """
+
+        
         loader = DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            shuffle=self.train_shuffle,
+            shuffle=True,
             num_workers=self.num_workers,
             drop_last=True,
             pin_memory=True
@@ -199,6 +195,7 @@ class CIFAR10DataModule(LightningDataModule):
         """
         MNIST val set uses a subset of the training set for validation
         """
+        '''
         loader = DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
@@ -207,8 +204,27 @@ class CIFAR10DataModule(LightningDataModule):
             pin_memory=True,
             drop_last=True
         )
-        #import ipdb; ipdb.set_trace()
         return loader
+        '''
+        val_train_loader = DataLoader(
+            self.val_train_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            drop_last=True
+        )
+
+        val_test_loader = DataLoader(
+            self.val_test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            drop_last=True
+        )
+
+        return [val_train_loader, val_test_loader]
 
     def test_dataloader(self):
         """
@@ -226,12 +242,11 @@ class CIFAR10DataModule(LightningDataModule):
         return loader
 
     def default_transforms(self):
-        cf10_transforms = transform_lib.Compose([
+        cf100_transforms = transform_lib.Compose([
             transform_lib.ToTensor(),
-            cifar10_normalization()
+            cifar100_normalization()
         ])
-        return cf10_transforms
+        return cf100_transforms
 
-datamodule = CIFAR10DataModule()
-datamodule.prepare_data()
+datamodule = CIFAR100DataModule()
 datamodule.setup()

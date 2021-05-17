@@ -18,7 +18,7 @@ from Contrastive_uncertainty.general.datamodules.datamodule_transforms import \
     Moco2TrainKMNISTTransforms, Moco2EvalKMNISTTransforms, \
     Moco2TrainSTL10Transforms, Moco2EvalSTL10Transforms, \
     Moco2TrainEMNISTTransforms, Moco2EvalEMNISTTransforms,\
-    GaussianBlur, dataset_with_indices
+    GaussianBlur, dataset_with_indices, dataset_with_indices_hierarchy
 
 
 def split_size(batch_size, samples): # obtains a dataset size for the k-means based on the batch size

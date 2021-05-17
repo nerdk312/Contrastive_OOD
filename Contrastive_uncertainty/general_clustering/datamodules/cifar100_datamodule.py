@@ -6,19 +6,19 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split, Subset
 
 
-from Contrastive_uncertainty.general_clustering.datamodules.dataset_normalizations import cifar10_normalization
-from Contrastive_uncertainty.general_clustering.datamodules.datamodule_transforms import dataset_with_indices,split_size
+from Contrastive_uncertainty.general_clustering.datamodules.dataset_normalizations import cifar100_normalization
+from Contrastive_uncertainty.general_clustering.datamodules.datamodule_transforms import dataset_with_indices,split_size,\
+    dataset_with_indices_hierarchy
 from warnings import warn
 
 
 from torchvision import transforms as transform_lib
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import CIFAR100
 
 
+class CIFAR100DataModule(LightningDataModule):
 
-class CIFAR10DataModule(LightningDataModule):
-
-    name = 'cifar10'
+    name = 'cifar100'
     extra_args = {}
 
     def __init__(
@@ -66,8 +66,8 @@ class CIFAR10DataModule(LightningDataModule):
         """
         super().__init__(*args, **kwargs)
         self.dims = (3, 32, 32)
-        self.DATASET = CIFAR10
-        self.DATASET_with_indices = dataset_with_indices(self.DATASET)
+        self.DATASET = CIFAR100
+        self.DATASET_with_indices = dataset_with_indices_hierarchy(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size
@@ -93,9 +93,9 @@ class CIFAR10DataModule(LightningDataModule):
     def num_classes(self):
         """
         Return:
-            10
+            100
         """
-        return 10
+        return 100
 
     def prepare_data(self):
         """
@@ -123,7 +123,7 @@ class CIFAR10DataModule(LightningDataModule):
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
-        
+        #import ipdb; ipdb.set_trace()
         train_length = len(dataset)
         new_dataset_size = split_size(self.batch_size,train_length)
         indices = range(new_dataset_size)
@@ -145,9 +145,10 @@ class CIFAR10DataModule(LightningDataModule):
         # val transforms use the test transforms in this case
         val_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
-
+        #dataset.coarse_targets = sparse2coarse(dataset.targets)
         train_length = len(dataset)
-        new_dataset_size = split_size(self.batch_size,train_length)
+        
+        new_dataset_size = split_size(self.batch_size, train_length)
         indices = range(new_dataset_size)
         self.val_dataset = Subset(dataset, indices) # Obtain a subset of the data from 0th index to the index for the last value
         '''
@@ -226,12 +227,8 @@ class CIFAR10DataModule(LightningDataModule):
         return loader
 
     def default_transforms(self):
-        cf10_transforms = transform_lib.Compose([
+        cf100_transforms = transform_lib.Compose([
             transform_lib.ToTensor(),
-            cifar10_normalization()
+            cifar100_normalization()
         ])
-        return cf10_transforms
-
-datamodule = CIFAR10DataModule()
-datamodule.prepare_data()
-datamodule.setup()
+        return cf100_transforms

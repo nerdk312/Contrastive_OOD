@@ -10,6 +10,11 @@ def cifar10_normalization():
     normalize = transforms.Normalize(mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
                                      std=[x / 255.0 for x in [63.0, 62.1, 66.7]])
     return normalize
+#https://gist.github.com/weiaicunzai/e623931921efefd4c331622c344d8151 - Normalisation obtained from here
+def cifar100_normalization():
+    normalize = transforms.Normalize(mean=[0.5071, 0.4867, 0.4408], std=[0.2675, 0.2565, 0.2761])
+                                    
+    return normalize
 
 def stl10_normalization():
     normalize = transforms.Normalize(mean=(0.43, 0.42, 0.39), std=(0.27, 0.26, 0.27))
