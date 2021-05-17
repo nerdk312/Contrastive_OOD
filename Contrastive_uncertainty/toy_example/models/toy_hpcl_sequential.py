@@ -14,7 +14,7 @@ from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mea
 
 
 
-class HPCLBranchToy(Toy):
+class HPCLSequentialToy(Toy):
     def __init__(self,
         datamodule,
         optimizer:str = 'sgd',
@@ -65,7 +65,7 @@ class HPCLBranchToy(Toy):
     @property
     def name(self):
         ''' return name of model'''
-        return 'HPCLBranch'
+        return 'HPCLSequential'
 
     def init_encoders(self):
         """
@@ -253,31 +253,29 @@ class HPCLBranchToy(Toy):
 
         # Representaiton for the instance case
         #import ipdb; ipdb.set_trace()
-        instance_q = self.encoder_q.final_fc[0](q)
-        instance_k = self.encoder_k.final_fc[0](k)
+        q = self.encoder_q.final_fc[0](q)
+        k = self.encoder_k.final_fc[0](k)
         
-        instance_q = nn.functional.normalize(instance_q, dim=1)
-        instance_k = nn.functional.normalize(instance_k, dim=1)
+        q = nn.functional.normalize(q, dim=1)
+        k = nn.functional.normalize(k, dim=1)
         
-        output, target = self.instance_forward(instance_q,instance_k)
+        output, target = self.instance_forward(q, k)
         # InfoNCE loss
         loss_instance = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
         acc_1, acc_5 = precision_at_k(output, target,top_k=(1,5))
         instance_metrics = {'Instance Loss': loss_instance, 'Instance Accuracy @1':acc_1,'Instance Accuracy @5':acc_5}
         metrics.update(instance_metrics)
-
-
         
         # Initialise loss value
         loss_proto = 0 
         for index, data_labels in enumerate(collated_labels):
-            proto_q = self.encoder_q.final_fc[index+1](q) 
-            proto_k = self.encoder_k.final_fc[index+1](k)
+            q = self.encoder_q.final_fc[index+1](q) 
+            k = self.encoder_k.final_fc[index+1](k)
 
-            proto_q = nn.functional.normalize(proto_q, dim=1)
-            proto_k = nn.functional.normalize(proto_k, dim=1)
+            q = nn.functional.normalize(q, dim=1)
+            k = nn.functional.normalize(k, dim=1)
 
-            features = torch.cat([proto_q.unsqueeze(1), proto_k.unsqueeze(1)], dim=1)
+            features = torch.cat([q.unsqueeze(1), k.unsqueeze(1)], dim=1)
             loss_proto += self.supervised_contrastive_forward(features=features,labels=data_labels)
         
         # Normalise the proto loss by number of different labels present
