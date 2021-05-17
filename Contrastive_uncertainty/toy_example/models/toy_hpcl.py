@@ -213,7 +213,12 @@ class HPCLToy(Toy):
     def loss_function(self,batch,auxillary_data = None):
         metrics = {}
         # output images as well as coarse labels of the data
-        (img_1,img_2), fine_labels, indices = batch
+        (img_1,img_2), coarse_labels, indices = batch
+        
+        # Made random fine labels for testing purposes 
+        fine_labels = torch.randint(low=0, high=4, size = coarse_labels.shape)
+        collated_labels = [fine_labels,coarse_labels]
+        #import ipdb; ipdb.set_trace()
         q = self.encoder_q(img_1)
         q = nn.functional.normalize(q, dim=1)
         k = self.encoder_q(img_2)
@@ -227,7 +232,13 @@ class HPCLToy(Toy):
 
 
         features = torch.cat([q.unsqueeze(1), k.unsqueeze(1)], dim=1)
-        loss_proto = self.supervised_contrastive_forward(features=features,labels=fine_labels)
+        # Initialise loss value
+        loss_proto = 0 
+        for index, data_labels in enumerate(collated_labels):
+            loss_proto += self.supervised_contrastive_forward(features=features,labels=data_labels)
+        
+        # Normalise the proto loss by number of different labels present
+        loss_proto /= len(collated_labels)
         
         '''
             for index, (proto_out,proto_target) in enumerate(zip(output_proto, target_proto)): # Nawid - I believe this goes through the results of the m different k clustering results
@@ -240,6 +251,7 @@ class HPCLToy(Toy):
             # average loss across all sets of prototypes
             loss_proto /= len(self.hparams.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
         '''
+        
         loss = loss_instance + loss_proto # Nawid - increase the loss
 
         additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
