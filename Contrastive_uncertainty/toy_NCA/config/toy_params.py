@@ -17,7 +17,7 @@ weight_decay = 1e-4,
 # Miscellaneous arguments
 seed = 26,
 epochs = 100,
-bsz = 64,
+bsz = 128,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
 model = 'Softmax',

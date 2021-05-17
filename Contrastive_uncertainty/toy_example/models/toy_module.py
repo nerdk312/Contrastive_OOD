@@ -61,7 +61,6 @@ class Toy(pl.LightningModule):
     def _momentum_update_key_encoder(self):
         raise NotImplementedError
     
-
     def aux_data(self):
         ''' Placeholder function, used to obtain auxillary data for a specific task'''
         auxillary_data = None

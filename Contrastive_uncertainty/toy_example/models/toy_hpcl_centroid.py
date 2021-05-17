@@ -13,7 +13,7 @@ from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mea
 
 
 
-class HPCLToy(Toy):
+class HPCLCentroidToy(Toy):
     def __init__(self,
         datamodule,
         optimizer:str = 'sgd',
@@ -96,6 +96,8 @@ class HPCLToy(Toy):
 
         self.queue_ptr[0] = ptr
 
+    
+
     def instance_forward(self, q, k):
         # compute logits
         # Einstein sum is more intuitive
@@ -118,99 +120,43 @@ class HPCLToy(Toy):
         self._dequeue_and_enqueue(k) # Nawid - queue values
         
         return logits, labels
-    
-    def supervised_contrastive_forward(self, features, labels=None, mask=None):
-        """Compute loss for model. If both `labels` and `mask` are None,
-        it degenerates to SimCLR unsupervised loss:
-        https://arxiv.org/pdf/2002.05709.pdf
-        Args:
-            features: hidden vector of shape [bsz, n_views, ...].
-            labels: ground truth of shape [bsz].
-            mask: contrastive mask of shape [bsz, bsz], mask_{i,j}=1 if sample j
-                has the same class as sample i. Can be asymmetric.
-        Returns:
-            A loss scalar.
-        """
+
+    def proto_forward(self,features,labels,prototypes):
+        logits_proto = torch.mm(features,prototypes.t().to(self.device)) # [bxd] by [dxprotosize] = [bx protosize]
+        logits_proto /= 0.07  # Divide by temperature term
+        proto_labels = labels.to(self.device)
         #import ipdb; ipdb.set_trace()
-        if len(features.shape) < 3:
-            raise ValueError('`features` needs to be [bsz, n_views, ...],'
-                             'at least 3 dimensions are required')
-        if len(features.shape) > 3:
-            features = features.view(features.shape[0], features.shape[1], -1)
-        batch_size = features.shape[0]
-        if labels is not None and mask is not None:
-            raise ValueError('Cannot define both `labels` and `mask`')
-        elif labels is None and mask is None:
-            mask = torch.eye(batch_size, dtype=torch.float32, device = self.device)
-        elif labels is not None:
-            labels = labels.contiguous().view(-1, 1)
-            if labels.shape[0] != batch_size:
-                raise ValueError('Num of labels does not match num of features')
-            # Makes a mask with values of 0 and 1 depending on whether the labels between two different samples in the batch are the same
-            mask = torch.eq(labels, labels.T).float().to(self.device)
-            
-        else:
-            mask = mask.float().to(self.device)
-        contrast_count = features.shape[1]
-        # Nawid - concatenates the features from the different views, so this is the data points of all the different views
-        contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)
-
-        if self.hparams.contrast_mode == 'one':
-            anchor_feature = features[:, 0] # Nawid - anchor is only the index itself and only the single view
-            anchor_count = 1 # Nawid - only one anchor
-        elif self.hparams.contrast_mode == 'all':
-            anchor_feature = contrast_feature 
-            anchor_count = contrast_count # Nawid - all the different views are the anchors
-        else:
-            raise ValueError('Unknown mode: {}'.format(self.hparams.contrast_mode))
-
-        #anchor_feature = contrast_feature
-        #anchor_count = contrast_count  # Nawid - all the different views are the anchors
-
-        # compute logits (between each data point with every other data point )
-        anchor_dot_contrast = torch.div(  # Nawid - similarity between the anchor and the contrast feature
-            torch.matmul(anchor_feature, contrast_feature.T),
-            self.hparams.softmax_temperature)
-        # for numerical stability
-        logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
-        logits = anchor_dot_contrast - logits_max.detach()
-        # tile mask
-        # Nawid- changes mask from [b,b] to [b* anchor count, b *contrast count]
-        mask = mask.repeat(anchor_count, contrast_count)
-        # mask-out self-contrast cases
-        # Nawid - logits mask is values of 0s and 1 in the same shape as the mask, it has values of 0 along the diagonal and 1 elsewhere, where the 0s are used to mask out self contrast cases
-        logits_mask = torch.scatter(
-            torch.ones_like(mask),
-            1,
-            torch.arange(batch_size * anchor_count).view(-1, 1).to(self.device),
-            0
-        )
-        # Nawid - updates mask to remove self contrast examples
-        mask = mask * logits_mask
-        # compute log_prob
-        # Nawid- exponentiate the logits and turn the logits for the self-contrast cases to zero
-        exp_logits = torch.exp(logits) * logits_mask
-        # Nawid - subtract the value for all the values along the dimension
-        log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
-        # compute mean of log-likelihood over positive
-        # Nawid - mask out all valeus which are zero, then calculate the sum of values along that dimension and then divide by sum
-        mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
-        # loss
-        #loss = - 1 * mean_log_prob_pos
-        #loss = - (model.hparams.softmax_temperature / model.hparams.base_temperature) * mean_log_prob_pos
-        # Nawid - loss is size [b]
-        loss = - (self.hparams.softmax_temperature / 0.07) * mean_log_prob_pos
-        # Nawid - changes to shape (anchor_count, batch)
-        loss = loss.view(anchor_count, batch_size).mean()
-
-        return loss
+        return logits_proto, proto_labels
 
 
+
+    
+    @torch.no_grad()
+    def compute_features(self, dataloader):
+        print('Computing features ...')
+        #import ipdb;ipdb.set_trace()
+        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
+        #import ipdb; ipdb.set_trace()
+        collated_labels =  torch.zeros(len(dataloader.dataset), device = self.device,dtype=torch.long)
+
+        #import ipdb; ipdb.set_trace()
+        for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
+            if isinstance(images, tuple) or isinstance(images, list):
+                images, *aug_images = images
+                images, labels = images.to(self.device), labels.to(self.device)
+
+            collated_labels[indices] = labels
+            feat = self.encoder_k(images)   # Nawid - obtain momentum features
+            features[indices] = feat  # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
+        
+        features = nn.functional.normalize(features, dim=1)
+        return features, collated_labels
+    
     def feature_vector(self, data):
         z = self.encoder_k(data)
         return z
 
-    def loss_function(self, batch, auxillary_data = None):
+    def loss_function(self,batch):
         metrics = {}
         # output images as well as coarse labels of the data
         (img_1,img_2), coarse_labels, indices = batch
@@ -230,16 +176,22 @@ class HPCLToy(Toy):
         instance_metrics = {'Instance Loss': loss_instance, 'Instance Accuracy @1':acc_1,'Instance Accuracy @5':acc_5}
         metrics.update(instance_metrics)
 
-
-        features = torch.cat([q.unsqueeze(1), k.unsqueeze(1)], dim=1)
+        
         # Initialise loss value
         loss_proto = 0 
+        proto_out, proto_target = self.proto_forward(q,coarse_labels,self.auxillary_data)
+        loss_proto += F.cross_entropy(proto_out, proto_target)
+        accp = precision_at_k(proto_out, proto_target)[0]
+        proto_metrics = {'Proto Loss': loss_proto,' Proto Accuracy @ 1' : accp}
+        metrics.update(proto_metrics)
+
+        '''
         for index, data_labels in enumerate(collated_labels):
             loss_proto += self.supervised_contrastive_forward(features=features,labels=data_labels)
         
         # Normalise the proto loss by number of different labels present
         loss_proto /= len(collated_labels)
-        
+        '''
         '''
             for index, (proto_out,proto_target) in enumerate(zip(output_proto, target_proto)): # Nawid - I believe this goes through the results of the m different k clustering results
                 loss_proto += F.cross_entropy(proto_out, proto_target) #
@@ -250,15 +202,32 @@ class HPCLToy(Toy):
                 metrics.update(proto_metrics)
             # average loss across all sets of prototypes
             loss_proto /= len(self.hparams.num_cluster) # Nawid -average loss across all the m different k nearest neighbours
-        '''
-        
+        '''     
         loss = loss_instance + loss_proto # Nawid - increase the loss
 
-        additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
+        additional_metrics = {'Loss':loss}
         metrics.update(additional_metrics)
         return metrics
     
+    @torch.no_grad()
+    def obtain_protoypes(self,features,labels):
+        #y = F.one_hot(labels.long(), num_classes=self.hparams.num_classes).float()
+        y = F.one_hot(labels.long()).float()
+
+        # compute sum of embeddings on class by class basis
+
+        #features_sum = torch.einsum('ij,ik->kj',z,y) # (batch, features) , (batch, num classes) to get (num classes,features)
+        #y = y.float() # Need to change into a float to be able to use it for the matrix multiplication
+        features_sum = torch.matmul(y.T,features) # (num_classes,batch) (batch,features) to get (num_class, features)
+
+        #features_sum = torch.matmul(z.T, y) # (batch,features) (batch,num_classes) to get (features,num_classes)
+
+        prototypes = features_sum.T / y.sum(0) # Nawid - divide each of the feature sum by the number of instances present in the class (need to transpose to get into shape which can divide column wise) shape : (features,num_classes
+        prototypes = prototypes.T # Turn back into shape (num_classes,features)
         
+        return prototypes
+    
+    '''
     @torch.no_grad()
     def update_embeddings(self, x, labels): # Assume y is one hot encoder
         z = self.feature_vector(x)  # (batch,features)
@@ -275,11 +244,23 @@ class HPCLToy(Toy):
         embeddings = features_sum.T / y.sum(0) # Nawid - divide each of the feature sum by the number of instances present in the class (need to transpose to get into shape which can divide column wise) shape : (features,num_classes
         embeddings = embeddings.T # Turn back into shape (num_classes,features)
         return embeddings
+    '''
     
+    def aux_data(self,dataloader):
+        features, collated_labels = self.compute_features(dataloader)
+        prototypes = self.obtain_protoypes(features, collated_labels)
+        return prototypes
 
+    def on_train_epoch_start(self):
+        dataloader = self.datamodule.val_dataloader()
+        #import ipdb; ipdb.set_trace()
+        self.auxillary_data = self.aux_data(dataloader)
+        return self.auxillary_data
 
-
-
-
-
-
+    def on_fit_start(self):
+        if self.trainer.testing:
+            dataloader = self.datamodule.test_dataloader()
+        else:
+            dataloader = self.datamodule.val_dataloader()
+        
+        self.auxillary_data = self.aux_data(dataloader)
