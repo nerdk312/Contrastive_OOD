@@ -4,4 +4,4 @@ from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import Cr
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance import ModelInstance
 
 # calls the function
-train(cross_entropy_hparams,CrossEntropyModule, ModelInstance)
+train(cross_entropy_hparams, CrossEntropyModule, ModelInstance)

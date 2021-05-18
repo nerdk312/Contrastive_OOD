@@ -67,7 +67,7 @@ class CIFAR100DataModule(LightningDataModule):
         super().__init__(*args, **kwargs)
         self.dims = (3, 32, 32)
         self.DATASET = CIFAR100
-        self.DATASET_with_indices = dataset_with_indices_hierarchy(self.DATASET)
+        self.DATASET_with_indices = dataset_with_indices(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size
@@ -96,6 +96,13 @@ class CIFAR100DataModule(LightningDataModule):
             100
         """
         return 100
+    @property
+    def num_channels(self):
+        """
+        Return:
+            3
+        """
+        return 3
 
     def prepare_data(self):
         """

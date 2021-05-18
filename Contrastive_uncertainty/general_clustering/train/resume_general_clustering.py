@@ -12,12 +12,9 @@ from pytorch_lightning.loggers import WandbLogger
 import re
 
 
-from Contrastive_uncertainty.general_clustering.run.general_clustering_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.general_clustering.run.general_clustering_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary
 from Contrastive_uncertainty.general_clustering.datamodules.datamodule_dict import dataset_dict
 from Contrastive_uncertainty.general_clustering.utils.hybrid_utils import previous_model_directory
-
-
-
 
 def resume(run_path, trainer_dict,model_module,model_function):
     api = wandb.Api()
@@ -41,7 +38,7 @@ def resume(run_path, trainer_dict,model_module,model_function):
     # Callback information
     datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
     OOD_datamodule = Datamodule_selection(dataset_dict,config['OOD_dataset'],config)
-    channels = Channel_selection(dataset_dict,config['dataset'])
+    #channels = Channel_selection(dataset_dict,config['dataset'])
 
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
@@ -53,7 +50,7 @@ def resume(run_path, trainer_dict,model_module,model_function):
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function
     # model = model_module.load_from_checkpoint(model_dir)
 
-    model = model_function(model_module,config,datamodule,channels) 
+    model = model_function(model_module,config,datamodule)
 
     # Updating the config parameters with the parameters in the trainer dict
     for trainer_k, trainer_v in trainer_dict.items():

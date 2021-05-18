@@ -26,18 +26,18 @@ def Datamodule_selection(data_dict, dataset, config):
     Datamodule.prepare_data()
     Datamodule.setup()
     return Datamodule
-
+'''
 def Channel_selection(data_dict, dataset):
     datamodule_info = data_dict[dataset]
     channels = datamodule_info['channels']
     return channels
-
+'''
 
 def callback_dictionary(Datamodule,OOD_Datamodule,config):
     val_train_loader, val_test_loader = Datamodule.val_dataloader() # Used for metric logger callback also
     samples = next(iter(val_test_loader))
     sample_size = config['bsz']
-    num_classes = config['num_classes']
+    num_classes = Datamodule.num_classes
     quick_callback = config['quick_callback']
     inference_clusters = [num_classes]
     OOD_val_train_loader, OOD_val_test_loader = OOD_Datamodule.val_dataloader()

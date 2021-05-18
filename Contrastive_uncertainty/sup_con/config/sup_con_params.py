@@ -1,5 +1,4 @@
 sup_con_hparams = dict(
-num_classes = 10,
 emb_dim = 128,
 softmax_temperature = 0.07,
 instance_encoder = 'resnet50',

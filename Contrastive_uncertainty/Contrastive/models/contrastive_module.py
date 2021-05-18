@@ -1,3 +1,4 @@
+from torch.utils import data
 import wandb
 import pytorch_lightning as pl
 import torch
@@ -23,7 +24,6 @@ class ContrastiveModule(pl.LightningModule):
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
         use_mlp: bool = False,
-        num_channels:int = 3, # number of channels for the specific dataset
         contrastive: bool = True,
         supervised_contrastive: bool = False,
         instance_encoder:str = 'resnet50',
@@ -34,7 +34,9 @@ class ContrastiveModule(pl.LightningModule):
         # Nawid - required to use for the fine tuning
         self.save_hyperparameters()
         self.datamodule = datamodule
-
+        self.num_classes = datamodule.num_classes
+        self.num_channels = datamodule.num_channels
+        
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder_q, self.encoder_k = self.init_encoders()
@@ -69,12 +71,12 @@ class ContrastiveModule(pl.LightningModule):
         """
         if self.hparams.instance_encoder == 'resnet18':
             print('using resnet18')
-            encoder_q = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
-            encoder_k = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
+            encoder_q = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
         elif self.hparams.instance_encoder =='resnet50':
             print('using resnet50')
-            encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
-            encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = 10)
+            encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
         
         return encoder_q, encoder_k
 

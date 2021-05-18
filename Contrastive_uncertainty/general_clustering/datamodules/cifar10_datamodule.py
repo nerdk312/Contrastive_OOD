@@ -96,7 +96,14 @@ class CIFAR10DataModule(LightningDataModule):
             10
         """
         return 10
-
+    @property
+    def num_channels(self):
+        """
+        Return:
+            3
+        """
+        return 3
+    
     def prepare_data(self):
         """
         Saves CIFAR10 files to data_dir

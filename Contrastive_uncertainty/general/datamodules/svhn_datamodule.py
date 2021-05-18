@@ -92,6 +92,14 @@ class SVHNDataModule(LightningDataModule):
             10
         """
         return 10
+    
+    @property
+    def num_channels(self):
+        """
+        Return:
+            3
+        """
+        return 3
 
     def prepare_data(self):
         """

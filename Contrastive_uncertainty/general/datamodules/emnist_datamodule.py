@@ -90,6 +90,14 @@ class EMNISTDataModule(LightningDataModule):
             26
         """
         return 26
+    
+    @property
+    def num_channels(self):
+        """
+        Return:
+            1
+        """
+        return 1
 
     def prepare_data(self):
         """

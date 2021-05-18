@@ -20,8 +20,6 @@ class CrossEntropyModule(pl.LightningModule):
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        num_channels:int = 3, # number of channels for the specific dataset
-        num_classes:int = 10, # Attribute required for the finetuning value
         label_smoothing:bool = False,
         instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
@@ -29,11 +27,11 @@ class CrossEntropyModule(pl.LightningModule):
 
         super().__init__()
         # Nawid - required to use for the fine tuning
-        self.num_classes = num_classes
         self.save_hyperparameters()
 
         self.datamodule = datamodule
-
+        self.num_channels = datamodule.num_channels
+        self.num_classes = datamodule.num_classes
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder = self.init_encoders()
@@ -53,12 +51,12 @@ class CrossEntropyModule(pl.LightningModule):
         """
         if self.hparams.instance_encoder == 'resnet18':
             print('using resnet18')
-            encoder  = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
+            encoder  = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes=self.num_classes)
             
         elif self.hparams.instance_encoder =='resnet50':
             print('using resnet50')
-            encoder = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.hparams.num_channels,num_classes = self.hparams.num_classes)
-        
+            encoder = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes=self.num_classes)
+
         return encoder
 
     def callback_vector(self, x): # vector for the representation before using separate branches for the task

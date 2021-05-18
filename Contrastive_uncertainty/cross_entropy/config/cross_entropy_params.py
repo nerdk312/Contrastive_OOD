@@ -1,5 +1,4 @@
 cross_entropy_hparams = dict(
-num_classes = 10,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 
@@ -10,9 +9,8 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'FashionMNIST',
-OOD_dataset = 'MNIST',
-
+dataset = 'CIFAR100',
+OOD_dataset = 'SVHN',
 
 label_smoothing =False,
 

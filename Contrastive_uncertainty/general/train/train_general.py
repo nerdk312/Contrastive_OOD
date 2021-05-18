@@ -10,7 +10,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 
 
-from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,Channel_selection,callback_dictionary
+from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary
 from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
 
 
@@ -30,7 +30,7 @@ def train(params,model_module,model_function):
 
     datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
     OOD_datamodule = Datamodule_selection(dataset_dict,config['OOD_dataset'],config)
-    channels = Channel_selection(dataset_dict,config['dataset'])
+    #channels = Channel_selection(dataset_dict,config['dataset'])
 
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
@@ -40,7 +40,7 @@ def train(params,model_module,model_function):
     
     # desired_callbacks = []
     # model_function takes in the model module and the config and uses it to instantiate the model
-    model = model_function(model_module,config,datamodule,channels)
+    model = model_function(model_module,config,datamodule)
 
 
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients

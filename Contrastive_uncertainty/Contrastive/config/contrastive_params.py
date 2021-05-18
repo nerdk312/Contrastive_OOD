@@ -1,5 +1,4 @@
 contrastive_hparams = dict(
-num_classes = 10,
 emb_dim = 128,
 num_negatives = 65536,
 encoder_momentum = 0.999,

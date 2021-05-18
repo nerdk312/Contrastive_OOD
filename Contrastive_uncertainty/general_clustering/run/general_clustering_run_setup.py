@@ -4,12 +4,12 @@ from Contrastive_uncertainty.general.callbacks.visualisation_callback import Vis
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 
 from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,\
-    Datamodule_selection, Channel_selection
+    Datamodule_selection #Channel_selection
 
 
 def callback_dictionary(Datamodule,OOD_Datamodule,config):
     sample_size = config['bsz']
-    num_classes = config['num_classes']
+    num_classes = Datamodule.num_classes
     quick_callback = config['quick_callback']
     inference_clusters = config['num_inference_cluster']
     val_loader= Datamodule.val_dataloader() # Used for metric logger callback also

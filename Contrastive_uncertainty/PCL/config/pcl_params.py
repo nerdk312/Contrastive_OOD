@@ -34,7 +34,7 @@ val_check = 20,
 model_saving = 200, # Used to control how often the model is saved
 
 
-num_classes = 10,
+
 num_cluster_negatives = 4096,
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
