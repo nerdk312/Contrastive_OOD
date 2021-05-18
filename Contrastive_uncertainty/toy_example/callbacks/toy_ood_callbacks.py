@@ -9,6 +9,11 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloa
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_fpr,\
     get_pr_sklearn, get_roc_sklearn
 
+#from Contrastive_uncertainty.general.utils import iso_forest as iso
+import eif as iso
+import seaborn as sb
+sb.set_style(style="whitegrid")
+sb.set_color_codes()
 
 class OOD_ROC(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule):
@@ -426,3 +431,97 @@ class Mahalanobis_OOD(pl.Callback):
             class_names=self.class_names,OOD_class_names =self.OOD_class_names),
             "global_step": trainer.global_step
                   })
+
+# https://github.com/sahandha/eif#The-Code (Based on code from this section)
+class IsoForest(pl.Callback):
+    def __init__(self, Datamodule,OOD_Datamodule,quick_callback):
+        super().__init__()
+        self.Datamodule = Datamodule
+        self.OOD_Datamodule = OOD_Datamodule
+        self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
+        self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
+        self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
+
+    def on_validation_epoch_end(self, trainer, pl_module):
+        self.get_iforest_auroc_basic(trainer,pl_module)
+
+    def on_test_epoch_end(self,trainer,pl_module):
+        self.get_iforest_auroc(trainer,pl_module)
+        '''
+        train_loader = self.Datamodule.train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+        
+        features_train, labels_train = self.get_features(pl_module, train_loader)  # using feature befor MLP-head
+        features_test, labels_test = self.get_features(pl_module, train_loader)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
+        
+        self.iforest_score(features_train, features_test, features_ood)
+        # Obtain the fpr95, aupr, test predictions, OOD predictions (basic version does not log the confidence scores or the confusion matrices)
+        '''
+
+
+    def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
+        features, labels = [], []
+        total = 0
+        loader = quickloading(self.quick_callback,dataloader)
+        for index, (img, label,indices) in enumerate(loader):
+            if isinstance(img, tuple) or isinstance(img, list):
+                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
+
+            if total > max_images:
+                break
+            
+            img, label = img.to(pl_module.device), label.to(pl_module.device)
+
+            features += list(pl_module.feature_vector(img).data.cpu().numpy())
+            labels += list(label.data.cpu().numpy())
+
+            if verbose and not index % 50:
+                print(index)
+                
+            total += len(img)
+        #import ipdb; ipdb.set_trace()
+        # https://www.programcreek.com/python/example/21245/numpy.double converting to a double 
+        return np.asarray(features,dtype=np.double), np.array(labels) 
+    
+    def get_all_features(self,trainer,pl_module):
+        train_loader = self.Datamodule.train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        features_train, labels_train = self.get_features(pl_module, train_loader)  # using feature befor MLP-head
+        features_test, labels_test = self.get_features(pl_module, train_loader)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
+        return features_train, features_test, features_ood
+
+    
+    def iforest_score_basic(self,features_train,features_test, features_ood):
+        F = iso.iForest(features_train,ntrees=200, sample_size=256, ExtensionLevel=1) # Train the isolation forest on indomain data
+        SN = F.compute_paths(X_in=features_test) # Nawid - compute the paths for the nominal datapoints
+        SA = F.compute_paths(X_in=features_ood)
+        iforest_auroc = get_roc_sklearn(SN, SA)
+        wandb.log({'iForest AUROC': iforest_auroc})
+        return SN, SA
+
+    # Computes ROC as well as plotting histogram of the data 
+    def iforest_score(self,features_train,features_test, features_ood):    
+        SN, SA = self.iforest_score_basic(features_train, features_test, features_ood)
+
+        # histogram of the confidence scores for the true data
+        true_data = [[s] for s in SN]
+        true_table = wandb.Table(data=true_data, columns=["scores"])
+        wandb.log({'True_data_iForest_Anomaly_scores': wandb.plot.histogram(true_table, "scores",title="iForest_true_data_Anomaly_scores")})
+
+        # Histogram of the confidence scores for the OOD data
+        ood_data = [[s] for s in SA]
+        ood_table = wandb.Table(data=ood_data, columns=["scores"])
+        wandb.log({'OOD_data_iForest_Anomaly_scores': wandb.plot.histogram(ood_table, "scores",title="iForest_OOD_data_Anomaly_scores")})
+
+    def get_iforest_auroc_basic(self,trainer,pl_module):
+        features_train,features_test,features_ood = self.get_all_features(trainer,pl_module)
+        self.iforest_score_basic(features_train,features_test,features_ood)
+    
+    def get_iforest_auroc(self,trainer,pl_module):
+        features_train,features_test,features_ood = self.get_all_features(trainer,pl_module)
+        self.iforest_score(features_train,features_test,features_ood)

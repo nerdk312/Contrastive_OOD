@@ -122,11 +122,15 @@ class HPCLCentroidToy(Toy):
         return logits, labels
 
     def proto_forward(self,features,labels,prototypes):
+        proto_labels = []
+        proto_logits = []
+
         logits_proto = torch.mm(features,prototypes.t().to(self.device)) # [bxd] by [dxprotosize] = [bx protosize]
         logits_proto /= 0.07  # Divide by temperature term
-        proto_labels = labels.to(self.device)
+        proto_labels.append(labels.to(self.device))
+        proto_logits.append(logits_proto)
         #import ipdb; ipdb.set_trace()
-        return logits_proto, proto_labels
+        return proto_logits, proto_labels
 
 
 
@@ -134,23 +138,29 @@ class HPCLCentroidToy(Toy):
     @torch.no_grad()
     def compute_features(self, dataloader):
         print('Computing features ...')
-        #import ipdb;ipdb.set_trace()
-        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device = self.device)
-        #import ipdb; ipdb.set_trace()
-        collated_labels =  torch.zeros(len(dataloader.dataset), device = self.device,dtype=torch.long)
-
-        #import ipdb; ipdb.set_trace()
-        for i, (images, labels, indices) in enumerate(tqdm(dataloader)):
+        
+        features = torch.zeros(len(dataloader.dataset), self.hparams.emb_dim, device=self.device)
+        # Collate the coarse and fine grained labels
+        collated_fine_labels =  torch.zeros(len(dataloader.dataset), device = self.device,dtype=torch.long)
+        collated_coarse_labels =  torch.zeros(len(dataloader.dataset), device = self.device,dtype=torch.long)
+        
+        for i, (images, coarse_labels, indices) in enumerate(tqdm(dataloader)):
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_images = images
-                images, labels = images.to(self.device), labels.to(self.device)
+            fine_labels = torch.randint(low=0, high=4, size = coarse_labels.shape)
+            images, coarse_labels, fine_labels = images.to(self.device), coarse_labels.to(self.device), fine_labels.to(self.device)
+                
 
-            collated_labels[indices] = labels
+            collated_coarse_labels[indices] = coarse_labels
+            collated_fine_labels[indices] = fine_labels
+
             feat = self.encoder_k(images)   # Nawid - obtain momentum features
             features[indices] = feat  # Nawid - place features in matrix, where the features are placed based on the index value which shows the index in the training data
-        
+        # Collate the coarse and the fine grain labels   
+        collated_labels = [collated_fine_labels, collated_coarse_labels]
         features = nn.functional.normalize(features, dim=1)
         return features, collated_labels
+    
     
     def feature_vector(self, data):
         z = self.encoder_k(data)
@@ -179,6 +189,9 @@ class HPCLCentroidToy(Toy):
         
         # Initialise loss value
         loss_proto = 0 
+
+
+        
         proto_out, proto_target = self.proto_forward(q,coarse_labels,self.auxillary_data)
         loss_proto += F.cross_entropy(proto_out, proto_target)
         accp = precision_at_k(proto_out, proto_target)[0]
@@ -212,20 +225,22 @@ class HPCLCentroidToy(Toy):
     @torch.no_grad()
     def obtain_protoypes(self,features,labels):
         #y = F.one_hot(labels.long(), num_classes=self.hparams.num_classes).float()
-        y = F.one_hot(labels.long()).float()
+        # Labels is a tensor of the different values
+        collated_prototypes = []
+        for i, label in enumerate(labels):
+            y = F.one_hot(labels.long()).float()
+            # compute sum of embeddings on class by class basis
+            #features_sum = torch.einsum('ij,ik->kj',z,y) # (batch, features) , (batch, num classes) to get (num classes,features)
+            #y = y.float() # Need to change into a float to be able to use it for the matrix multiplication
+            features_sum = torch.matmul(y.T,features) # (num_classes,batch) (batch,features) to get (num_class, features)
 
-        # compute sum of embeddings on class by class basis
-
-        #features_sum = torch.einsum('ij,ik->kj',z,y) # (batch, features) , (batch, num classes) to get (num classes,features)
-        #y = y.float() # Need to change into a float to be able to use it for the matrix multiplication
-        features_sum = torch.matmul(y.T,features) # (num_classes,batch) (batch,features) to get (num_class, features)
-
-        #features_sum = torch.matmul(z.T, y) # (batch,features) (batch,num_classes) to get (features,num_classes)
-
-        prototypes = features_sum.T / y.sum(0) # Nawid - divide each of the feature sum by the number of instances present in the class (need to transpose to get into shape which can divide column wise) shape : (features,num_classes
-        prototypes = prototypes.T # Turn back into shape (num_classes,features)
+            #features_sum = torch.matmul(z.T, y) # (batch,features) (batch,num_classes) to get (features,num_classes)
+            prototypes = features_sum.T / y.sum(0) # Nawid - divide each of the feature sum by the number of instances present in the class (need to transpose to get into shape which can divide column wise) shape : (features,num_classes
+            prototypes = prototypes.T # Turn back into shape (num_classes,features)
+            # Collate the prototypes for the coarse and fine grain labels case
+            collated_prototypes.append(prototypes)
         
-        return prototypes
+        return collated_prototypes
     
     '''
     @torch.no_grad()

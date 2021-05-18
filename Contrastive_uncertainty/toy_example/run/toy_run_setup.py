@@ -1,7 +1,7 @@
 from Contrastive_uncertainty.toy_example.callbacks.toy_visualisation_callbacks import  circular_visualisation, data_visualisation,\
                                                                                TwoMoonsUncertaintyVisualisation , TwoMoonsRepresentationVisualisation
 from Contrastive_uncertainty.toy_example.callbacks.toy_general_callbacks import ModelSaving
-from Contrastive_uncertainty.toy_example.callbacks.toy_ood_callbacks import OOD_ROC, Mahalanobis_OOD
+from Contrastive_uncertainty.toy_example.callbacks.toy_ood_callbacks import IsoForest, OOD_ROC, Mahalanobis_OOD
 from Contrastive_uncertainty.toy_example.datamodules.datamodule_dict import dataset_dict
 
 from Contrastive_uncertainty.toy_example.models.toy_moco import MocoToy
@@ -40,6 +40,7 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
                      'Representation_visualise': TwoMoonsRepresentationVisualisation(Datamodule),
                      'ROC': OOD_ROC(Datamodule, OOD_Datamodule),
                      'Mahalanobis': Mahalanobis_OOD(Datamodule, OOD_Datamodule, config['quick_callback']),
+                     'IsoForest': IsoForest(Datamodule, OOD_Datamodule, config['quick_callback']),
                      'Saving': ModelSaving(1)}
 
     return callback_dict
