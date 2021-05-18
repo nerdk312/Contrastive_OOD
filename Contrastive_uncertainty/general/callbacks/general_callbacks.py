@@ -18,6 +18,7 @@ from sklearn.metrics import roc_auc_score
 
 from Contrastive_uncertainty.general.utils.hybrid_utils import OOD_conf_matrix
 
+
 # Used to save the model in the directory as well as in wandb
 class ModelSaving(pl.Callback):
     def __init__(self, interval):
