@@ -379,7 +379,7 @@ class Mahalanobis_OOD(pl.Callback):
             
         features_train, labels_train = self.get_features(pl_module, train_loader)  # using feature befor MLP-head
         
-        features_test, labels_test = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_features(pl_module, test_loader)
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         
 
@@ -736,7 +736,7 @@ class IsoForest(pl.Callback):
         ood_loader = self.OOD_Datamodule.test_dataloader()
 
         features_train, labels_train = self.get_features(pl_module, train_loader)  # using feature befor MLP-head
-        features_test, labels_test = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_features(pl_module, test_loader)
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         return features_train, features_test, features_ood
 
