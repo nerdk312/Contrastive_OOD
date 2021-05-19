@@ -11,7 +11,7 @@ from torchvision.datasets import EMNIST
 import math
 
 from Contrastive_uncertainty.general_clustering.datamodules.dataset_normalizations import emnist_normalization
-from Contrastive_uncertainty.general_clustering.datamodules.datamodule_transforms import dataset_with_indices, split_size
+from Contrastive_uncertainty.general_clustering.datamodules.datamodule_transforms import dataset_with_indices, split_size, dataset_with_indices_emnist
 
 
 class EMNISTDataModule(LightningDataModule):
@@ -65,7 +65,7 @@ class EMNISTDataModule(LightningDataModule):
         super().__init__(*args, **kwargs)
         self.dims = (1, 28, 28)
         self.DATASET = EMNIST
-        self.DATASET_with_indices = dataset_with_indices(self.DATASET)
+        self.DATASET_with_indices = dataset_with_indices_emnist(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size

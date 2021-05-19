@@ -12,13 +12,15 @@ from Contrastive_uncertainty.general_clustering.datamodules.dataset_normalizatio
 
 from Contrastive_uncertainty.general.datamodules.datamodule_transforms import \
     Moco2TrainCIFAR10Transforms, Moco2EvalCIFAR10Transforms, \
+    Moco2TrainCIFAR100Transforms, Moco2EvalCIFAR100Transforms, \        
     Moco2TrainSVHNTransforms, Moco2EvalSVHNTransforms,\
     Moco2TrainFashionMNISTTransforms, Moco2EvalFashionMNISTTransforms, \
     Moco2TrainMNISTTransforms, Moco2EvalMNISTTransforms, \
     Moco2TrainKMNISTTransforms, Moco2EvalKMNISTTransforms, \
     Moco2TrainSTL10Transforms, Moco2EvalSTL10Transforms, \
     Moco2TrainEMNISTTransforms, Moco2EvalEMNISTTransforms,\
-    GaussianBlur, dataset_with_indices, dataset_with_indices_hierarchy
+    GaussianBlur, dataset_with_indices, dataset_with_indices_hierarchy, \
+    dataset_with_indices_emnist
 
 
 def split_size(batch_size, samples): # obtains a dataset size for the k-means based on the batch size
