@@ -9,8 +9,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'FashionMNIST',
-OOD_dataset = 'MNIST',
+dataset = 'CIFAR100',
+OOD_dataset = 'SVHN',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -28,12 +28,11 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'MultiPCL experiments',
-notes = 'MultiPCL grayscale datasets except EMNIST', # Add notes to the specific models each time
+group = 'CIFAR100 experiments',
+notes = 'CIFAR 100 vs SVHN baselines', # Add notes to the specific models each time
 
 
 # Cross entropy Specific parameters
-num_classes = 10,
 label_smoothing = False,
 
 # Contrastive specific parameters
@@ -50,14 +49,14 @@ contrast_mode ='one',
 # PCL specific parameters
 num_multi_cluster = [2000,4000], 
 num_cluster_negatives = 1024,
-num_inference_cluster = [26,100,1000], # Number of clusters for the inference callback
+num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
 
 # unsupcon memory parameters
 memory_momentum = 0.5,
-num_cluster = [26],
+num_cluster = [100],
 
 # Either goes through all the models or goes through baselines
 
-single_model = 'MultiPCL'
+single_model = 'Baselines'
 )  # evaluation

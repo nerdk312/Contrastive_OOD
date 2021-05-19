@@ -8,9 +8,9 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet18',
-bsz = 64,
-dataset = 'FashionMNIST',
-OOD_dataset = 'MNIST',
+bsz = 128,
+dataset = 'CIFAR100',
+OOD_dataset = 'SVHN',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -33,7 +33,7 @@ notes = None, # Add notes to the specific models each time
 
 
 # Cross entropy Specific parameters
-num_classes = 10,
+
 label_smoothing = False,
 
 # Contrastive specific parameters
@@ -59,5 +59,5 @@ num_cluster = [10],
 
 # Either goes through all the models or goes through baselines
 
-single_model = 'MultiPCL'
+single_model = 'Baselines'
 )  # evaluation

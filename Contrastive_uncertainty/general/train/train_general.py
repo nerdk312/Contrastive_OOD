@@ -36,7 +36,8 @@ def train(params,model_module,model_function):
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
-                        callback_dict['Mahalanobis'],callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']] 
+                        callback_dict['Mahalanobis'], callback_dict['MMD'],
+                        callback_dict['Visualisation'],callback_dict['Uniformity']] 
     
     # desired_callbacks = []
     # model_function takes in the model module and the config and uses it to instantiate the model

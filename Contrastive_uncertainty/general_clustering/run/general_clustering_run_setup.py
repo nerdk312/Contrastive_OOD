@@ -1,5 +1,5 @@
 from Contrastive_uncertainty.general.callbacks.general_callbacks import  ModelSaving,SupConLoss,Uniformity,MMD_distance,Centroid_distance
-from Contrastive_uncertainty.general.callbacks.ood_callbacks import  Mahalanobis_OOD, Euclidean_OOD
+from Contrastive_uncertainty.general.callbacks.ood_callbacks import  Mahalanobis_OOD, Euclidean_OOD#, IsoForest
 from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 
@@ -29,3 +29,5 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
                 'Centroid': Centroid_distance(Datamodule, quick_callback=quick_callback), 'SupCon': SupConLoss(Datamodule, quick_callback=quick_callback)}
     
     return callback_dict
+
+#'IsoForest': IsoForest(Datamodule,OOD_Datamodule, quick_callback=quick_callback),

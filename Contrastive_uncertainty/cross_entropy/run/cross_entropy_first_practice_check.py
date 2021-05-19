@@ -3,7 +3,7 @@ from Contrastive_uncertainty.cross_entropy.config.cross_entropy_params import cr
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import CrossEntropyModule
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance import ModelInstance
 
-cross_entropy_hparams['bsz'] = 128
+cross_entropy_hparams['bsz'] = 16
 cross_entropy_hparams['instance_encoder'] = 'resnet18'
 cross_entropy_hparams['epochs'] = 1
 cross_entropy_hparams['fast_run'] = True

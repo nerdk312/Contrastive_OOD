@@ -42,14 +42,8 @@ def train(base_dict):
                     
                     'PCL':{'params':pcl_hparams,'model_module':PCLModule,
                     'model_instance':PCLModelInstance,'train':general_clustering_training},
-
-                    'MultiPCL':{'params':multi_pcl_hparams,'model_module':MultiPCLModule,
-                    'model_instance':MultiPCLModelInstance,'train':general_clustering_training},
-
-                    'UnSupConMemory':{'params':unsup_con_memory_hparams,'model_module':UnSupConMemoryModule,
-                    'model_instance':UnSupConMemoryModelInstance,'train':general_clustering_training}
-                    }
-               
+    }   
+    
     # Update the parameters of each model
 
     # iterate through all items of the state dict
