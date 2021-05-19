@@ -8,11 +8,8 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-
-
-from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary
-from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
-
+from Contrastive_uncertainty.general_hierarchy.run.general_hierarchy_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary
+from Contrastive_uncertainty.general_hierarchy.datamodules.datamodule_dict import dataset_dict
 
 # Train takes in params, a particular training module as well a model_function to instantiate the model
 def train(params,model_module,model_function):

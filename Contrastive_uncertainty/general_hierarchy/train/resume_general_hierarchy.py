@@ -11,9 +11,9 @@ from pytorch_lightning.loggers import WandbLogger
 # Library required for selecting parts of a sentence
 import re
 
-from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary
-from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
-from Contrastive_uncertainty.general.utils.hybrid_utils import previous_model_directory
+from Contrastive_uncertainty.general_hierarchy.run.general_hierarchy_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary
+from Contrastive_uncertainty.general_hierarchy.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.general_hierarchy.utils.hybrid_utils import previous_model_directory
 
 
 def resume(run_path, trainer_dict,model_module,model_function):
