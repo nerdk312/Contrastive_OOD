@@ -7,8 +7,8 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.datasets.cifar import CIFAR100
 
 
-from Contrastive_uncertainty.general.datamodules.dataset_normalizations import cifar100_normalization
-from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, dataset_with_indices_hierarchy
+from Contrastive_uncertainty.general_hierarchy.datamodules.dataset_normalizations import cifar100_normalization
+from Contrastive_uncertainty.general_hierarchy.datamodules.datamodule_transforms import dataset_with_indices, dataset_with_indices_hierarchy, CIFAR100_coarse_labels
 from warnings import warn
 
 
@@ -68,7 +68,7 @@ class CIFAR100DataModule(LightningDataModule):
         super().__init__(*args, **kwargs)
         self.dims = (3, 32, 32)
         self.DATASET = CIFAR100
-        self.DATASET_with_indices = dataset_with_indices_hierarchy(self.DATASET)
+        self.DATASET_with_indices = dataset_with_indices_hierarchy(self.DATASET,CIFAR100_coarse_labels)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size

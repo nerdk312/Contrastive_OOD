@@ -28,9 +28,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'CIFAR100 experiments',
-notes = 'CIFAR 100 vs SVHN baselines', # Add notes to the specific models each time
-
+group = 'CIFAR100 experiments 2',
+notes = 'CIFAR 100 vs SVHN baselines Second Run', # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
 label_smoothing = False,

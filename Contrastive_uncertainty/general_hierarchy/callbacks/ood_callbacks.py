@@ -44,7 +44,7 @@ class Mahalanobis_OOD(pl.Callback):
         
         # Number of classes of the data
         self.num_fine_classes = self.Datamodule.num_classes
-        self.num_coarse_classes = self.Datamodule.num_coarse_classses
+        self.num_coarse_classes = self.Datamodule.num_coarse_classes
         # Names for creating a confusion matrix for the data
         class_dict = self.Datamodule.idx2class
         self.class_names = [v for k,v in class_dict.items()] # names of the categories of the dataset

@@ -20,4 +20,5 @@ from Contrastive_uncertainty.general.datamodules.datamodule_transforms import \
     Moco2TrainSTL10Transforms, Moco2EvalSTL10Transforms, \
     Moco2TrainEMNISTTransforms, Moco2EvalEMNISTTransforms,\
     GaussianBlur, dataset_with_indices, dataset_with_indices_hierarchy, \
-    dataset_with_indices_emnist ,coarse_labels
+    dataset_with_indices_emnist, \
+    MNIST_coarse_labels, CIFAR10_coarse_labels, CIFAR100_coarse_labels

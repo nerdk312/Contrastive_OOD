@@ -6,21 +6,25 @@ from Contrastive_uncertainty.Contrastive.models.contrastive_module import Contra
 from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
 from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_module import UnSupConMemoryModule
+from Contrastive_uncertainty.hierarchical_models.models.hsup_con_module import HSupConModule
+
 
 # Model instances for the different methods
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance import ModelInstance as CEModelInstance
 from Contrastive_uncertainty.Contrastive.models.contrastive_model_instance import ModelInstance as ContrastiveModelInstance
 from Contrastive_uncertainty.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
 from Contrastive_uncertainty.PCL.models.pcl_model_instance import ModelInstance as PCLModelInstance
+from Contrastive_uncertainty.hierarchical_models.models.hsup_con_model_instance import ModelInstance as HSupConModelInstance
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_model_instance import ModelInstance as UnSupConMemoryModelInstance
 
 # Import evaluate
 from Contrastive_uncertainty.general.train.evaluate_general import evaluation as general_evaluation
 from Contrastive_uncertainty.general_clustering.train.evaluate_general_clustering import evaluation as general_clustering_evaluation
+from Contrastive_uncertainty.general_hierarchy.train.evaluate_general_hierarchy import evaluation as general_hierarchy_evaluation
 
 
 def evaluate(run_paths):    
-    acceptable_single_models = ['Baselines','CE','Moco','SupCon','PCL','UnSupConMemory']
+    acceptable_single_models = ['Baselines','CE','Moco','SupCon','PCL','UnSupConMemory','HSupCon']
 
     # Dict for the model name, parameters and specific training loop
     

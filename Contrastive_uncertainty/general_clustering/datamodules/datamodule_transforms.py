@@ -12,7 +12,7 @@ from Contrastive_uncertainty.general_clustering.datamodules.dataset_normalizatio
 
 from Contrastive_uncertainty.general.datamodules.datamodule_transforms import \
     Moco2TrainCIFAR10Transforms, Moco2EvalCIFAR10Transforms, \
-    Moco2TrainCIFAR100Transforms, Moco2EvalCIFAR100Transforms, \        
+    Moco2TrainCIFAR100Transforms, Moco2EvalCIFAR100Transforms,\
     Moco2TrainSVHNTransforms, Moco2EvalSVHNTransforms,\
     Moco2TrainFashionMNISTTransforms, Moco2EvalFashionMNISTTransforms, \
     Moco2TrainMNISTTransforms, Moco2EvalMNISTTransforms, \

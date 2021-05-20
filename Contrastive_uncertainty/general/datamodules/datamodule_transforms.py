@@ -12,7 +12,7 @@ from torchvision import transforms
 
 
 # CIFAR100 Coarse labels
-coarse_labels = np.array([ 4,  1, 14,  8,  0,  6,  7,  7, 18,  3,  
+CIFAR100_coarse_labels = np.array([ 4,  1, 14,  8,  0,  6,  7,  7, 18,  3,  
                            3, 14,  9, 18,  7, 11,  3,  9,  7, 11,
                            6, 11,  5, 10,  7,  6, 13, 15,  3, 15,  
                            0, 11,  1, 10, 12, 14, 16,  9, 11,  5, 
@@ -23,6 +23,14 @@ coarse_labels = np.array([ 4,  1, 14,  8,  0,  6,  7,  7, 18,  3,
                           16, 19,  2,  4,  6, 19,  5,  5,  8, 19, 
                           18,  1,  2, 15,  6,  0, 17,  8, 14, 13])
     
+
+# MNIST Coarse labels
+MNIST_coarse_labels = np.array([ 0, 2, 1,  4,  3,  4,  0,  2, 1, 3])
+    
+
+# CIFAR10 Coarse labels
+#{0: '0 - airplane', 1: '1 - automobile', 2: '2 - bird', 3: '3 - cat', 4: '4 - deer', 5: '5 - dog', 6: '6 - frog', 7: '7 - horse', 8: '8 - ship', 9: '9 - truck'}
+CIFAR10_coarse_labels = np.array([ 0,  2, 3,  5,  6,  5,  4,  6, 1,  2])
 
 
 
@@ -394,6 +402,7 @@ def dataset_with_indices(cls):
     bases: tupe of clases from which corresponds to the __bases__ attribute
     '''
 
+'''
 #https://discuss.pytorch.org/t/how-to-retrieve-the-sample-indices-of-a-mini-batch/7948/18
 def dataset_with_indices_hierarchy(cls):
     """
@@ -410,10 +419,26 @@ def dataset_with_indices_hierarchy(cls):
     return type(cls.__name__, (cls,), {
         '__getitem__': __getitem__,
     }) 
-    '''type(name,bases,dict)
-    name is the name of the class which corresponds to the __name__ attribute__
-    bases: tupe of clases from which corresponds to the __bases__ attribute
-    '''
+    
+'''
+
+#https://discuss.pytorch.org/t/how-to-retrieve-the-sample-indices-of-a-mini-batch/7948/18
+def dataset_with_indices_hierarchy(cls, coarse_labels_map):
+    """
+    Modifies the given Dataset class to return a tuple data, target, index
+    instead of just data, target.
+    """
+    
+    def __getitem__(self, index):
+        #import ipdb; ipdb.set_trace()
+        data, target = cls.__getitem__(self, index)
+        coarse_target = coarse_labels_map[target]
+        return data, target, coarse_target, index
+    
+    return type(cls.__name__, (cls,), {
+        '__getitem__': __getitem__,
+    })
+
 
 # Subtracts target by 1 to make it so that number of classes go from 0 to 25 rather than 1 to 26
 def dataset_with_indices_emnist(cls):
