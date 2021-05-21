@@ -416,15 +416,12 @@ class Mahalanobis_OOD(pl.Callback):
        
         
         # Checks whether it is training epoch or test epoch
-        
+        '''
         if trainer.testing:
             # Calculates the confusion matrix for where the OOD examples are being predicted
             self.supervised_distance_OOD_confusion_matrix(trainer, indices_dood, labels_ood)
             # Calculates the distances of the centroids from the centre of the hypersphere
             self.centroid_distances(features_train, labels_train) 
-        '''   
-        if Trainer._running_stage.value == 'test':
-            self.distance_OOD_confusion_matrix(trainer,indices_dood,labels_ood)   
         '''
 
         #self.distance_confusion_matrix(trainer,indices_dtest,labels_test)

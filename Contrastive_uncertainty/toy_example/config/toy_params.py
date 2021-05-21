@@ -21,7 +21,7 @@ epochs = 2,
 bsz = 128,
 dataset = 'TwoMoons',
 OOD_dataset = 'StraightLines',
-model = 'Softmax',
+model = 'HPCLSequential',
 
 # Trainer configurations
 fast_run = False,

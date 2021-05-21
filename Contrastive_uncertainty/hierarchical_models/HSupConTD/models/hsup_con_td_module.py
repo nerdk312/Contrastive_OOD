@@ -1,3 +1,4 @@
+import collections
 import wandb
 import pytorch_lightning as pl
 import torch
@@ -7,9 +8,10 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.sup_con.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
+from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 
-class HSupConModule(pl.LightningModule):
+class HSupConTDModule(pl.LightningModule):
     def __init__(self,
         emb_dim: int = 128,
         contrast_mode:str = 'one',
@@ -19,7 +21,8 @@ class HSupConModule(pl.LightningModule):
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        use_mlp: bool = False,
+        num_negatives: int = 65536,
+        encoder_momentum: float = 0.999,
         instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
         ):
@@ -33,11 +36,18 @@ class HSupConModule(pl.LightningModule):
 
         # create the encoders
         # num_classes is the output fc dimension
+        self.encoder_q, self.encoder_k = self.init_encoders()
         
-        self.encoder = self.init_encoders()
-        if use_mlp:  # hack: brute-force replacement
-            dim_mlp = self.encoder.fc.weight.shape[1]
-            self.encoder.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder.fc)
+        for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
+            param_k.data.copy_(param_q.data)  # initialize
+            param_k.requires_grad = False  # not update by gradient
+        
+        # create the queue
+        self.register_buffer("queue", torch.randn(emb_dim, num_negatives))
+        self.queue = nn.functional.normalize(self.queue, dim=0)
+
+        self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
+        
         '''  
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
@@ -45,7 +55,7 @@ class HSupConModule(pl.LightningModule):
     @property
     def name(self):
         ''' return name of model'''
-        return 'HSupCon'
+        return 'HSupConTD'
 
     def init_encoders(self):
         """
@@ -53,26 +63,80 @@ class HSupConModule(pl.LightningModule):
         """
         if self.hparams.instance_encoder == 'resnet18':
             print('using resnet18')
-            encoder = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_q = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)            
         elif self.hparams.instance_encoder =='resnet50':
             print('using resnet50')
-            encoder = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
         
-        return encoder
+        # Additional branches for the specific tasks
+        fc_layer_dict = collections.OrderedDict([])
+        Sequential_layer_dict = collections.OrderedDict([])
+
+        for i in range(2):
+            name = 'Proto_Coarse' if i == 0 else 'Proto_Fine'
+            fc_layer_dict[name] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+            Sequential_layer_dict[name] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+
+
+        fc_layer_dict['Instance'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+        Sequential_layer_dict['Instance'] = nn.Sequential(nn.ReLU(), nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim))
+                
+        
+        encoder_q.sequential = nn.Sequential(Sequential_layer_dict)
+        encoder_k.sequential = nn.Sequential(Sequential_layer_dict)
+
+        encoder_q.branch_fc = nn.Sequential(fc_layer_dict)
+        encoder_k.branch_fc = nn.Sequential(fc_layer_dict)
+
+        return encoder_q, encoder_k
     
-    def callback_vector(self,x): # vector for the representation before using separate branches for the task
+    @torch.no_grad()
+    def _momentum_update_key_encoder(self):
         """
-        Input:
-            x: a batch of images for classification
-        Output:
-            z: latent vector
+        Momentum update of the key encoder
         """
-        z = self.encoder(x)
-        z = nn.functional.normalize(z, dim=1)
-        return z
+        for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
+            em = self.hparams.encoder_momentum
+            param_k.data = param_k.data * em + param_q.data * (1. - em)
 
+    @torch.no_grad()
+    def _dequeue_and_enqueue(self, keys):
+        # gather keys before updating queue
+        batch_size = keys.shape[0]
+        ptr = int(self.queue_ptr)
+        assert self.hparams.num_negatives % batch_size == 0  # for simplicity
 
-    def forward(self, features, labels=None, mask=None):
+        # replace the keys at ptr (dequeue and enqueue)
+        self.queue[:, ptr:ptr + batch_size] = keys.T # Nawid - add the keys to the queue
+        ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
+        self.queue_ptr[0] = ptr
+
+    def instance_forward(self, q, k):
+        # compute logits
+        # Einstein sum is more intuitive
+        # positive logits: Nx1
+        l_pos = torch.einsum('nc,nc->n', [q, k]).unsqueeze(-1) #Nawid - positive logit between output of key and query
+        # negative logits: Nxr
+        l_neg = torch.einsum('nc,ck->nk', [q, self.queue.clone().detach()]) # Nawid - negative logits (dot product between key and negative samples in a query bank)
+
+        # logits: Nx(1+r)
+        logits = torch.cat([l_pos, l_neg], dim=1) # Nawid - total logits - instance based loss to keep property of local smoothness
+
+        # apply temperature
+        logits /= self.hparams.softmax_temperature
+
+        # labels: positive key indicators
+        labels = torch.zeros(logits.shape[0], dtype=torch.long,device = self.device)
+        #labels = labels.type_as(logits)
+
+        # dequeue and enqueue
+        self._dequeue_and_enqueue(k) # Nawid - queue values
+        
+        return logits, labels
+    
+    def supervised_contrastive_forward(self, features, labels=None, mask=None):
         """Compute loss for model. If both `labels` and `mask` are None,
         it degenerates to SimCLR unsupervised loss:
         https://arxiv.org/pdf/2002.05709.pdf
@@ -122,12 +186,12 @@ class HSupConModule(pl.LightningModule):
         #anchor_count = contrast_count  # Nawid - all the different views are the anchors
 
         # compute logits (between each data point with every other data point )
-        anchor_dot_contrast = torch.div(  # Nawid - similarity between the anchor and the contrast feature
+        anchor_dot_con_butrast = torch.div(  # Nawid - similarity between the anchor and the contrast feature
             torch.matmul(anchor_feature, contrast_feature.T),
             self.hparams.softmax_temperature)
         # for numerical stability
-        logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
-        logits = anchor_dot_contrast - logits_max.detach()
+        logits_max, _ = torch.max(anchor_dot_con_butrast, dim=1, keepdim=True)
+        logits = anchor_dot_con_butrast - logits_max.detach()
         # tile mask
         # Nawid- changes mask from [b,b] to [b* anchor count, b *contrast count]
         mask = mask.repeat(anchor_count, contrast_count)
@@ -158,19 +222,66 @@ class HSupConModule(pl.LightningModule):
         loss = loss.view(anchor_count, batch_size).mean()
 
         return loss
+    
+    def callback_vector(self,x): # vector for the representation before using separate branches for the task
+        """
+        Input:
+            x: a batch of images for classification
+        Output:
+            z: latent vector
+        """
+        z = self.encoder_k(x)
+        z = nn.functional.normalize(z, dim=1)
+        return z
 
 
+    
     def loss_function(self, batch):
+        metrics = {}
         (img_1, img_2), fine_labels, coarse_labels, indices = batch
-        imgs = torch.cat([img_1, img_2], dim=0)
-        bsz = coarse_labels.shape[0]
-        features = self.encoder(imgs)
-        features = nn.functional.normalize(features, dim=1)
-        ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
-        features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
-        loss = self(features, coarse_labels) #  forward pass of the model
-        metrics = {'Loss': loss}
+        collated_labels = [fine_labels,coarse_labels]
+        
+        q = self.encoder_q(img_1)
+        k = self.encoder_k(img_2)
+        # Proto loss
+        loss_proto = 0 
+        for index, data_labels in enumerate(collated_labels):
+            
+            q = self.encoder_q.sequential[index](q)
+            proto_q = self.encoder_q.branch_fc[index](q)
+            proto_q = nn.functional.normalize(proto_q, dim=1)
 
+            k = self.encoder_q.sequential[index](k)
+            proto_k = self.encoder_k.branch_fc[index](k)
+            proto_k = nn.functional.normalize(proto_k, dim=1)
+
+            features = torch.cat([proto_q.unsqueeze(1), proto_k.unsqueeze(1)], dim=1)
+            loss_proto += self.supervised_contrastive_forward(features=features,labels=data_labels)
+            
+        loss_proto /= len(collated_labels)
+
+        # Instance loss
+        q = self.encoder_q.sequential[-1](q)
+        instance_q = self.encoder_q.branch_fc[-1](q)
+        instance_q = nn.functional.normalize(instance_q, dim=1)
+
+        k = self.encoder_q.sequential[-1](k)
+        instance_k = self.encoder_k.branch_fc[-1](k)
+        instance_k = nn.functional.normalize(instance_k, dim=1)
+        
+        output, target = self.instance_forward(instance_q,instance_k)
+        # InfoNCE loss
+        loss_instance = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
+        acc_1, acc_5 = precision_at_k(output, target,top_k=(1,5))
+        instance_metrics = {'Instance Loss': loss_instance, 'Instance Accuracy @1':acc_1,'Instance Accuracy @5':acc_5}
+        metrics.update(instance_metrics)
+
+        # Total loss
+        loss = loss_instance + loss_proto # Nawid - increase the loss
+
+        # Metric logging
+        additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
+        metrics.update(additional_metrics)
         return metrics
 
     def training_step(self, batch, batch_idx):

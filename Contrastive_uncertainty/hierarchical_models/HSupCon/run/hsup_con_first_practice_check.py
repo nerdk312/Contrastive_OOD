@@ -1,8 +1,7 @@
 from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy import train
-from Contrastive_uncertainty.hierarchical_models.config.hsup_con_params import hsup_con_hparams
-from Contrastive_uncertainty.hierarchical_models.models.hsup_con_module import HSupConModule
-from Contrastive_uncertainty.hierarchical_models.models.hsup_con_model_instance import ModelInstance
-
+from Contrastive_uncertainty.hierarchical_models.HSupCon.config.hsup_con_params import hsup_con_hparams
+from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_module import HSupConModule
+from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_model_instance import ModelInstance
 
 
 hsup_con_hparams['bsz'] = 16

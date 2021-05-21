@@ -271,11 +271,11 @@ class Mahalanobis_OOD(pl.Callback):
         true_table = wandb.Table(data=true_data, columns=["scores"])
         # Examine if the centroid was obtained in supervised or unsupervised manner
         if labels_train is not None:    
-            true_histogram_name = self.true_histogram + f'Supervised_{num_clusters}_clusters'
-            ood_histogram_name = self.ood_histogram + f'Supervised_{num_clusters}_clusters_{self.OOD_dataname}'
+            true_histogram_name = self.true_histogram + f':Supervised_{num_clusters}_clusters'
+            ood_histogram_name = self.ood_histogram + f':Supervised_{num_clusters}_clusters_{self.OOD_dataname}'
         else:
-            true_histogram_name = self.true_histogram + f'Unsupervised_{num_clusters}_clusters_{self.OOD_dataname}'
-            ood_histogram_name = self.ood_histogram + f'Unsupervised_{num_clusters}_clusters_{self.OOD_dataname}'
+            true_histogram_name = self.true_histogram + f':Unsupervised_{num_clusters}_clusters_{self.OOD_dataname}'
+            ood_histogram_name = self.ood_histogram + f':Unsupervised_{num_clusters}_clusters_{self.OOD_dataname}'
 
         #import ipdb; ipdb.set_trace()
         wandb.log({true_histogram_name: wandb.plot.histogram(true_table, "scores",title=true_histogram_name)})

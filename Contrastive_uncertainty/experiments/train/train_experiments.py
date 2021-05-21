@@ -3,7 +3,8 @@ from Contrastive_uncertainty.cross_entropy.config.cross_entropy_params import cr
 from Contrastive_uncertainty.Contrastive.config.contrastive_params import contrastive_hparams
 from Contrastive_uncertainty.sup_con.config.sup_con_params import sup_con_hparams
 from Contrastive_uncertainty.PCL.config.pcl_params import pcl_hparams
-from Contrastive_uncertainty.hierarchical_models.config.hsup_con_params import hsup_con_hparams
+from Contrastive_uncertainty.hierarchical_models.HSupCon.config.hsup_con_params import hsup_con_hparams
+from Contrastive_uncertainty.hierarchical_models.HSupConBU.config.hsup_con_bu_params import hsup_con_bu_hparams
 from Contrastive_uncertainty.multi_PCL.config.multi_pcl_params import multi_pcl_hparams
 from Contrastive_uncertainty.unsup_con_memory.config.unsup_con_memory_params import unsup_con_memory_hparams
 
@@ -12,7 +13,8 @@ from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import Cr
 from Contrastive_uncertainty.Contrastive.models.contrastive_module import ContrastiveModule
 from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
 from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
-from Contrastive_uncertainty.hierarchical_models.models.hsup_con_module import HSupConModule
+from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_module import HSupConModule
+from Contrastive_uncertainty.hierarchical_models.HSupConBU.models.hsup_con_bu_module import HSupConBUModule
 from Contrastive_uncertainty.multi_PCL.models.multi_pcl_module import MultiPCLModule
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_module import UnSupConMemoryModule
 
@@ -21,20 +23,27 @@ from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance i
 from Contrastive_uncertainty.Contrastive.models.contrastive_model_instance import ModelInstance as ContrastiveModelInstance
 from Contrastive_uncertainty.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
 from Contrastive_uncertainty.PCL.models.pcl_model_instance import ModelInstance as PCLModelInstance
-from Contrastive_uncertainty.hierarchical_models.models.hsup_con_model_instance import ModelInstance as HSupConModelInstance
+from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_model_instance import ModelInstance as HSupConModelInstance
+from Contrastive_uncertainty.hierarchical_models.HSupConBU.models.hsup_con_bu_model_instance import ModelInstance as HSupConBUModelInstance
 from Contrastive_uncertainty.multi_PCL.models.multi_pcl_model_instance import ModelInstance as MultiPCLModelInstance
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_model_instance import ModelInstance as UnSupConMemoryModelInstance
+
 
 # Import training methods 
 from Contrastive_uncertainty.general.train.train_general import train as general_training
 from Contrastive_uncertainty.general_clustering.train.train_general_clustering import train as general_clustering_training
 from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
+
 def train(base_dict):    
-    acceptable_single_models = ['Baselines','CE','Moco','SupCon','PCL','MultiPCL','UnSupConMemory','HSupCon']
+    acceptable_single_models = ['Baselines','CE','Moco','SupCon',
+    'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU']
 
     # Dict for the model name, parameters and specific training loop
     
-    model_dict = {'HSupCon':{'params':hsup_con_hparams,'model_module':HSupConModule, 
+    model_dict = {'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
+                    'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training},
+                    
+                    'HSupCon':{'params':hsup_con_hparams,'model_module':HSupConModule, 
                     'model_instance':HSupConModelInstance,'train':general_hierarchy_training},
                     
                     'PCL':{'params':pcl_hparams,'model_module':PCLModule,
@@ -65,10 +74,13 @@ def train(base_dict):
 
     # Checks whether base_dict single model is present in the list
     assert base_dict['single_model'] in acceptable_single_models, 'single model response not in list of acceptable responses'
-
+    '''
     datasets = ['FashionMNIST','MNIST','KMNIST','CIFAR10']
     ood_datasets = ['MNIST','FashionMNIST','MNIST','SVHN']
-
+    '''
+    datasets = ['MNIST','CIFAR10', 'CIFAR100']
+    ood_datasets = ['FashionMNIST','SVHN','SVHN']
+    
     # BASELINES
     # Go through all the models in the current dataset and current OOD dataset
     if base_dict['single_model']== 'Baselines':

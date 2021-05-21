@@ -1,0 +1,7 @@
+from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy import train
+from Contrastive_uncertainty.hierarchical_models.HSupConTD.config.hsup_con_td_params import hsup_con_td_hparams
+from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_module import HSupConTDModule
+from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_model_instance import ModelInstance
+
+# calls the function
+train(hsup_con_td_hparams, HSupConTDModule, ModelInstance)

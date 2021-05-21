@@ -19,6 +19,7 @@ from Contrastive_uncertainty.toy_example.models.toy_multi_PCL import MultiPCLToy
 from Contrastive_uncertainty.toy_example.models.toy_multi_PCL_branch import MultiPCLBranchToy
 from Contrastive_uncertainty.toy_example.models.toy_hpcl import HPCLToy
 from Contrastive_uncertainty.toy_example.models.toy_hpcl_branch import HPCLBranchToy
+from Contrastive_uncertainty.toy_example.models.toy_hpcl_sequential import HPCLSequentialToy
 from Contrastive_uncertainty.toy_example.models.toy_hpcl_centroid import HPCLCentroidToy
 
 def Datamodule_selection(dataset, config):
@@ -93,7 +94,7 @@ def Model_selection(datamodule,config):
                 softmax_temperature=config['softmax_temperature'],
                 pretrained_network=config['pretrained_network']),
 
-                'HPCLSequential':HPCLBranchToy(datamodule=datamodule,
+                'HPCLSequential':HPCLSequentialToy(datamodule=datamodule,
                 optimizer=config['optimizer'], learning_rate=config['learning_rate'],
                 momentum=config['momentum'], weight_decay=config['weight_decay'],
                 hidden_dim=config['hidden_dim'], emb_dim=config['emb_dim'],
