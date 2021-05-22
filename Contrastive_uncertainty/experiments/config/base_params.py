@@ -9,8 +9,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'CIFAR100',
-OOD_dataset = 'SVHN',
+dataset = 'MNIST',
+OOD_dataset = 'FashionMNIST',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -28,8 +28,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'HSupConBU training experiment',
-notes = 'Examining whether HSupConBU is able to train effectively', # Add notes to the specific models each time
+group = 'HSupCon vs SupCon',
+notes = 'Examining the difference between fine and coarse grain classification', # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
 label_smoothing = False,
@@ -57,5 +57,5 @@ num_cluster = [100],
 
 # Either goes through all the models or goes through baselines
 
-single_model = 'HSupConBU'
+single_model = 'Baselines'
 )  # evaluation

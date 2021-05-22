@@ -39,7 +39,7 @@ def train(base_dict):
     'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU']
 
     # Dict for the model name, parameters and specific training loop
-    
+    '''
     model_dict = {'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
                     'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training},
                     
@@ -58,8 +58,15 @@ def train(base_dict):
                     'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyModule,
                     'model_instance':CEModelInstance,'train':general_training},
                     
-    }   
-    
+    }
+    '''
+    model_dict = {'HSupCon':{'params':hsup_con_hparams,'model_module':HSupConModule, 
+                    'model_instance':HSupConModelInstance,'train':general_hierarchy_training},
+                    
+                    'SupCon':{'params':sup_con_hparams,'model_module':SupConModule, 
+                    'model_instance':SupConModelInstance,'train':general_training},
+               
+    }
     # Update the parameters of each model
 
     # iterate through all items of the state dict
