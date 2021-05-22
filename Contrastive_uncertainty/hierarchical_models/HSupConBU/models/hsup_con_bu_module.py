@@ -258,8 +258,10 @@ class HSupConBUModule(pl.LightningModule):
 
     def loss_function(self, batch):
         metrics = {}
-        (img_1, img_2), fine_labels, coarse_labels, indices = batch
-        collated_labels = [fine_labels,coarse_labels]
+        # import ipdb; ipdb.set_trace()
+        # *labels used to group together the labels
+        (img_1, img_2), *labels, indices = batch
+        #collated_labels = [fine_labels,coarse_labels]
         
         q = self.encoder_q(img_1)
         k = self.encoder_k(img_2)
@@ -268,7 +270,6 @@ class HSupConBUModule(pl.LightningModule):
         instance_q = self.encoder_q.branch_fc[0](q)
         instance_q = nn.functional.normalize(instance_q, dim=1)
 
-        
         k = self.encoder_q.sequential[0](k)
         instance_k = self.encoder_k.branch_fc[0](k)
         instance_k = nn.functional.normalize(instance_k, dim=1)
@@ -283,8 +284,8 @@ class HSupConBUModule(pl.LightningModule):
         # Initialise loss value
         
         proto_loss_terms = [0, 0]
-        assert len(proto_loss_terms) == len(collated_labels), 'number of label types different than loss terms'
-        for index, (data_labels, loss_proto) in enumerate(zip(collated_labels,proto_loss_terms)):
+        assert len(proto_loss_terms) == len(labels), 'number of label types different than loss terms'
+        for index, (data_labels, loss_proto) in enumerate(zip(labels,proto_loss_terms)):
             
             q = self.encoder_q.sequential[index+1](q)
             proto_q = self.encoder_q.branch_fc[index+1](q)

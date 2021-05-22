@@ -108,8 +108,9 @@ class MetricLogger(pl.Callback):
             final_iter = tqdm(loader, desc='Embedding Data...'.format(len(evaltypes)))# Nawid - loading of dataloader I believe
             for idx,inp in enumerate(final_iter):
                 input_img,target = inp[0], inp[1] # Nawid - obtain data
+                # Take into account multiple augmented versions of images as well as the different labels
                 if isinstance(input_img, tuple) or isinstance(input_img,list):input_img, *aug_imgs = input_img
-
+                if isinstance(input_img, tuple) or isinstance(input_img,list):target, *coarse_target = target
                 target_labels.extend(target.numpy().tolist()) # Nawid- obtain labels
                 #embeddings = model.embedding_encoder.update_embeddings(input_img.to(self.pars['device']),target.to(self.pars['device']))
                 #out = model.online_encoder(input_img.to(self.pars['device']),embeddings) # Nawid - Obtain output
@@ -186,7 +187,6 @@ class MetricLogger(pl.Callback):
                 _, computed_cluster_labels_cosine = faiss_search_index.search(features_cosine, 1)
 
 
-
             """============ Compute Nearest Neighbours ==============="""
             if 'nearest_features' in self.requires:
                 faiss_search_index  = faiss.IndexFlatL2(features.shape[-1])
@@ -234,7 +234,6 @@ class MetricLogger(pl.Callback):
             extra_infos[evaltype] = {'features':features, 'target_labels':target_labels}
         torch.cuda.empty_cache()
         return computed_metrics, extra_infos
-
 
 
     def evaluate_data(self,trainer,pl_module,log_key='Test'):
