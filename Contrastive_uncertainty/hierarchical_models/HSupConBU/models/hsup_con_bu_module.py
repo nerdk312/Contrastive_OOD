@@ -25,6 +25,7 @@ class HSupConBUModule(pl.LightningModule):
         encoder_momentum: float = 0.999,
         instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
+        branch_weights: list = [1.0/3, 1.0/3, 1.0/3],  # Going from instance fine to coarse
         ):
 
         super().__init__()
@@ -281,8 +282,10 @@ class HSupConBUModule(pl.LightningModule):
         metrics.update(instance_metrics)
 
         # Initialise loss value
-        loss_proto = 0 
-        for index, data_labels in enumerate(collated_labels):
+        
+        proto_loss_terms = [0, 0]
+        assert len(proto_loss_terms) == len(collated_labels), 'number of label types different than loss terms'
+        for index, (data_labels, loss_proto) in enumerate(zip(collated_labels,proto_loss_terms)):
             
             q = self.encoder_q.sequential[index+1](q)
             proto_q = self.encoder_q.branch_fc[index+1](q)
@@ -293,13 +296,12 @@ class HSupConBUModule(pl.LightningModule):
             proto_k = nn.functional.normalize(proto_k, dim=1)
 
             features = torch.cat([proto_q.unsqueeze(1), proto_k.unsqueeze(1)], dim=1)
-            loss_proto += self.supervised_contrastive_forward(features=features,labels=data_labels)
+            proto_loss_terms[index] = self.supervised_contrastive_forward(features=features,labels=data_labels)
         
         # Normalise the proto loss by number of different labels present
-        loss_proto /= len(collated_labels)
-        loss = loss_instance + loss_proto # Nawid - increase the loss
-
-        additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
+        loss = (self.hparams.branch_weights[0]*loss_instance) + (self.hparams.branch_weights[1]*proto_loss_terms[0]) + (self.hparams.branch_weights[2]*proto_loss_terms[1])  # Nawid - increase the loss
+        # import ipdb; ipdb.set_trace()
+        additional_metrics = {'Loss':loss, 'Fine Loss':proto_loss_terms[0], 'Coarse Loss':proto_loss_terms[1]}
         metrics.update(additional_metrics)
         return metrics
 

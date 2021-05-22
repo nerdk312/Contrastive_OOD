@@ -6,6 +6,7 @@ def ModelInstance(model_module,config,datamodule):
             momentum = config['momentum'], weight_decay = config['weight_decay'],
             datamodule = datamodule,
             instance_encoder = config['instance_encoder'],
-            pretrained_network = config['pretrained_network'])
+            pretrained_network = config['pretrained_network'],
+            branch_weights = config['branch_weights'])
     
     return model
