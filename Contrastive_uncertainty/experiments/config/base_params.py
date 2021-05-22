@@ -50,10 +50,12 @@ num_multi_cluster = [2000,4000],
 num_cluster_negatives = 1024,
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
-
 # unsupcon memory parameters
 memory_momentum = 0.5,
 num_cluster = [100],
+
+# HSupConBU parameters
+branch_weights = [1.0/3, 1.0/3, 1.0/3],
 
 # Either goes through all the models or goes through baselines
 

@@ -273,7 +273,6 @@ class HSupConBUModule(pl.LightningModule):
         instance_k = self.encoder_k.branch_fc[0](k)
         instance_k = nn.functional.normalize(instance_k, dim=1)
         
-
         output, target = self.instance_forward(instance_q,instance_k)
         # InfoNCE loss
         loss_instance = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
