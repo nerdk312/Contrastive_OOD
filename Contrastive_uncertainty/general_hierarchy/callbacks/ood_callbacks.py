@@ -25,7 +25,6 @@ from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mea
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_fpr, get_pr_sklearn, get_roc_sklearn, Euclidean_OOD
 
 
-
 class Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,num_inference_clusters,quick_callback):
         super().__init__()

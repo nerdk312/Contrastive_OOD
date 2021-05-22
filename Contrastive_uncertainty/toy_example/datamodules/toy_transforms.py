@@ -154,6 +154,48 @@ def Normalize(x, mean, std):
     x = (x - mean) / std
     return x
 
+
+
+class ToyTrainBlobsTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self):
+        # image augmentation functions
+        self.train_transform = transforms.Compose([
+            transforms.RandomApply([GaussianNoise([.1, 2.])], p=0.5),
+        ])
+
+    def __call__(self, inp):
+        
+        q = self.train_transform(inp)
+        #print('pre normalised q',q)
+        #q = Normalize(q,mean,std)
+        #print('post normalised q',q)
+        k = self.train_transform(inp)
+        #k = Normalize(k,mean,std)
+        return q, k
+
+
+class ToyEvalBlobsTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self):
+        self.test_transform = transforms.Compose([
+        ])
+
+    def __call__(self, inp):
+        q = self.test_transform(inp)
+        #q = Normalize(q, mean, std)
+        k = self.test_transform(inp)
+        #k = Normalize(k, mean, std)
+        return q, k
+
+
+
 # Use to apply transforms to the tensordataset  https://stackoverflow.com/questions/55588201/pytorch-transforms-on-tensordataset
 class CustomTensorDataset(Dataset):
     """TensorDataset with support of transforms.
@@ -168,10 +210,19 @@ class CustomTensorDataset(Dataset):
 
         if self.transform:
             x = self.transform(x)
+        
+        # y is from the 1st value to the last value to be able to deal with the coarse values which are present for the task
+        
 
-        y = self.tensors[1][index]
+        if len(self.tensors) ==3:
+            y = self.tensors[1][index]
+            coarse_y = self.tensors[2][index]
+            return x, y, coarse_y, index # Added the return of index for the purpose of PCL
+            
+        else:
+            y = self.tensors[1][index]
 
-        return x, y, index # Added the return of index for the purpose of PCL
+            return x, y, index # Added the return of index for the purpose of PCL
 
     def __len__(self):
         return self.tensors[0].size(0)

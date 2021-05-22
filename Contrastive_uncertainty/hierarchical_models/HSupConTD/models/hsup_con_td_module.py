@@ -25,6 +25,7 @@ class HSupConTDModule(pl.LightningModule):
         encoder_momentum: float = 0.999,
         instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
+        branch_weights: list = [1.0/3, 1.0/3, 1.0/3],  # Going from instance fine to coarse
         ):
 
         super().__init__()
@@ -70,6 +71,7 @@ class HSupConTDModule(pl.LightningModule):
             encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
             encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
         
+        
         # Additional branches for the specific tasks
         fc_layer_dict = collections.OrderedDict([])
         Sequential_layer_dict = collections.OrderedDict([])
@@ -91,6 +93,35 @@ class HSupConTDModule(pl.LightningModule):
         encoder_k.branch_fc = nn.Sequential(fc_layer_dict)
 
         return encoder_q, encoder_k
+    
+    # Callback vector which uses both the representations for the task
+    def callback_vector(self, x):  # vector for the representation before using separate branches for the task
+        """
+        Input:
+            x: a batch of images for classification
+        Output:
+            z: latent vector
+        """
+        coarse_z = self.coarse_callback_vector(x)
+        fine_z = self.fine_callback_vector(x)
+        z = (coarse_z, fine_z)
+        return z
+        
+    # Callback vector for fine branch
+    def fine_callback_vector(self, x):
+        z = self.encoder_k(x)
+        z = self.encoder_k.sequential[0:2](z)
+        z = self.encoder_k.branch_fc[1](z)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+
+    # Callback vector for coarse branch
+    def coarse_callback_vector(self,x):
+        z = self.encoder_k(x)
+        z = self.encoder_k.sequential[0:3](z)
+        z = self.encoder_k.branch_fc[2](z)
+        z = nn.functional.normalize(z, dim=1)
+        return z
     
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
@@ -186,12 +217,12 @@ class HSupConTDModule(pl.LightningModule):
         #anchor_count = contrast_count  # Nawid - all the different views are the anchors
 
         # compute logits (between each data point with every other data point )
-        anchor_dot_con_butrast = torch.div(  # Nawid - similarity between the anchor and the contrast feature
+        anchor_dot_contrast = torch.div(  # Nawid - similarity between the anchor and the contrast feature
             torch.matmul(anchor_feature, contrast_feature.T),
             self.hparams.softmax_temperature)
         # for numerical stability
-        logits_max, _ = torch.max(anchor_dot_con_butrast, dim=1, keepdim=True)
-        logits = anchor_dot_con_butrast - logits_max.detach()
+        logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
+        logits = anchor_dot_contrast - logits_max.detach()
         # tile mask
         # Nawid- changes mask from [b,b] to [b* anchor count, b *contrast count]
         mask = mask.repeat(anchor_count, contrast_count)
@@ -223,6 +254,7 @@ class HSupConTDModule(pl.LightningModule):
 
         return loss
     
+    '''
     def callback_vector(self,x): # vector for the representation before using separate branches for the task
         """
         Input:
@@ -233,19 +265,20 @@ class HSupConTDModule(pl.LightningModule):
         z = self.encoder_k(x)
         z = nn.functional.normalize(z, dim=1)
         return z
-
+    '''
 
     
     def loss_function(self, batch):
         metrics = {}
-        (img_1, img_2), fine_labels, coarse_labels, indices = batch
-        collated_labels = [fine_labels,coarse_labels]
+        (img_1, img_2), *labels, indices = batch
+        #collated_labels = [fine_labels,coarse_labels]
         
         q = self.encoder_q(img_1)
         k = self.encoder_k(img_2)
         # Proto loss
-        loss_proto = 0 
-        for index, data_labels in enumerate(collated_labels):
+        proto_loss_terms = [0, 0]
+        assert len(proto_loss_terms) == len(labels), 'number of label types different than loss terms'
+        for index, data_labels in enumerate(labels):
             
             q = self.encoder_q.sequential[index](q)
             proto_q = self.encoder_q.branch_fc[index](q)
@@ -256,9 +289,8 @@ class HSupConTDModule(pl.LightningModule):
             proto_k = nn.functional.normalize(proto_k, dim=1)
 
             features = torch.cat([proto_q.unsqueeze(1), proto_k.unsqueeze(1)], dim=1)
-            loss_proto += self.supervised_contrastive_forward(features=features,labels=data_labels)
-            
-        loss_proto /= len(collated_labels)
+            proto_loss_terms[index] = self.supervised_contrastive_forward(features=features,labels=data_labels)
+        
 
         # Instance loss
         q = self.encoder_q.sequential[-1](q)
@@ -277,13 +309,14 @@ class HSupConTDModule(pl.LightningModule):
         metrics.update(instance_metrics)
 
         # Total loss
-        loss = loss_instance + loss_proto # Nawid - increase the loss
+        loss = (self.hparams.branch_weights[0]*loss_instance) + (self.hparams.branch_weights[1]*proto_loss_terms[0]) + (self.hparams.branch_weights[2]*proto_loss_terms[1])  # Nawid - increase the loss
 
         # Metric logging
-        additional_metrics = {'Loss':loss, 'ProtoLoss':loss_proto}
+        additional_metrics = {'Loss':loss, 'Fine Loss':proto_loss_terms[0], 'Coarse Loss':proto_loss_terms[1]}
         metrics.update(additional_metrics)
         return metrics
-
+    
+    
     def training_step(self, batch, batch_idx):
         metrics = self.loss_function(batch)
         for k,v in metrics.items():

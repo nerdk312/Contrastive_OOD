@@ -172,7 +172,7 @@ class TwoMoonsUncertaintyVisualisation(pl.Callback): # contains methods specifc 
     def on_validation_epoch_end(self,trainer, pl_module):
         self.visualise_uncertainty(trainer,pl_module)
     
-    def on_test_epoch_end(self,tainer,pl_module):
+    def on_test_epoch_end(self,trainer,pl_module):
         self.generate_video()
 
     def outlier_grid(self): #  Generates the grid of points, outputs, x_lin and y_lin aswell as this is required for the uncertainty visualisation
@@ -180,7 +180,7 @@ class TwoMoonsUncertaintyVisualisation(pl.Callback): # contains methods specifc 
         x_lin,y_lin = np.linspace(-domain+0.5, domain+0.5, 50), np.linspace(-domain, domain, 50)
 
         # Normalising the data which is used for the visualisation
-        x_lin,y_lin = (x_lin -self.datamodule.mean[0])/self.datamodule.std[0], (y_lin -self.datamodule.mean[1])/self.datamodule.std[1]
+        x_lin, y_lin = (x_lin -self.datamodule.mean[0])/self.datamodule.std[0], (y_lin -self.datamodule.mean[1])/self.datamodule.std[1]
         xx, yy = np.meshgrid(x_lin, y_lin)
         X_grid = np.column_stack([xx.flatten(), yy.flatten()])
         return x_lin, y_lin, X_grid

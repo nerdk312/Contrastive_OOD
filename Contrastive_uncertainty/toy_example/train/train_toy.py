@@ -41,7 +41,7 @@ def training(params):
     #desired_callbacks = [callback_dict['Uncertainty_visualise']]#[callback_dict['ROC'],callback_dict['Mahalanobis']]
     #desired_callbacks = [callback_dict['Saving']]
     #desired_callbacks = [callback_dict['Mahalanobis']]
-    desired_callbacks = [callback_dict['IsoForest']]
+    desired_callbacks = []
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
         
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,

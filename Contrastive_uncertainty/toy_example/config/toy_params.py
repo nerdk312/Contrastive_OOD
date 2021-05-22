@@ -19,9 +19,9 @@ weight_decay = 1e-4,
 seed = 26,
 epochs = 2,
 bsz = 128,
-dataset = 'TwoMoons',
+dataset = 'Blobs',
 OOD_dataset = 'StraightLines',
-model = 'HPCLSequential',
+model = 'HSupConBU',
 
 # Trainer configurations
 fast_run = False,
@@ -31,6 +31,8 @@ validation_ratio = 1.0,
 test_ratio = 1.0,
 val_check = 1,
 pretrained_network = None,
+num_inference_cluster = [10,100],
+
 
 project = 'toy'  # evaluation, Moco_training
 )

@@ -94,7 +94,7 @@ class HPCLSequentialToy(Toy):
         encoder_k.branch_fc = nn.Sequential(fc_layer_dict)
 
         
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         '''
         encoder_q.instance = nn.Sequential(nn.ReLU(),nn.Linear(self.hparams.emb_dim,self.hparams.emb_dim))
         encoder_q.coarse = nn.Sequential(nn.ReLU(),nn.Linear(self.hparams.emb_dim,self.hparams.emb_dim))

@@ -1,19 +1,23 @@
-import collections
-import wandb
-import pytorch_lightning as pl
+import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from torch import nn
-import torchvision
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from pytorch_lightning.loggers import WandbLogger
+from random import sample
+from tqdm import tqdm
+import faiss
+import collections
+import pytorch_lightning as pl
+
+from Contrastive_uncertainty.toy_example.models.toy_encoder import Backbone
+from Contrastive_uncertainty.toy_example.models.toy_module import Toy
 
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
-from Contrastive_uncertainty.hierarchical_models.HSupConBU.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 
-class HSupConBUModule(pl.LightningModule):
+
+
+class HSupConBUToy(Toy):
     def __init__(self,
-        emb_dim: int = 128,
+        emb_dim: int = 2,
         contrast_mode:str = 'one',
         softmax_temperature: float = 0.07,
         optimizer:str = 'sgd',
@@ -21,25 +25,32 @@ class HSupConBUModule(pl.LightningModule):
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        num_negatives: int = 65536,
+        num_negatives: int = 32,
         encoder_momentum: float = 0.999,
-        instance_encoder:str = 'resnet50',
+        instance_encoder:str = 'backbone',
         pretrained_network:str = None,
         branch_weights: list = [1.0/3, 1.0/3, 1.0/3],  # Going from instance fine to coarse
         ):
+        """
+        hidden_dim: dimensionality of neural network (default: 128)
+        emb_dim: dimensionality of the feature space (default: 2)
+        num_negatives: number of negative samples/prototypes (defaul: 16384)
 
-        super().__init__()
-        # Nawid - required to use for the fine tuning
+        encoder_momentum: momentum for updating key encoder (default: 0.999)
+        softmax_temperature: softmax temperature
+        """
+
+        super().__init__(datamodule, optimizer, learning_rate,
+                         momentum, weight_decay)
+        
         self.save_hyperparameters()
         self.datamodule = datamodule
         self.num_classes = datamodule.num_classes
         self.num_channels = datamodule.num_channels
 
-        # create the encoders
-        # num_classes is the output fc dimension
         
         self.encoder_q, self.encoder_k = self.init_encoders()
-        
+
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
             param_k.data.copy_(param_q.data)  # initialize
             param_k.requires_grad = False  # not update by gradient
@@ -49,12 +60,12 @@ class HSupConBUModule(pl.LightningModule):
         self.queue = nn.functional.normalize(self.queue, dim=0)
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
-        
-        '''  
-        if self.hparams.pretrained_network is not None:
-            self.encoder_loading(self.hparams.pretrained_network)
         '''
-        
+        #import ipdb; ipdb.set_trace()
+        if self.hparams.pretrained_network is not None:
+            self.encoder_loading(self.pretrained_network)
+        '''
+
     @property
     def name(self):
         ''' return name of model'''
@@ -64,15 +75,9 @@ class HSupConBUModule(pl.LightningModule):
         """
         Override to add your own encoders
         """
-        if self.hparams.instance_encoder == 'resnet18':
-            print('using resnet18')
-            encoder_q = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
-            encoder_k = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)            
-        elif self.hparams.instance_encoder =='resnet50':
-            print('using resnet50')
-            encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
-            encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
-        
+        encoder_q = Backbone(20, self.hparams.emb_dim)
+        encoder_k = Backbone(20, self.hparams.emb_dim)
+
         # Additional branches for the specific tasks
         fc_layer_dict = collections.OrderedDict([])
         Sequential_layer_dict = collections.OrderedDict([])
@@ -91,8 +96,9 @@ class HSupConBUModule(pl.LightningModule):
 
         encoder_q.branch_fc = nn.Sequential(fc_layer_dict)
         encoder_k.branch_fc = nn.Sequential(fc_layer_dict)
-
+        
         return encoder_q, encoder_k
+
 
     # Callback vector which uses both the representations for the task
     def callback_vector(self, x):  # vector for the representation before using separate branches for the task
@@ -123,6 +129,7 @@ class HSupConBUModule(pl.LightningModule):
         z = nn.functional.normalize(z, dim=1)
         return z
 
+
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
         """
@@ -132,6 +139,7 @@ class HSupConBUModule(pl.LightningModule):
             em = self.hparams.encoder_momentum
             param_k.data = param_k.data * em + param_q.data * (1. - em)
 
+            
     @torch.no_grad()
     def _dequeue_and_enqueue(self, keys):
         # gather keys before updating queue
@@ -143,7 +151,6 @@ class HSupConBUModule(pl.LightningModule):
         self.queue[:, ptr:ptr + batch_size] = keys.T # Nawid - add the keys to the queue
         ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
         self.queue_ptr[0] = ptr
-
 
     def instance_forward(self, q, k):
         # compute logits
@@ -167,7 +174,7 @@ class HSupConBUModule(pl.LightningModule):
         self._dequeue_and_enqueue(k) # Nawid - queue values
         
         return logits, labels
-
+    
     def supervised_contrastive_forward(self, features, labels=None, mask=None):
         """Compute loss for model. If both `labels` and `mask` are None,
         it degenerates to SimCLR unsupervised loss:
@@ -218,12 +225,12 @@ class HSupConBUModule(pl.LightningModule):
         #anchor_count = contrast_count  # Nawid - all the different views are the anchors
 
         # compute logits (between each data point with every other data point )
-        anchor_dot_contrast = torch.div(  # Nawid - similarity between the anchor and the contrast feature
+        anchor_dot_con_bu_contrast = torch.div(  # Nawid - similarity between the anchor and the contrast feature
             torch.matmul(anchor_feature, contrast_feature.T),
             self.hparams.softmax_temperature)
         # for numerical stability
-        logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
-        logits = anchor_dot_contrast - logits_max.detach()
+        logits_max, _ = torch.max(anchor_dot_con_bu_contrast, dim=1, keepdim=True)
+        logits = anchor_dot_con_bu_contrast - logits_max.detach()
         # tile mask
         # Nawid- changes mask from [b,b] to [b* anchor count, b *contrast count]
         mask = mask.repeat(anchor_count, contrast_count)
@@ -256,11 +263,16 @@ class HSupConBUModule(pl.LightningModule):
         return loss
 
 
+    def feature_vector(self, data):
+        z = self.encoder_k(data)
+        return z
+
     def loss_function(self, batch):
         metrics = {}
         # import ipdb; ipdb.set_trace()
         # *labels used to group together the labels
         (img_1, img_2), *labels, indices = batch
+        #import ipdb; ipdb.set_trace()
         #collated_labels = [fine_labels,coarse_labels]
         
         q = self.encoder_q(img_1)
@@ -284,6 +296,7 @@ class HSupConBUModule(pl.LightningModule):
         # Initialise loss value
         
         proto_loss_terms = [0, 0]
+        print('label length',len(labels))
         assert len(proto_loss_terms) == len(labels), 'number of label types different than loss terms'
         for index, data_labels in enumerate(labels):
             
@@ -312,7 +325,7 @@ class HSupConBUModule(pl.LightningModule):
         loss = metrics['Loss']
         return loss
         
-    def validation_step(self, batch, batch_idx,dataset_idx):
+    def validation_step(self, batch, batch_idx):
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
             if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
@@ -322,20 +335,22 @@ class HSupConBUModule(pl.LightningModule):
         for k,v in metrics.items():
             if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
         
-        #return {'logits':logits,'target':labels} # returns y_pred as y_pred are essentially the logits in this case, and I want to log how the logits change in time
-     
-    def configure_optimizers(self):
-        if self.hparams.optimizer =='sgd':
-            optimizer = torch.optim.SGD(self.parameters(), self.hparams.learning_rate,
-                                        momentum=self.hparams.momentum,
-                                        weight_decay=self.hparams.weight_decay)
-        elif self.hparams.optimizer =='adam':
-            optimizer = torch.optim.Adam(self.parameters(), self.hparams.learning_rate,
-                                        weight_decay=self.hparams.weight_decay)
-        return optimizer
     
-    # Loads both network as a target state dict
-    def encoder_loading(self,pretrained_network):
-        print('checkpoint loaded')
-        checkpoint = torch.load(pretrained_network)
-        self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
+    '''
+    @torch.no_grad()
+    def update_embeddings(self, x, labels): # Assume y is one hot encoder
+        z = self.feature_vector(x)  # (batch,features)
+        y = F.one_hot(labels.long(), num_classes=self.hparams.num_classes).float()
+        # compute sum of embeddings on class by class basis
+
+        #features_sum = torch.einsum('ij,ik->kj',z,y) # (batch, features) , (batch, num classes) to get (num classes,features)
+        #y = y.float() # Need to change into a float to be able to use it for the matrix multiplication
+        features_sum = torch.matmul(y.T,z) # (num_classes,batch) (batch,features) to get (num_class, features)
+
+        #features_sum = torch.matmul(z.T, y) # (batch,features) (batch,num_classes) to get (features,num_classes)
+        
+
+        embeddings = features_sum.T / y.sum(0) # Nawid - divide each of the feature sum by the number of instances present in the class (need to transpose to get into shape which can divide column wise) shape : (features,num_classes
+        embeddings = embeddings.T # Turn back into shape (num_classes,features)
+        return embeddings
+    '''

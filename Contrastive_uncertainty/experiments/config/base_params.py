@@ -28,8 +28,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'HSupCon vs SupCon',
-notes = 'Examining the difference between fine and coarse grain classification', # Add notes to the specific models each time
+group = 'HSupConTD training',
+notes = 'Examining whether HSupConTD is able to train effectively',  # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
 label_smoothing = False,
@@ -37,7 +37,7 @@ label_smoothing = False,
 # Contrastive specific parameters
 Contrastive = True,
 supervised_contrastive = False,
-num_negatives = 1024,
+num_negatives = 4096,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
 use_mlp =True,
@@ -59,5 +59,5 @@ branch_weights = [1.0/3, 1.0/3, 1.0/3],
 
 # Either goes through all the models or goes through baselines
 
-single_model = 'Baselines'
+single_model = 'HSupConTD'
 )  # evaluation

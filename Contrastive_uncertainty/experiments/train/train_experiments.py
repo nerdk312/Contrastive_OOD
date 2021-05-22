@@ -5,6 +5,7 @@ from Contrastive_uncertainty.sup_con.config.sup_con_params import sup_con_hparam
 from Contrastive_uncertainty.PCL.config.pcl_params import pcl_hparams
 from Contrastive_uncertainty.hierarchical_models.HSupCon.config.hsup_con_params import hsup_con_hparams
 from Contrastive_uncertainty.hierarchical_models.HSupConBU.config.hsup_con_bu_params import hsup_con_bu_hparams
+from Contrastive_uncertainty.hierarchical_models.HSupConTD.config.hsup_con_td_params import hsup_con_td_hparams
 from Contrastive_uncertainty.multi_PCL.config.multi_pcl_params import multi_pcl_hparams
 from Contrastive_uncertainty.unsup_con_memory.config.unsup_con_memory_params import unsup_con_memory_hparams
 
@@ -15,6 +16,7 @@ from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
 from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
 from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_module import HSupConModule
 from Contrastive_uncertainty.hierarchical_models.HSupConBU.models.hsup_con_bu_module import HSupConBUModule
+from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_module import HSupConTDModule
 from Contrastive_uncertainty.multi_PCL.models.multi_pcl_module import MultiPCLModule
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_module import UnSupConMemoryModule
 
@@ -25,6 +27,7 @@ from Contrastive_uncertainty.sup_con.models.sup_con_model_instance import ModelI
 from Contrastive_uncertainty.PCL.models.pcl_model_instance import ModelInstance as PCLModelInstance
 from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_model_instance import ModelInstance as HSupConModelInstance
 from Contrastive_uncertainty.hierarchical_models.HSupConBU.models.hsup_con_bu_model_instance import ModelInstance as HSupConBUModelInstance
+from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_model_instance import ModelInstance as HSupConTDModelInstance
 from Contrastive_uncertainty.multi_PCL.models.multi_pcl_model_instance import ModelInstance as MultiPCLModelInstance
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_model_instance import ModelInstance as UnSupConMemoryModelInstance
 
@@ -36,7 +39,7 @@ from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy imp
 
 def train(base_dict):    
     acceptable_single_models = ['Baselines','CE','Moco','SupCon',
-    'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU']
+    'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU','HSupConTD']
 
     # Dict for the model name, parameters and specific training loop
     '''
@@ -65,6 +68,11 @@ def train(base_dict):
                     
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConModule, 
                     'model_instance':SupConModelInstance,'train':general_training},
+
+                    'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDModule, 
+                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},
+
+                    
                
     }
     # Update the parameters of each model

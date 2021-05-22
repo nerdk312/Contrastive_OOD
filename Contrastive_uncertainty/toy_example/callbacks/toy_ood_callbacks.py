@@ -86,7 +86,7 @@ class OOD_ROC(pl.Callback):
         accuracies = np.concatenate(accuracies)
         outputs = np.concatenate(outputs)
 
-        return scores, accuracies,outputs
+        return scores, accuracies, outputs
 
     # Outputs the OOD values as well as the ROC curve
     def get_auroc_ood(self,pl_module):
