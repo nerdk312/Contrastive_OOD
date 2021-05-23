@@ -10,8 +10,8 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'CIFAR100',
-OOD_dataset = 'SVHN',
+dataset = 'MNIST',
+OOD_dataset = 'FashionMNIST',
 
 contrast_mode = 'one',
 use_mlp = True,

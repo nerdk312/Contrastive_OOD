@@ -46,7 +46,13 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
             classes//2
         '''
         return self.centers//2
-
+    @property
+    def num_hierarchy(self):
+        '''
+        Return:
+            number of layers in hierarchy
+        '''
+        return 2 
     @property
     def num_channels(self):
         """

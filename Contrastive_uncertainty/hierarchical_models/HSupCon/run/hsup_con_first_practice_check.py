@@ -7,7 +7,7 @@ from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_model_i
 hsup_con_hparams['bsz'] = 16
 hsup_con_hparams['instance_encoder'] = 'resnet18'
 hsup_con_hparams['epochs'] = 1
-hsup_con_hparams['fast_run'] = True
+hsup_con_hparams['fast_run'] = False
 hsup_con_hparams['training_ratio'] = 0.01
 hsup_con_hparams['validation_ratio'] = 0.2
 hsup_con_hparams['test_ratio'] = 0.2

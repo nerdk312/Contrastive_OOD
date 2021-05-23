@@ -1,5 +1,5 @@
 from Contrastive_uncertainty.general_hierarchy.callbacks.general_callbacks import  ModelSaving,SupConLoss,Uniformity,MMD_distance,Centroid_distance
-from Contrastive_uncertainty.general_hierarchy.callbacks.ood_callbacks import Mahalanobis_OOD, Euclidean_OOD#, IsoForest
+from Contrastive_uncertainty.general_hierarchy.callbacks.ood_callbacks import Mahalanobis_OOD # Euclidean_OOD#, IsoForest
 from Contrastive_uncertainty.general_hierarchy.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.general_hierarchy.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 

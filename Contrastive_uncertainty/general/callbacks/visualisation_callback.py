@@ -29,7 +29,7 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloa
 from scipy.spatial.distance import cdist # Required for TwoMoons visualisation involving pairwise distances
 
 class Visualisation(pl.Callback): # General class for visualisation
-    def __init__(self, datamodule, ood_datamodule,quick_callback):
+    def __init__(self, datamodule, ood_datamodule, quick_callback):
         self.datamodule = datamodule
         self.ood_datamodule = ood_datamodule
         self.ood_datamodule.test_transforms= self.datamodule.test_transforms   # Make it so that the OOD datamodule has the same transform as the true module
@@ -39,25 +39,28 @@ class Visualisation(pl.Callback): # General class for visualisation
         # setup data
         self.quick_callback = quick_callback
 
-    #def on_fit_start(self, trainer, pl_module):
+    
     def on_test_epoch_end(self, trainer, pl_module):
         # Obtain representations for the normal case as well as the concatenated representations
         
         representations, labels = self.obtain_representations(pl_module)
-        
-        # PCA visalisation
-        self.pca_visualisation(representations, labels, 'inliers')
-        # T-SNE visualisation
-        self.tsne_visualisation(representations, labels, 'inliers')
+        for i in len(representations):
+
+            # PCA visalisation
+            self.pca_visualisation(representations[i], labels[i], f'inliers {i+1}')
+            # T-SNE visualisation
+            self.tsne_visualisation(representations[i], labels[i], f'inliers {i+1}')
         # +1 in num classes to represent outlier data, *2 represents class specific outliers
         #self.pca_visualisation(concat_representations, concat_labels,config['num_classes']+1,'general')
 
         # Obtain the concatenated representations for the case where the different values can be used for the task
+        '''
         if not self.quick_callback:
             concat_representations, concat_labels, class_concat_labels = self.OOD_representations(pl_module) # obtain representations and labels which have both data
             self.pca_visualisation(concat_representations, class_concat_labels, 'class')
             self.tsne_visualisation(concat_representations, class_concat_labels, 'class')
-
+        '''
+    
     def obtain_representations(self, pl_module):  # separate from init so that two moons does not make representations automatically using dataloader rather it uses X_vis
         # self.data = self.datamodule.test_dataloader() # instantiate val dataloader
 
@@ -71,7 +74,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         loader = quickloading(self.quick_callback, dataloader)
         self.representations, self.labels = self.compute_representations(pl_module, loader)
         return self.representations, self.labels
-
+    '''
     def OOD_representations(self,pl_module):
         true_dataset = self.datamodule.test_dataset  #  Test set of the true datamodule
 
@@ -92,25 +95,38 @@ class Visualisation(pl.Callback): # General class for visualisation
 
         self.concat_representations, _ = self.compute_representations(pl_module, loader)
         return self.concat_representations, concat_labels, class_concat_labels
-
+    '''
     @torch.no_grad()
     def compute_representations(self, pl_module, loader):
-        features = []
-        collated_labels = []
-        #import ipdb; ipdb.set_trace()
-        for i, (images, labels,indices) in enumerate(tqdm(loader)): # Obtain data and labels from dataloader
-            assert len(loader)>0, 'loader is empty'
+
+        features = {}
+        collated_labels = {}
+        for i in range(self.num_hierarchy):
+            features[i] = []
+            collated_labels[i] = []
+        
+        for i, (images, *labels, indices) in enumerate(tqdm(loader)): # Obtain data and labels from dataloader
+            assert len(loader) >0, 'loader is empty'
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_imgs = images
             
             images = images.to(pl_module.device)  # cuda(non_blocking=True)
-            features.append(pl_module.callback_vector(images))  # Obtain features
-            collated_labels.append(labels)
+            feature_vector = pl_module.callback_vector(images)
+            for i in range(self.num_hierarchy):
+                features[i].append(feature_vector[i])
+                collated_labels[i].append(labels[i])
 
-        features = torch.cat(features)
-        collated_labels = torch.cat(collated_labels)
-        return features.cpu(), collated_labels.cpu()
+            #features.append(pl_module.callback_vector(images))  # Obtain features
 
+            #collated_labels.append(labels)
+        for i in range(self.num_hierarchy):
+            features[i] = torch.cat(features[i]).cpu()
+            collated_labels[i] = torch.cat(collated_labels[i]).cpu()
+
+
+        #features = torch.cat(features)
+        #collated_labels = torch.cat(collated_labels)
+        return features, collated_labels
 
     def pca_visualisation(self, representations, labels, name):
         pca = PCA(n_components=3)

@@ -186,7 +186,7 @@ class Mahalanobis_OOD(pl.Callback):
         
         
         # Number of classes of the data
-        self.num_hierarchy = 2  #self.Datamodule.num_hierarchy  # Used to get the number of layers in hierarchy
+        self.num_hierarchy = self.Datamodule.num_hierarchy  # Used to get the number of layers in hierarchy
         self.num_fine_classes = self.Datamodule.num_classes
         self.num_coarse_classes = self.Datamodule.num_coarse_classes
         # Names for creating a confusion matrix for the data
@@ -198,7 +198,7 @@ class Mahalanobis_OOD(pl.Callback):
 
         self.OOD_dataname = self.OOD_Datamodule.name
     
-    def on_validation_epoch_end(self,trainer,pl_module):
+    def on_validation_epoch_end(self, trainer, pl_module):
         # Skip if fast testing as this can lead to issues with the code
         if trainer.fast_dev_run:
             pass
@@ -297,10 +297,6 @@ class Mahalanobis_OOD(pl.Callback):
                 features[i] += list(feature_vector[i].data.cpu().numpy())
                 labels[i] += list(label[i].data.cpu().numpy())
 
-            #features.append(pl_module.callback_vector(img))
-            #features += list(pl_module.callback_vector(img).data.cpu().numpy())
-            #fine_labels += list(fine_label.data.cpu().numpy())
-            #coarse_labels += list(coarse_label.data.cpu().numpy())
             
             if verbose and not index % 50:
                 print(index)
@@ -316,12 +312,6 @@ class Mahalanobis_OOD(pl.Callback):
     
     def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
         #features, fine_labels, coarse_labels = [], [], []
-        '''
-        sample = next(iter(dataloader)) 
-        data_sample, *label_sample, index_sample = sample
-        # Examines whether it is only fine labels, or fine and coarse (required as ID dataloader and OOD dataloader differs)
-        hierarchy_layers = len(label_sample)
-        '''
         features = {}
         labels = []
 
