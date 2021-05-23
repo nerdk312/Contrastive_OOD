@@ -269,6 +269,8 @@ class HSupConTDModule(pl.LightningModule):
 
     
     def loss_function(self, batch):
+        # Encoder update
+        self._momentum_update_key_encoder()
         metrics = {}
         (img_1, img_2), *labels, indices = batch
         #collated_labels = [fine_labels,coarse_labels]

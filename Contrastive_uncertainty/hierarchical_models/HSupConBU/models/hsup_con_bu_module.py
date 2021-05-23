@@ -257,6 +257,8 @@ class HSupConBUModule(pl.LightningModule):
 
 
     def loss_function(self, batch):
+        # Encoder update
+        self._momentum_update_key_encoder()
         metrics = {}
         # import ipdb; ipdb.set_trace()
         # *labels used to group together the labels
