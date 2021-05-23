@@ -9,12 +9,15 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloa
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_fpr,\
     get_pr_sklearn, get_roc_sklearn
 
+import faiss
+
 #from Contrastive_uncertainty.general.utils import iso_forest as iso
 import eif as iso
 import seaborn as sb
 sb.set_style(style="whitegrid")
 sb.set_color_codes()
 
+'''
 class OOD_ROC(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule):
         super().__init__()
@@ -111,10 +114,10 @@ class OOD_ROC(pl.Callback):
 
         
         # Double checking the calculation of the ROC scores for the data
-        '''
-        second_check_roc_auc = roc_auc_score(1-anomaly_targets,confidence_scores) # ROC scores for the case of checking whether a sample is in distribution data
-        wandb.log({"AUROC_v2":second_check_roc_auc})
-        '''
+        
+        #second_check_roc_auc = roc_auc_score(1-anomaly_targets,confidence_scores) # ROC scores for the case of checking whether a sample is in distribution data
+        #wandb.log({"AUROC_v2":second_check_roc_auc})
+        
 
         accuracy = np.mean(accuracies[: len(self.Datamodule.test_dataset)]) # Nawid - obtainn accuracy for the true dataset
         roc_auc = roc_auc_score(anomaly_targets, scores) # Nawid - obtain roc auc for a binary classification problem where the scores show how close it is to a centroid (which will say whether it is in domain or out of domain), and whether it identified as being in domain or out of domain.
@@ -147,12 +150,12 @@ class OOD_ROC(pl.Callback):
         ood_table = wandb.Table(data=ood_data, columns=["scores"])
         wandb.log({'OOD_data_OOD_scores': wandb.plot.histogram(ood_table, "scores",title="OOD_data_scores")})
 
-        '''
+        
         # Double checking the calculation of the ROC scores for the data
         #second_check_scores = #1 + scores # scores are all negative values
-        second_check_roc_auc = roc_auc_score(1-anomaly_targets,confidence_scores) # ROC scores for the case of checking whether a sample is in distribution data
-        wandb.log({"AUROC_v2":second_check_roc_auc})
-        '''
+        #second_check_roc_auc = roc_auc_score(1-anomaly_targets,confidence_scores) # ROC scores for the case of checking whether a sample is in distribution data
+        #wandb.log({"AUROC_v2":second_check_roc_auc})
+        
 
         accuracy = np.mean(accuracies[: len(self.Datamodule.test_dataset)]) # Nawid - obtainn accuracy for the true dataset
         roc_auc = roc_auc_score(anomaly_targets, scores) # Nawid - obtain roc auc for a binary classification problem where the scores show how close it is to a centroid (which will say whether it is in domain or out of domain), and whether it identified as being in domain or out of domain.
@@ -160,7 +163,7 @@ class OOD_ROC(pl.Callback):
         wandb.log({"AUROC":roc_auc})
 
         return accuracy, roc_auc
-
+'''
 class Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,num_inference_clusters,quick_callback):
         super().__init__()
@@ -169,20 +172,21 @@ class Mahalanobis_OOD(pl.Callback):
         self.OOD_Datamodule = OOD_Datamodule
         self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
         self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
+        self.num_inference_clusters = num_inference_clusters
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
         
         self.log_name = "Supervised_Mahalanobis_"
         self.unsupervised_log_name = "Unsupervised_Mahalanobis_"
         self.true_histogram = 'Mahalanobis_True_data_scores'
         self.ood_histogram = 'Mahalanobis_OOD_data_scores'
-        self.log_classification = 'Mahalanobis Classification'
         
         self.log_name = "Mahalanobis_"
         self.true_histogram = 'Mahalanobis_True_data_scores'
         self.ood_histogram = 'Mahalanobis_OOD_data_scores'
-
-
+        
+        
         # Number of classes of the data
+        self.num_hierarchy = 2  #self.Datamodule.num_hierarchy  # Used to get the number of layers in hierarchy
         self.num_fine_classes = self.Datamodule.num_classes
         self.num_coarse_classes = self.Datamodule.num_coarse_classes
         # Names for creating a confusion matrix for the data
@@ -213,41 +217,35 @@ class Mahalanobis_OOD(pl.Callback):
         test_loader = self.Datamodule.test_dataloader()
         ood_loader = self.OOD_Datamodule.test_dataloader()
         
+        # 
         # Obtain representations of the data
-        features_train, fine_labels_train, coarse_labels_train = self.get_features_hierarchy(pl_module, train_loader)  # using feature befor MLP-head
-        
-        features_test, fine_labels_test, coarse_labels_test = self.get_features_hierarchy(pl_module, test_loader)
+        features_train, labels_train = self.get_features_hierarchy(pl_module, train_loader)
+        #features_train, fine_labels_train, coarse_labels_train = self.get_features_hierarchy(pl_module, train_loader)  # using feature befor MLP-head
+        features_test, labels_test = self.get_features_hierarchy(pl_module, test_loader)
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
+        #features_test, fine_labels_test, coarse_labels_test = self.get_features_hierarchy(pl_module, test_loader)
+        #features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         
+        for i in range(len(features_train)):
+            # Obtain the number of classes for the case for the coarse and fine case
+            num_classes = max(labels_train[i]+1)
+            fpr95, auroc, aupr, indices_dtest, indices_dood = self.get_eval_results(
+                np.copy(features_train[i]),
+                np.copy(features_test[i]),
+                np.copy(features_ood[i]),
+                np.copy(labels_train[i]),
+                num_classes) 
+            #import ipdb; ipdb.set_trace()
+            self.mahalanobis_classification(indices_dtest, labels_test[i],f'Mahalanobis Classification {i+1}')
 
-        # Obtain the fpr95, aupr, test predictions, OOD predictions (basic version does not log the confidence scores or the confusion matrices)
-        fpr95, auroc, aupr, indices_dtest, indices_dood = self.get_eval_results(
-            np.copy(features_train),
-            np.copy(features_test),
-            np.copy(features_ood),
-            np.copy(fine_labels_train),
-            self.num_fine_classes
-        )
-
-        fpr95_coarse, auroc_coarse, aupr_coarse, indices_dtest_coarse, indices_dood_coarse = self.get_eval_results(
-            np.copy(features_train),
-            np.copy(features_test),
-            np.copy(features_ood),
-            np.copy(coarse_labels_train),
-            self.num_coarse_classes
-        )
-
-        # Performs centroid classification using the labels
-        self.mahalanobis_classification(indices_dtest, fine_labels_test,'Mahalanobis Fine Classification')
-        self.mahalanobis_classification(indices_dtest_coarse, coarse_labels_test,'Mahalanobis Coarse Classification')
         # Calculates the mahalanobis distance using unsupervised approach
         
         # Perform unsupervised clustering with different values       
         for num_clusters in self.num_inference_clusters:
             _, _, _, UL_indices_dtest, UL_indices_dood = self.get_eval_results(
-            np.copy(features_train),
-            np.copy(features_test),
-            np.copy(features_ood),
+            np.copy(features_train[0]),
+            np.copy(features_test[0]),
+            np.copy(features_ood[0]),
             None,
             num_clusters
         )
@@ -262,59 +260,105 @@ class Mahalanobis_OOD(pl.Callback):
         labels = torch.tensor(labels,dtype = torch.long)
         mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
         #import ipdb; ipdb.set_trace()       
-        wandb.log({self.log_classification:mahalanobis_test_accuracy})
-        
+        wandb.log({name:mahalanobis_test_accuracy})
+    
+
+    
     def get_features_hierarchy(self,pl_module, dataloader, max_images=10**10, verbose=False):
-        features, fine_labels, coarse_labels = [], [], []
+        #features, fine_labels, coarse_labels = [], [], []
+        '''
+        sample = next(iter(dataloader)) 
+        data_sample, *label_sample, index_sample = sample
+        # Examines whether it is only fine labels, or fine and coarse (required as ID dataloader and OOD dataloader differs)
+        hierarchy_layers = len(label_sample)
+        '''
+        features = {}
+        labels = {}
+
+        for i in range(self.num_hierarchy):
+            features[i] = []
+            labels[i] = []
+        
         total = 0
         loader = quickloading(self.quick_callback,dataloader)
-        for index, (img, fine_label,coarse_label,indices) in enumerate(loader):
+        for index, (img, *label,indices) in enumerate(loader):
             assert len(loader)>0, 'loader is empty'
             if isinstance(img, tuple) or isinstance(img, list):
                     img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
 
-
             if total > max_images:
                 break
             
-            img, fine_label, coarse_label = img.to(pl_module.device), fine_label.to(pl_module.device), coarse_label.to(pl_module.device)
+            img = img.to(pl_module.device)
+            #import ipdb; ipdb.set_trace()
 
-            features += list(pl_module.callback_vector(img).data.cpu().numpy())
-            fine_labels += list(fine_label.data.cpu().numpy())
-            coarse_labels += list(coarse_label.data.cpu().numpy())
+            feature_vector = pl_module.callback_vector(img)
+            for i in range(self.num_hierarchy):
+                features[i] += list(feature_vector[i].data.cpu().numpy())
+                labels[i] += list(label[i].data.cpu().numpy())
+
+            #features.append(pl_module.callback_vector(img))
+            #features += list(pl_module.callback_vector(img).data.cpu().numpy())
+            #fine_labels += list(fine_label.data.cpu().numpy())
+            #coarse_labels += list(coarse_label.data.cpu().numpy())
             
             if verbose and not index % 50:
                 print(index)
                 
             total += len(img)
-
-        return np.array(features), np.array(fine_labels), np.array(coarse_labels)   
-
+        
+        # Convert each list separately to an array
+        for i in range(self.num_hierarchy):
+            features[i] = np.array(features[i])
+            labels[i] = np.array(labels[i])
+        
+        return features, labels
+    
     def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
-        features, labels = [], []
+        #features, fine_labels, coarse_labels = [], [], []
+        '''
+        sample = next(iter(dataloader)) 
+        data_sample, *label_sample, index_sample = sample
+        # Examines whether it is only fine labels, or fine and coarse (required as ID dataloader and OOD dataloader differs)
+        hierarchy_layers = len(label_sample)
+        '''
+        features = {}
+        labels = []
+
+        for i in range(self.num_hierarchy):
+            features[i] = []
+        
         total = 0
         loader = quickloading(self.quick_callback,dataloader)
-        for index, (img, label,*_) in enumerate(loader):
+        for index, (img,label,indices) in enumerate(loader):
             assert len(loader)>0, 'loader is empty'
             if isinstance(img, tuple) or isinstance(img, list):
                     img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
 
-
             if total > max_images:
                 break
             
-            img, label = img.to(pl_module.device), label.to(pl_module.device)
-
-            features += list(pl_module.callback_vector(img).data.cpu().numpy())
+            img = img.to(pl_module.device)
+            feature_vector = pl_module.callback_vector(img)
+            for i in range(self.num_hierarchy):
+                features[i] += list(feature_vector[i].data.cpu().numpy())
+            #import ipdb; ipdb.set_trace()
             labels += list(label.data.cpu().numpy())
 
+            
             if verbose and not index % 50:
                 print(index)
                 
             total += len(img)
-
-        return np.array(features), np.array(labels)    
- 
+        
+        # Convert each list separately to an array
+        for i in range(self.num_hierarchy):
+            features[i] = np.array(features[i])
+        
+        labels = np.array(labels)
+        
+        return features, labels
+    
     # Nawid - perform k-means on the training features and then assign a cluster assignment
     def get_clusters(self, ftrain, nclusters):
         kmeans = faiss.Kmeans(

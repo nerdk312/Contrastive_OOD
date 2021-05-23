@@ -20,7 +20,7 @@ seed = 26,
 epochs = 2,
 bsz = 128,
 dataset = 'Blobs',
-OOD_dataset = 'StraightLines',
+OOD_dataset = 'TwoMoons',
 model = 'HSupConBU',
 
 # Trainer configurations

@@ -21,10 +21,11 @@ from Contrastive_uncertainty.general.utils.hybrid_utils import OOD_conf_matrix
 
 # Used to save the model in the directory as well as in wandb
 class ModelSaving(pl.Callback):
-    def __init__(self, interval):
+    def __init__(self, interval,folder_name):
         super().__init__()
         self.interval = interval
         self.counter = interval
+        self.folder_name = folder_name
         #self.epoch_last_check = 0
     
     
@@ -41,7 +42,7 @@ class ModelSaving(pl.Callback):
 
         
     def save_model(self, trainer, pl_module,epoch):
-        folder = 'Models'
+        folder = self.folder_name
         folder = os.path.join(folder, wandb.run.path)
         # makedirs used to make multiple subfolders in comparison to mkdir which makes a single folder
         if not os.path.exists(folder):
@@ -53,14 +54,8 @@ class ModelSaving(pl.Callback):
 
         # Saves the checkpoint to enable to continue loading
         trainer.save_checkpoint(filename)
-        '''
-        torch.save({
-            'online_encoder_state_dict':pl_module.encoder_q.state_dict(),
-            'target_encoder_state_dict':pl_module.encoder_k.state_dict(),
-        },filename)
-        '''
-        
-        
+       
+                
 # Calculation of MMD based on the definition 2/ equation 1 in the paper        
 # http://www.gatsby.ucl.ac.uk/~gretton/papers/GreBorRasSchetal12.pdf?origin=publication_detail
 class MMD_distance(pl.Callback):
