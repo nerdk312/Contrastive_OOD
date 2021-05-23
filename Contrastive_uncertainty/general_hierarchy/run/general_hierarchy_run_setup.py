@@ -17,7 +17,7 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
 
     OOD_samples = next(iter(OOD_val_test_loader))
 
-    callback_dict = {'Model_saving':ModelSaving(config['model_saving']), 
+    callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Models'), 
                 'Metrics': MetricLogger(evaluation_metrics,num_classes,val_test_loader,evaltypes,config['quick_callback']),
                 
                 'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule,num_inference_clusters=inference_clusters, quick_callback=quick_callback),

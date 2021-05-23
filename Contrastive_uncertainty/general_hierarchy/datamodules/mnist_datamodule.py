@@ -99,6 +99,14 @@ class MNISTDataModule(LightningDataModule):
         return 5
     
     @property
+    def num_hierarchy(self):
+        '''
+        Return:
+            number of layers in hierarchy
+        '''
+        return 2 
+    
+    @property
     def num_channels(self):
         """
         Return:

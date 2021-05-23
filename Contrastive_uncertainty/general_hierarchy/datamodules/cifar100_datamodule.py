@@ -109,6 +109,14 @@ class CIFAR100DataModule(LightningDataModule):
             3
         """
         return 3
+    
+    @property
+    def num_hierarchy(self):
+        '''
+        Return:
+            number of layers in hierarchy
+        '''
+        return 2 
 
     def prepare_data(self):
         """
