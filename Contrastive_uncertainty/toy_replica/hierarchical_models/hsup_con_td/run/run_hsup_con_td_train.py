@@ -1,0 +1,8 @@
+from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.train.train_general_hierarchy import train
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.config.hsup_con_td_params import hsup_con_td_hparams
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_module import HSupConTDToy
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_model_instance import ModelInstance
+
+
+# calls the function
+train(hsup_con_td_hparams, HSupConTDToy, ModelInstance)
