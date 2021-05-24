@@ -10,9 +10,8 @@ from pytorch_lightning.loggers import WandbLogger
 
 
 
-from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary
-from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
-
+from Contrastive_uncertainty.toy_replica.toy_general.run.general_run_setup import train_run_name, eval_run_name, Datamodule_selection, callback_dictionary
+from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict
 
 # Train takes in params, a particular training module as well a model_function to instantiate the model
 def train(params,model_module,model_function):
@@ -33,13 +32,13 @@ def train(params,model_module,model_function):
     #channels = Channel_selection(dataset_dict,config['dataset'])
 
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
-    import ipdb; ipdb.set_trace()
+    #import ipdb; ipdb.set_trace()
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    
+    '''
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
                         callback_dict['MMD'],callback_dict['Visualisation']]
-    
-    # desired_callbacks = []
+    '''
+    desired_callbacks = []
     # model_function takes in the model module and the config and uses it to instantiate the model
     model = model_function(model_module,config,datamodule)
 

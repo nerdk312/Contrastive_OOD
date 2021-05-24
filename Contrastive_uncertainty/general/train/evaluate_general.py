@@ -8,6 +8,7 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
+
 from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary
 from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
 from Contrastive_uncertainty.general.utils.hybrid_utils import previous_model_directory
@@ -36,7 +37,7 @@ def evaluation(run_path, model_module, model_function):
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
 
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
-                        callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']]
+                        callback_dict['MMD'],callback_dict['Visualisation']]
 
     # CHANGE SECTION
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function

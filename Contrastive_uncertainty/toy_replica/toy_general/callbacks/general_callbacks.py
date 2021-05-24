@@ -16,7 +16,7 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
 
-from Contrastive_uncertainty.general.utils.hybrid_utils import OOD_conf_matrix
+from Contrastive_uncertainty.toy_replica.toy_general.utils.hybrid_utils import OOD_conf_matrix
 
 
 # Used to save the model in the directory as well as in wandb

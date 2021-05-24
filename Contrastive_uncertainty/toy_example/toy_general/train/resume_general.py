@@ -16,7 +16,6 @@ from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_
 from Contrastive_uncertainty.general.utils.hybrid_utils import previous_model_directory
 
 
-
 def resume(run_path, trainer_dict,model_module,model_function):
     api = wandb.Api()
     previous_run = api.run(path=run_path)
@@ -45,7 +44,7 @@ def resume(run_path, trainer_dict,model_module,model_function):
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
-                        callback_dict['MMD'],callback_dict['Visualisation']]
+                        callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']]
 
 
     # CHANGE SECTION

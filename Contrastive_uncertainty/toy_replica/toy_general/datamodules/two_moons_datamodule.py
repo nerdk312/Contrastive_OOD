@@ -21,12 +21,13 @@ from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import Custo
 
 class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons dataset
 
-    def __init__(self,batch_size=32, train_transforms=None, test_transforms=None, noise=0.1):
+    def __init__(self,data_dir: str = None,batch_size=32,seed = 42, train_transforms=None, test_transforms=None, noise=0.1):
         super().__init__()
         self.batch_size = batch_size
         self.noise = noise
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
+        self.seed = seed
 
     def setup(self, stage=None):
         '''called one each GPU separately - stage defines if we are at fit or test step'''
@@ -45,10 +46,8 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
             self.test_data = (self.test_data - self.mean)/self.std
 
         self.train_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
-        self.val_train_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels)),transform = self.train_transforms)
-        self.val_test_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels)),transform = self.test_transforms)
-
-        self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)),transform = self.test_transforms)
+        self.val_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)
+        self.test_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)
         #self.val_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(),torch.from_numpy(self.val_labels)), transform = self.test_transforms)
         #self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)), transform = self.test_transforms)
 
@@ -64,9 +63,9 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
     def val_dataloader(self):
         '''returns validation dataloader'''
         
-        val_train_loader = DataLoader(self.val_train_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True,num_workers = 8) # Batch size is entire validataion set
-        val_test_loader = DataLoader(self.val_test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True,num_workers = 8) # Batch size is entire validataion set
-        return [val_train_loader, val_test_loader]
+        val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True,num_workers = 8) # Batch size is entire validataion set
+
+        return val_loader
 
     def test_dataloader(self):
         '''returns test dataloader'''

@@ -17,10 +17,10 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
 
-from Contrastive_uncertainty.general.utils.hybrid_utils import OOD_conf_matrix
-#from Contrastive_uncertainty.Contrastive.models.loss_functions import class_discrimination
-from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloading
-from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.toy_replica.toy_general.utils.hybrid_utils import OOD_conf_matrix
+from Contrastive_uncertainty.toy_replica.toy_general.callbacks.general_callbacks import quickloading
+from Contrastive_uncertainty.toy_replica.toy_general.utils.pl_metrics import precision_at_k, mean
+
 
 
 

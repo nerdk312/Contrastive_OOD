@@ -10,160 +10,32 @@ from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_fpr,\
     get_pr_sklearn, get_roc_sklearn
 
 import faiss
+import torch
+import torch.optim as optim
+import torch.nn as nn
+import torch.nn.functional as F
+import pytorch_lightning as pl
 
-#from Contrastive_uncertainty.general.utils import iso_forest as iso
-import eif as iso
-import seaborn as sb
-sb.set_style(style="whitegrid")
-sb.set_color_codes()
+import os
+import numpy as np
+import sklearn.datasets
+import matplotlib.pyplot as plt
+import seaborn as sns
+import wandb
+import sklearn.metrics as skm
+import faiss
 
-'''
-class OOD_ROC(pl.Callback):
-    def __init__(self, Datamodule,OOD_Datamodule):
-        super().__init__()
-        self.Datamodule = Datamodule
-        self.OOD_Datamodule = OOD_Datamodule
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
+from sklearn.metrics import roc_auc_score
 
-        self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
-        self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
-        #self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
-
-    # Outputs the OOD scores only (does not output the curve)
-    def on_validation_epoch_end(self,trainer,pl_module):
-        accuracy, roc_auc = self.get_auroc_ood_basic(pl_module)
-
-    # Outputs OOD scores aswell as the ROC curve
-    def on_test_epoch_end(self,trainer,pl_module):
-        accuracy, roc_auc = self.get_auroc_ood(pl_module)
+from Contrastive_uncertainty.general.utils.hybrid_utils import OOD_conf_matrix
+#from Contrastive_uncertainty.Contrastive.models.loss_functions import class_discrimination
+from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloading
+from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
 
 
-    def prepare_ood_datasets(self): # Code seems to be same as DUQ implementation
-        true_dataset,ood_dataset = self.Datamodule.test_dataset, self.OOD_Datamodule.test_dataset # Dataset is not transformed at this point
-        datasets = [true_dataset, ood_dataset]
 
-        # Nawid - targets for anomaly, 0 is not anomaly and 1 is anomaly
-        anomaly_targets = torch.cat(
-            (torch.zeros(len(true_dataset)), torch.ones(len(ood_dataset)))
-        )
-
-        concat_datasets = torch.utils.data.ConcatDataset(datasets)
-        # Dataset becomes transformed as it passes through the datalodaer I believe
-        dataloader = torch.utils.data.DataLoader(
-            concat_datasets, batch_size=100, shuffle=False, num_workers=6, pin_memory=False,
-        )
-
-        return dataloader, anomaly_targets # Nawid -contains the data for the true data and the false data aswell as values which indicate whether it is an anomaly or not
-
-    def loop_over_dataloader(self,pl_module, dataloader): # Nawid - obtain accuracy (pred equal to target) and kernel distances which are the scores
-        #model.eval()
-
-        with torch.no_grad():
-            scores = []
-            accuracies = []
-            outputs = []
-            #loader = quickloading(self.quick_callback,dataloader) # Used to get a single batch or used to get the entire dataset
-            for data, target,index in dataloader:
-                if isinstance(data, tuple) or isinstance(data, list):
-                    data, *aug_data = data # Used to take into accoutn whether the data is a tuple of the different augmentations
-
-                data = data.to(pl_module.device)
-                target = target.to(pl_module.device)
-
-                # Nawid - distance which is the score as well as the prediciton for the accuracy is obtained
-                output = pl_module.class_discrimination(data)
-                kernel_distance, pred = output.max(1) # The higher the kernel distance is, the more confident it is, so the lower the probability of an outlier
-
-                # Make array for the probability of being outlier and not being an outlier which is based on the confidence (kernel distance)
-                OOD_prediction = torch.zeros((len(data),2)).to(pl_module.device)
-
-                OOD_prediction[:, 0] = kernel_distance # The kernel distance is the confidence that the label is 0 (not outlier)
-                OOD_prediction[:, 1] = 1 - OOD_prediction[:, 0] # Value of being an outlier (belonging to class 1), is 1 - kernel distance (1-confidence)
-
-                accuracy = pred.eq(target)
-                accuracies.append(accuracy.cpu().numpy())
-
-                scores.append(-kernel_distance.cpu().numpy()) # Scores represent - kernel distance, since kernel distance is the confidence of being in domain, - kernel distance represent OOD samples
-                outputs.append(OOD_prediction.cpu().numpy())
-
-        scores = np.concatenate(scores)
-        accuracies = np.concatenate(accuracies)
-        outputs = np.concatenate(outputs)
-
-        return scores, accuracies, outputs
-
-    # Outputs the OOD values as well as the ROC curve
-    def get_auroc_ood(self,pl_module):
-        dataloader, anomaly_targets = self.prepare_ood_datasets() # Nawid - obtains concatenated true and false data, as well as anomaly targets which show if the value is 0 (not anomaly) or 1 (anomaly)
-
-        scores, accuracies,outputs = self.loop_over_dataloader(pl_module, dataloader)
-
-        confidence_scores = outputs[:,0]
-        # confidence scores for the true data and for the OOD data
-        true_scores =  confidence_scores[: len(self.Datamodule.test_dataset)]
-        ood_scores =  confidence_scores[len(self.Datamodule.test_dataset):]
-
-        # histogram of the confidence scores for the true data
-        true_data = [[s] for s in true_scores]
-        true_table = wandb.Table(data=true_data, columns=["scores"])
-        wandb.log({'True_data_OOD_scores': wandb.plot.histogram(true_table, "scores",title="true_data_scores")})
-
-        # Histogram of the confidence scores for the OOD data
-        ood_data = [[s] for s in ood_scores]
-        ood_table = wandb.Table(data=ood_data, columns=["scores"])
-        wandb.log({'OOD_data_OOD_scores': wandb.plot.histogram(ood_table, "scores",title="OOD_data_scores")})
-
-        
-        # Double checking the calculation of the ROC scores for the data
-        
-        #second_check_roc_auc = roc_auc_score(1-anomaly_targets,confidence_scores) # ROC scores for the case of checking whether a sample is in distribution data
-        #wandb.log({"AUROC_v2":second_check_roc_auc})
-        
-
-        accuracy = np.mean(accuracies[: len(self.Datamodule.test_dataset)]) # Nawid - obtainn accuracy for the true dataset
-        roc_auc = roc_auc_score(anomaly_targets, scores) # Nawid - obtain roc auc for a binary classification problem where the scores show how close it is to a centroid (which will say whether it is in domain or out of domain), and whether it identified as being in domain or out of domain.
-
-        wandb.log({"roc" : wandb.plot.roc_curve(anomaly_targets, outputs,#scores,
-                        labels=None, classes_to_plot=None)})
-
-        wandb.log({"AUROC":roc_auc})
-
-        return accuracy, roc_auc
-
-    
-    def get_auroc_ood_basic(self,pl_module):
-        dataloader, anomaly_targets = self.prepare_ood_datasets() # Nawid - obtains concatenated true and false data, as well as anomaly targets which show if the value is 0 (not anomaly) or 1 (anomaly)
-
-        scores, accuracies,outputs = self.loop_over_dataloader(pl_module, dataloader)
-
-        confidence_scores = outputs[:,0]
-        # confidence scores for the true data and for the OOD data
-        true_scores =  confidence_scores[: len(self.Datamodule.test_dataset)]
-        ood_scores =  confidence_scores[len(self.Datamodule.test_dataset):]
-
-        # histogram of the confidence scores for the true data
-        true_data = [[s] for s in true_scores]
-        true_table = wandb.Table(data=true_data, columns=["scores"])
-        wandb.log({'True_data_OOD_scores': wandb.plot.histogram(true_table, "scores",title="true_data_scores")})
-
-        # Histogram of the confidence scores for the OOD data
-        ood_data = [[s] for s in ood_scores]
-        ood_table = wandb.Table(data=ood_data, columns=["scores"])
-        wandb.log({'OOD_data_OOD_scores': wandb.plot.histogram(ood_table, "scores",title="OOD_data_scores")})
-
-        
-        # Double checking the calculation of the ROC scores for the data
-        #second_check_scores = #1 + scores # scores are all negative values
-        #second_check_roc_auc = roc_auc_score(1-anomaly_targets,confidence_scores) # ROC scores for the case of checking whether a sample is in distribution data
-        #wandb.log({"AUROC_v2":second_check_roc_auc})
-        
-
-        accuracy = np.mean(accuracies[: len(self.Datamodule.test_dataset)]) # Nawid - obtainn accuracy for the true dataset
-        roc_auc = roc_auc_score(anomaly_targets, scores) # Nawid - obtain roc auc for a binary classification problem where the scores show how close it is to a centroid (which will say whether it is in domain or out of domain), and whether it identified as being in domain or out of domain.
-
-        wandb.log({"AUROC":roc_auc})
-
-        return accuracy, roc_auc
-'''
 class Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,num_inference_clusters,quick_callback):
         super().__init__()
@@ -225,7 +97,7 @@ class Mahalanobis_OOD(pl.Callback):
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         #features_test, fine_labels_test, coarse_labels_test = self.get_features_hierarchy(pl_module, test_loader)
         #features_ood, labels_ood = self.get_features(pl_module, ood_loader)
-        
+        import ipdb; ipdb.set_trace()
         for i in range(len(features_train)):
             # Obtain the number of classes for the case for the coarse and fine case
             num_classes = max(labels_train[i]+1)
@@ -261,9 +133,7 @@ class Mahalanobis_OOD(pl.Callback):
         mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
         #import ipdb; ipdb.set_trace()       
         wandb.log({name:mahalanobis_test_accuracy})
-    
 
-    
     def get_features_hierarchy(self,pl_module, dataloader, max_images=10**10, verbose=False):
         #features, fine_labels, coarse_labels = [], [], []
         '''
@@ -347,8 +217,8 @@ class Mahalanobis_OOD(pl.Callback):
         
         labels = np.array(labels)
         
-        return features, labels
-    
+        return features, labels   
+
     # Nawid - perform k-means on the training features and then assign a cluster assignment
     def get_clusters(self, ftrain, nclusters):
         kmeans = faiss.Kmeans(
@@ -402,7 +272,46 @@ class Mahalanobis_OOD(pl.Callback):
         dood = np.min(dood, axis=0)
 
         return din, dood, indices_din, indices_dood
+    # Used to obtain cluster centroids of the data
+    def get_cluster_centroids(self,ftrain,ypred):
+        centroids = []
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        centroids = np.array([np.mean(i, axis=0) for i in xc])
+        
+        
+        #centroids = [np.expand_dims(np.mean(i, axis=0),0) for i in xc]  # Nawid - find the average of the feature vectors of each class
+        return centroids
 
+    # Used to calculate the distances from centroids
+    def centroid_distances(self,ftrain,ypred):
+        # Makes barchart of deviations from the average vector of the training set
+        avg_vector = np.mean(ftrain, axis=0)
+        avg_vector = np.reshape(avg_vector, (1, -1))
+        centroids = self.get_cluster_centroids(ftrain,ypred)
+        diff = np.abs(centroids - avg_vector) # Calculates the absolute difference element wise to ensure that the mean does not cancel out
+        total_diff = np.mean(diff, axis=1)
+        labels = [i for i in np.unique(ypred)] 
+        data =[[label, val] for (label ,val) in zip(labels,total_diff)] # iterates through the different labels as well as the different values for the labels
+        table = wandb.Table(data=data, columns = ["label", "value"])
+        wandb.log({"Centroid Distances Average vector" : wandb.plot.bar(table, "label", "value",
+                               title="Centroid Distances Average vector")})
+        
+
+        # Makes barchart of deviations from the vector of all zeros where I assume the centre of the hypersphere is a vector of zeros
+        zero_vector = np.zeros_like(avg_vector)
+        zero_diff = np.abs(centroids - zero_vector) # Calculates the absolute difference element wise to ensure that the mean does not cancel out
+        total_zero_diff = np.mean(zero_diff, axis=1)
+        data_zero =[[label, val_zero] for (label ,val_zero) in zip(labels,total_zero_diff)] # iterates through the different labels as well as the different values for the labels
+        table_zero = wandb.Table(data=data_zero, columns = ["label", "value"])
+
+        wandb.log({"Centroid Distances Zero vector" : wandb.plot.bar(table_zero, "label", "value",
+                               title="Centroid Distances Zero vector")})
+        
+        #import ipdb; ipdb.set_trace()
+        #return total_diff
+    
+
+        
     def get_eval_results(self,ftrain, ftest, food, labelstrain, num_clusters):
         """
             None.
@@ -432,8 +341,45 @@ class Mahalanobis_OOD(pl.Callback):
         else:
             wandb.log({self.log_name + f'AUROC_{num_clusters}_clusters_{self.OOD_dataname}': auroc})
         return fpr95, auroc, aupr, indices_dtest, indices_dood
-
-
+        
+    
+    def distance_confusion_matrix(self,trainer,predictions,labels):
+        wandb.log({self.log_name +f"conf_mat_id_{self.OOD_dataname}": wandb.plot.confusion_matrix(probs = None,
+            preds=predictions, y_true=labels,
+            class_names=self.class_names),
+            "global_step": trainer.global_step
+                  })
+    '''
+    def distance_OOD_confusion_matrix(self,trainer,predictions,labels):
+        wandb.log({self.log_name +"OOD_conf_mat_id": OOD_conf_matrix(probs = None,
+            preds=predictions, y_true=labels,
+            class_names=self.class_names,OOD_class_names =self.OOD_class_names),
+            "global_step": trainer.global_step
+                  })
+    '''
+    def supervised_distance_OOD_confusion_matrix(self,trainer,predictions,labels):
+        # Used for the case of EMNIST where the number of labels differs compared to the OOD class
+        if len(self.class_names) == len(self.OOD_class_names):
+            wandb.log({self.log_name +f"OOD_conf_mat_id_supervised_{self.OOD_dataname}": OOD_conf_matrix(probs = None,
+                preds=predictions, y_true=labels,
+                class_names=self.class_names,OOD_class_names =self.OOD_class_names),
+                "global_step": trainer.global_step
+                      })
+        else:
+            wandb.log({self.log_name +f"OOD_conf_mat_id_supervised_{self.OOD_dataname}": OOD_conf_matrix(probs = None,
+                preds=predictions, y_true=labels,
+                class_names=None,OOD_class_names=None),
+                "global_step": trainer.global_step
+                      })
+        
+    
+    def unsupervised_distance_OOD_confusion_matrix(self,trainer,num_clusters,predictions,labels):
+        wandb.log({f'{self.log_name}_OOD_conf_mat_id_unsupervised:{num_clusters}_clusters_{self.OO_dataname}': OOD_conf_matrix(probs = None,
+            preds=predictions, y_true=labels,
+            class_names=None,OOD_class_names =None),
+            "global_step": trainer.global_step
+                  })
+    
     # Changes OOD scores to confidence scores 
     def log_confidence_scores(self,Dtest,DOOD,labels_train,num_clusters):  
         confidence_test = Dtest
@@ -457,169 +403,19 @@ class Mahalanobis_OOD(pl.Callback):
         ood_table = wandb.Table(data=ood_data, columns=["scores"])
         wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
 
-    # Used to calculate the distances between vectors
-    def centre_distances(self,ftrain,ypred):
-        xc = [ftrain[ypred == i] for i in np.unique(ypred)]
-        
-        avg_vector = np.mean(ftrain, axis=0)
-        avg_vector = np.reshape(avg_vector, (1, -1))
-        zero_vector = np.zeros_like(avg_vector)
-        # concatenate the avg vector as well as the zero vector
-        test_vector = np.concatenate((avg_vector,zero_vector),axis=0) 
+def get_roc_sklearn(xin, xood):
+    labels = [0] * len(xin)  + [1] * len(xood)
+    data = np.concatenate((xin, xood))
+    auroc = skm.roc_auc_score(labels, data)
+    return auroc
 
-        din = [
-            np.sum(
-                (test_vector - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
-                * (
-                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
-                        (test_vector - np.mean(x, axis=0, keepdims=True)).T
-                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot preduct by the distance of the data point from the mean (distance calculation)
-                ).T,
-                axis=-1,
-            )
-            for x in xc # Nawid - done for all the different classes
-        ]
-        # a list is given where each entry in the list represents the scores of a particular class
-        # In each entry of the list, there are n values, which correspond to the n vectors which I am testing
-        
-        # Get the first scalar in each class for the case of avg vector difference
-        avg_vector_diff = [din[i][0] for i in range(len(din))]
-        labels = [i for i in np.unique(ypred)] 
-        data =[[label, val] for (label ,val) in zip(labels,avg_vector_diff)] # iterates through the different labels as well as the different values for the labels
-        table = wandb.Table(data=data, columns = ["label", "value"])
-        wandb.log({"Mahalanobis Centroid Distances Average vector" : wandb.plot.bar(table, "label", "value",
-                               title="Mahalanobis Centroid Distances Average vector")})
-        
+# calculates aupr
+def get_pr_sklearn(xin, xood):
+    labels = [0] * len(xin)  + [1] * len(xood)
+    data = np.concatenate((xin, xood))
+    aupr = skm.average_precision_score(labels, data)
+    return aupr
 
-        zero_vector_diff = [din[i][1] for i in range(len(din))] 
-        data_zero =[[label, val_zero] for (label ,val_zero) in zip(labels,zero_vector_diff)] # iterates through the different labels as well as the different values for the labels
-        table = wandb.Table(data=data_zero, columns = ["label", "value"])
-        wandb.log({"Mahalanobis Centroid Distances Zero vector" : wandb.plot.bar(table, "label", "value",
-                               title="Mahalanobis Centroid Distances Zero vector")})
-
-    # Used for making a confusion matrix based on the squared distance between point
-    def get_ood_euclidean_scores_multi_cluster(self,ftrain, food, ypred):
-        # Nawid - get all the features which belong to each of the different classes
-        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
-        
-        dood = [
-            np.sum(
-                np.square(food - np.mean(x, axis=0, keepdims=True)),
-                axis=-1,
-            )
-            for x in xc # Nawid- this calculates the score for all the OOD examples 
-        ]
-        # Calculate the indices corresponding to the values
-        
-        indices_dood = np.argmin(dood, axis=0)
-        dood = np.min(dood, axis=0) # Nawid - calculate the minimum distance
-        
-        return dood, indices_dood
-
-    def distance_confusion_matrix(self,trainer,predictions,labels):
-        wandb.log({self.log_name +"conf_mat_id": wandb.plot.confusion_matrix(probs = None,
-            preds=predictions, y_true=labels,
-            class_names=self.class_names),
-            "global_step": trainer.global_step
-                  })
-
-    def distance_OOD_confusion_matrix(self,trainer,predictions,labels):
-        wandb.log({self.log_name +"OOD_conf_mat_id": OOD_conf_matrix(probs = None,
-            preds=predictions, y_true=labels,
-            class_names=self.class_names,OOD_class_names =self.OOD_class_names),
-            "global_step": trainer.global_step
-                  })
-
-# https://github.com/sahandha/eif#The-Code (Based on code from this section)
-class IsoForest(pl.Callback):
-    def __init__(self, Datamodule,OOD_Datamodule,quick_callback):
-        super().__init__()
-        self.Datamodule = Datamodule
-        self.OOD_Datamodule = OOD_Datamodule
-        self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
-        self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
-        self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
-
-    def on_validation_epoch_end(self, trainer, pl_module):
-        self.get_iforest_auroc_basic(trainer,pl_module)
-
-    def on_test_epoch_end(self,trainer,pl_module):
-        self.get_iforest_auroc(trainer,pl_module)
-        '''
-        train_loader = self.Datamodule.train_dataloader()
-        test_loader = self.Datamodule.test_dataloader()
-        ood_loader = self.OOD_Datamodule.test_dataloader()
-        
-        features_train, labels_train = self.get_features(pl_module, train_loader)  # using feature befor MLP-head
-        features_test, labels_test = self.get_features(pl_module, train_loader)
-        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
-        
-        self.iforest_score(features_train, features_test, features_ood)
-        # Obtain the fpr95, aupr, test predictions, OOD predictions (basic version does not log the confidence scores or the confusion matrices)
-        '''
-
-
-    def get_features(self,pl_module, dataloader, max_images=10**10, verbose=False):
-        features, labels = [], []
-        total = 0
-        loader = quickloading(self.quick_callback,dataloader)
-        for index, (img, label,indices) in enumerate(loader):
-            if isinstance(img, tuple) or isinstance(img, list):
-                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
-
-            if total > max_images:
-                break
-            
-            img, label = img.to(pl_module.device), label.to(pl_module.device)
-
-            features += list(pl_module.feature_vector(img).data.cpu().numpy())
-            labels += list(label.data.cpu().numpy())
-
-            if verbose and not index % 50:
-                print(index)
-                
-            total += len(img)
-        #import ipdb; ipdb.set_trace()
-        # https://www.programcreek.com/python/example/21245/numpy.double converting to a double 
-        return np.asarray(features,dtype=np.double), np.array(labels) 
-    
-    def get_all_features(self,trainer,pl_module):
-        train_loader = self.Datamodule.train_dataloader()
-        test_loader = self.Datamodule.test_dataloader()
-        ood_loader = self.OOD_Datamodule.test_dataloader()
-
-        features_train, labels_train = self.get_features(pl_module, train_loader)  # using feature befor MLP-head
-        features_test, labels_test = self.get_features(pl_module, train_loader)
-        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
-        return features_train, features_test, features_ood
-
-    
-    def iforest_score_basic(self,features_train,features_test, features_ood):
-        F = iso.iForest(features_train,ntrees=200, sample_size=256, ExtensionLevel=1) # Train the isolation forest on indomain data
-        SN = F.compute_paths(X_in=features_test) # Nawid - compute the paths for the nominal datapoints
-        SA = F.compute_paths(X_in=features_ood)
-        iforest_auroc = get_roc_sklearn(SN, SA)
-        wandb.log({'iForest AUROC': iforest_auroc})
-        return SN, SA
-
-    # Computes ROC as well as plotting histogram of the data 
-    def iforest_score(self,features_train,features_test, features_ood):    
-        SN, SA = self.iforest_score_basic(features_train, features_test, features_ood)
-
-        # histogram of the confidence scores for the true data
-        true_data = [[s] for s in SN]
-        true_table = wandb.Table(data=true_data, columns=["scores"])
-        wandb.log({'True_data_iForest_Anomaly_scores': wandb.plot.histogram(true_table, "scores",title="iForest_true_data_Anomaly_scores")})
-
-        # Histogram of the confidence scores for the OOD data
-        ood_data = [[s] for s in SA]
-        ood_table = wandb.Table(data=ood_data, columns=["scores"])
-        wandb.log({'OOD_data_iForest_Anomaly_scores': wandb.plot.histogram(ood_table, "scores",title="iForest_OOD_data_Anomaly_scores")})
-
-    def get_iforest_auroc_basic(self,trainer,pl_module):
-        features_train,features_test,features_ood = self.get_all_features(trainer,pl_module)
-        self.iforest_score_basic(features_train,features_test,features_ood)
-    
-    def get_iforest_auroc(self,trainer,pl_module):
-        features_train,features_test,features_ood = self.get_all_features(trainer,pl_module)
-        self.iforest_score(features_train,features_test,features_ood)
+# Nawid - calculate false positive rate
+def get_fpr(xin, xood):
+    return np.sum(xood < np.percentile(xin, 95)) / len(xood)

@@ -26,21 +26,35 @@ def Datamodule_selection(data_dict, dataset, config):
     Datamodule.prepare_data()
     Datamodule.setup()
     return Datamodule
-
+'''
+def Channel_selection(data_dict, dataset):
+    datamodule_info = data_dict[dataset]
+    channels = datamodule_info['channels']
+    return channels
+'''
 
 def callback_dictionary(Datamodule,OOD_Datamodule,config):
     val_train_loader, val_test_loader = Datamodule.val_dataloader() # Used for metric logger callback also
+    samples = next(iter(val_test_loader))
+    sample_size = config['bsz']
     num_classes = Datamodule.num_classes
     quick_callback = config['quick_callback']
     inference_clusters = [num_classes]
-    
+    OOD_val_train_loader, OOD_val_test_loader = OOD_Datamodule.val_dataloader()
 
-    callback_dict = {'Model_saving':ModelSaving(config['model_saving']),
+    OOD_samples = next(iter(OOD_val_test_loader))
+
+    callback_dict = {'Model_saving':ModelSaving(config['model_saving']), 
                 'Metrics': MetricLogger(evaluation_metrics,num_classes,val_test_loader,evaltypes,config['quick_callback']),
-                'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule,num_inference_clusters=inference_clusters, quick_callback=quick_callback),
-                'MMD': MMD_distance(Datamodule, quick_callback=quick_callback),
-                'Visualisation': Visualisation(Datamodule, OOD_Datamodule, config['quick_callback']),
                 
-                }
+                'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule,num_inference_clusters=inference_clusters, quick_callback=quick_callback),
+                
+                'Euclidean': Euclidean_OOD(Datamodule,OOD_Datamodule,num_inference_clusters=inference_clusters,quick_callback=quick_callback),'MMD': MMD_distance(Datamodule, quick_callback=quick_callback),
+
+                'Visualisation': Visualisation(Datamodule, OOD_Datamodule, config['quick_callback']),'Uniformity': Uniformity(2, Datamodule, config['quick_callback']),
+                
+                'Centroid': Centroid_distance(Datamodule, config['quick_callback']), 'SupCon': SupConLoss(Datamodule, config['quick_callback'])}
     
     return callback_dict
+#'IsoForest': IsoForest(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+#'Image_prediction':ImagePredictionLogger(samples,OOD_samples,sample_size), 'Confusion_matrix':OOD_confusion_matrix(Datamodule,OOD_Datamodule),'ROC':OOD_ROC(Datamodule,OOD_Datamodule),
