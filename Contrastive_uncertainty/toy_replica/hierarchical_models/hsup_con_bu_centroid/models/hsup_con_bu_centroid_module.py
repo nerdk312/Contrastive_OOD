@@ -44,10 +44,10 @@ class HSupConBUCentroidToy(pl.LightningModule):
         self.num_channels = datamodule.num_channels
 
         # Classes for the case of the anchor and the positive
-        self.anchor_classses = [datamodule.num_classes, datamodule.coarse_classes]
+        self.anchor_classes = [datamodule.num_classes, datamodule.num_coarse_classes]
         self.positive_classes = [None, datamodule.num_classes] # None is used for the instance discrimination case
         self.coarse_mapping = self.datamodule.coarse_mapping # Coarse mapping is the mapping from the fine labels to the coarse labels
-
+        #import ipdb; ipdb.set_trace()
 
         self.encoder_q, self.encoder_k = self.init_encoders()
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
@@ -166,6 +166,7 @@ class HSupConBUCentroidToy(pl.LightningModule):
 
         # labels: positive key indicators
         labels = torch.zeros(logits.shape[0], dtype=torch.long,device = self.device)
+        
         #labels = labels.type_as(logits)
 
         # dequeue and enqueue
@@ -205,7 +206,7 @@ class HSupConBUCentroidToy(pl.LightningModule):
         
         #print('label length',len(labels))
         assert len(proto_loss_terms) == len(labels), 'number of label types different than loss terms'
-        assert len(labels) == len(self.anchor_classses)
+        assert len(labels) == len(self.anchor_classes)
         for index, data_labels in enumerate(labels):
             
             q = self.encoder_q.sequential[index+1](q)
@@ -217,13 +218,13 @@ class HSupConBUCentroidToy(pl.LightningModule):
             k = self.encoder_q.sequential[index+1](k)
             proto_k = self.encoder_k.branch_fc[index+1](k)
             # Makes centroids for the particular class
-            if self.positive_class[index] is None:
+            if self.positive_classes[index] is None:
                 # Instance is the positives, no centroids made and labels is the data labels
-                target_labels = data_labels
+                target_labels = data_labels.to(self.device)
             else:    
                 proto_k = self.calculate_centroid(proto_k, labels[index-1], self.positive_classes[index])
                 # Label mapping from fine to coarse labels
-                target_labels = self.coarse_mapping
+                target_labels = self.coarse_mapping.to(self.device)
 
             proto_k = nn.functional.normalize(proto_k, dim=1)
             

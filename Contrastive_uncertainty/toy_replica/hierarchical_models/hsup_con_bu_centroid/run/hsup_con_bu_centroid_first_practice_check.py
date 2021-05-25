@@ -3,7 +3,7 @@ from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroi
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroidToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_model_instance import ModelInstance
 
-hsup_con_bu_centroid_hparams['bsz'] = 16
+hsup_con_bu_centroid_hparams['bsz'] = 256
 hsup_con_bu_centroid_hparams['instance_encoder'] = 'resnet18'
 hsup_con_bu_centroid_hparams['epochs'] = 1
 hsup_con_bu_centroid_hparams['fast_run'] = True
