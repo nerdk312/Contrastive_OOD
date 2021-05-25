@@ -12,8 +12,8 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'MNIST',
-OOD_dataset = 'FashionMNIST',
+dataset = 'Blobs',
+OOD_dataset = 'TwoMoons',
 
 contrast_mode = 'one',
 use_mlp = True,

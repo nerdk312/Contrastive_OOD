@@ -8,10 +8,8 @@ import faiss
 import collections
 import pytorch_lightning as pl
 
-from Contrastive_uncertainty.toy_example.models.toy_encoder import Backbone
-from Contrastive_uncertainty.toy_example.models.toy_module import Toy
-
-from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.models.encoder_model import Backbone
+from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.utils.pl_metrics import precision_at_k, mean
 
 
 
@@ -318,7 +316,7 @@ class HSupConTDToy(pl.LightningModule):
         loss = metrics['Loss']
         return loss
         
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx,dataset_idx):
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
             if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
@@ -327,4 +325,22 @@ class HSupConTDToy(pl.LightningModule):
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
             if v is not None: self.log('Test ' + k, v.item(),on_epoch=True)
+        
+    
+    def configure_optimizers(self):
+        if self.hparams.optimizer =='sgd':
+            optimizer = torch.optim.SGD(self.parameters(), self.hparams.learning_rate,
+                                        momentum=self.hparams.momentum,
+                                        weight_decay=self.hparams.weight_decay)
+        elif self.hparams.optimizer =='adam':
+            optimizer = torch.optim.Adam(self.parameters(), self.hparams.learning_rate,
+                                        weight_decay=self.hparams.weight_decay)
+        return optimizer
+    
+    # Loads both network as a target state dict
+    def encoder_loading(self,pretrained_network):
+        print('checkpoint loaded')
+        checkpoint = torch.load(pretrained_network)
+        self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
+
         
