@@ -73,7 +73,6 @@ class CIFAR10DataModule(LightningDataModule):
         self.num_samples = 60000 - val_split
 
 
-
     @property
     def total_samples(self):
         """
@@ -113,6 +112,14 @@ class CIFAR10DataModule(LightningDataModule):
             3
         """
         return 3
+    
+    @property
+    def coarse_mapping(self):
+        """
+        Return:
+            mapping to coarse labels
+        """
+        return torch.tensor(CIFAR10_coarse_labels)
 
     def prepare_data(self):
         """

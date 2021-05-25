@@ -9,12 +9,13 @@ import faiss
 import collections
 import pytorch_lightning as pl
 
-from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.models.encoder_model import Backbone
-from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.utils.pl_metrics import precision_at_k, mean
 
-class HSupConBUCentroidToy(pl.LightningModule):
+from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
+
+class HSupConBUCentroid(pl.LightningModule):
     def __init__(self,
-        emb_dim: int = 2,
+        emb_dim: int = 128,
         contrast_mode:str = 'one',
         softmax_temperature: float = 0.07,
         optimizer:str = 'sgd',
@@ -22,8 +23,9 @@ class HSupConBUCentroidToy(pl.LightningModule):
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        num_negatives: int = 32,
+        num_negatives: int = 65536,
         encoder_momentum: float = 0.999,
+        instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
         branch_weights: list = [1.0/3, 1.0/3, 1.0/3],  # Going from instance fine to coarse
         ):
@@ -74,8 +76,15 @@ class HSupConBUCentroidToy(pl.LightningModule):
         """
         Override to add your own encoders
         """
-        encoder_q = Backbone(20, self.hparams.emb_dim)
-        encoder_k = Backbone(20, self.hparams.emb_dim)
+        if self.hparams.instance_encoder == 'resnet18':
+            print('using resnet18')
+            encoder_q = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)            
+        elif self.hparams.instance_encoder =='resnet50':
+            print('using resnet50')
+            encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+        
 
         # Additional branches for the specific tasks
         fc_layer_dict = collections.OrderedDict([])
@@ -95,7 +104,7 @@ class HSupConBUCentroidToy(pl.LightningModule):
 
         encoder_q.branch_fc = nn.Sequential(fc_layer_dict)
         encoder_k.branch_fc = nn.Sequential(fc_layer_dict)
-        
+
         return encoder_q, encoder_k
 
 
@@ -175,6 +184,7 @@ class HSupConBUCentroidToy(pl.LightningModule):
         return logits, labels
       
     def loss_function(self, batch):
+        # Update the encoder
         self._momentum_update_key_encoder()
         metrics = {}
         # import ipdb; ipdb.set_trace()

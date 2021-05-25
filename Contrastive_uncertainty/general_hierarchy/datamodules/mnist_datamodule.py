@@ -113,6 +113,14 @@ class MNISTDataModule(LightningDataModule):
             1
         """
         return 1
+    
+    @property
+    def coarse_mapping(self):
+        """
+        Return:
+            mapping to coarse labels
+        """
+        return torch.tensor(MNIST_coarse_labels)
 
     def prepare_data(self):
         """
