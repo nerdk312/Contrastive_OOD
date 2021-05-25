@@ -60,7 +60,16 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
             0
         """
         return 0
-    
+        
+    # Outputs the mapping for the coarse vector
+    @property
+    def coarse_mapping(self):
+        """
+        Return:
+            mapping to coarse labels
+        """
+        return torch.tensor(blobs_coarse_labels)
+
 
     def setup(self, stage=None):
         '''called one each GPU separately - stage defines if we are at fit or test step'''
