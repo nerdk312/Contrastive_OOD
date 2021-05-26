@@ -28,8 +28,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'Coarse and Fine branch training',
-notes = 'Examining whether there is benefit for OOD detection training with only coarse and fine branch',  # Add notes to the specific models each time
+group = 'Architecture training experiment',
+notes = 'Examining whether HSupConBUCentroid, HSupConBU and HSupConTD can train',  # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
 label_smoothing = False,
@@ -55,9 +55,9 @@ memory_momentum = 0.5,
 num_cluster = [100],
 
 # HSupConBU parameters
-branch_weights = [0.0, 1.0/2, 1.0/2],
+branch_weights = [1.0/3, 1.0/3, 1.0/3],
 
 # Either goes through all the models or goes through baselines
 
-single_model = 'HSupConTD'
+single_model = 'Baselines'
 )  # evaluation

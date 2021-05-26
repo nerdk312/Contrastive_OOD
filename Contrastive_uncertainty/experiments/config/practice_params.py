@@ -8,9 +8,9 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet18',
-bsz = 128,
-dataset = 'CIFAR100',
-OOD_dataset = 'SVHN',
+bsz = 16,
+dataset = 'MNIST',
+OOD_dataset = 'FashionMNIST',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -56,6 +56,9 @@ num_inference_cluster = [10,100,1000], # Number of clusters for the inference ca
 # unsupcon memory parameters
 memory_momentum = 0.5,
 num_cluster = [10],
+
+# HSupConBU parameters
+branch_weights = [1.0/3, 1.0/3, 1.0/3],
 
 # Either goes through all the models or goes through baselines
 

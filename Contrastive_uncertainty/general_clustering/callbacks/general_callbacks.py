@@ -17,6 +17,5 @@ from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
 
 from Contrastive_uncertainty.general.callbacks.general_callbacks import ModelSaving, MMD_distance, \
-    Uniformity, SupConLoss, Centroid_distance, \
     quickloading
 

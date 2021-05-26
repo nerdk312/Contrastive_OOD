@@ -13,7 +13,7 @@ import pytorch_lightning as pl
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
 from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 
-class HSupConBUCentroid(pl.LightningModule):
+class HSupConBUCentroidModule(pl.LightningModule):
     def __init__(self,
         emb_dim: int = 128,
         contrast_mode:str = 'one',
