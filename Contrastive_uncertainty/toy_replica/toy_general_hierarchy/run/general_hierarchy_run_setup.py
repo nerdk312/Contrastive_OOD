@@ -16,7 +16,8 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
                 'Mahalanobis_instance_fine': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance',label_level='fine'),
                 'Mahalanobis_instance_coarse': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance',label_level='coarse'),
                 'MMD': MMD_distance(Datamodule, quick_callback=quick_callback),
-                'Visualisation': Visualisation(Datamodule, OOD_Datamodule, config['quick_callback']),
+                'Visualisation_instance_fine': Visualisation(Datamodule, OOD_Datamodule,quick_callback=config['quick_callback'],vector_level='instance',label_level='fine'),
+                'Visualisation_instance_coarse': Visualisation(Datamodule, OOD_Datamodule,vector_level='instance',quick_callback=config['quick_callback'],label_level='coarse')
                 }
     
     return callback_dict

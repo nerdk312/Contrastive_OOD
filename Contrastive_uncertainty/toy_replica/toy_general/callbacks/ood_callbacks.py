@@ -24,9 +24,9 @@ from Contrastive_uncertainty.toy_replica.toy_general.utils.pl_metrics import pre
 
 class Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
-    vector_level:str = 'instance',
-    label_level:str = 'fine',
-    quick_callback:bool = True):
+        vector_level:str = 'instance',
+        label_level:str = 'fine',
+        quick_callback:bool = True):
 
         super().__init__()
 
