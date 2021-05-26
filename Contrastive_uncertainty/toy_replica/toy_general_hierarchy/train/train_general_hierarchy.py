@@ -1,4 +1,5 @@
-import os 
+import os
+from pytorch_lightning import callbacks 
 import wandb
 import pytorch_lightning as pl
 import torch
@@ -39,7 +40,8 @@ def train(params,model_module,model_function):
     desired_callbacks = [callback_dict['Mahalanobis_instance_fine'],callback_dict['Mahalanobis_instance_coarse'],
                         callback_dict['Visualisation_instance_fine'],callback_dict['Visualisation_instance_coarse']]
     '''
-    desired_callbacks = [callback_dict['Metrics_instance_fine'],callback_dict['Metrics_instance_coarse']]
+    desired_callbacks = [callback_dict['Metrics_instance_fine'],callback_dict['Metrics_instance_coarse'],
+                        callback_dict['MMD_instance'],callback_dict['Model_saving']]
     # model_function takes in the model module and the config and uses it to instantiate the model
     model = model_function(model_module,config,datamodule)
 
