@@ -59,12 +59,17 @@ class ModelSaving(pl.Callback):
 # Calculation of MMD based on the definition 2/ equation 1 in the paper        
 # http://www.gatsby.ucl.ac.uk/~gretton/papers/GreBorRasSchetal12.pdf?origin=publication_detail
 class MMD_distance(pl.Callback):
-    def __init__(self,Datamodule,quick_callback):
+    def __init__(self,Datamodule,
+        vector_level:str ='instance',
+        quick_callback:bool = True):
+
         super().__init__()
         self.Datamodule = Datamodule
         self.quick_callback = quick_callback
         self.log_name = 'MMD_distance'
-    
+
+        self.vector_level = vector_level
+
     def on_test_epoch_end(self,trainer, pl_module):
         self.calculate_MMD(pl_module)
     
@@ -73,6 +78,7 @@ class MMD_distance(pl.Callback):
         self.calculate_MMD(pl_module)
 
     def calculate_MMD(self, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector}}
         dataloader = self.Datamodule.train_dataloader()
         with torch.no_grad():
             MMD_values = []
@@ -80,15 +86,16 @@ class MMD_distance(pl.Callback):
             high = torch.tensor(1.0).to(device=pl_module.device)
             uniform_distribution = torch.distributions.uniform.Uniform(low,high) # causes all samples to be on the correct device when obtainig smaples https://stackoverflow.com/questions/59179609/how-to-make-a-pytorch-distribution-on-gpu
             #uniform_distribution =  torch.distributions.uniform.Uniform(-1,1).sample(output.shape)
-            loader = quickloading(self.quick_callback,dataloader) # Used to get a single batch or used to get the entire dataset
-            for data, target,indices in loader:
-                if isinstance(data, tuple) or isinstance(data, list):
-                    data, *aug_data = data # Used to take into accoutn whether the data is a tuple of the different augmentations
+            loader = quickloading(self.quick_callback, dataloader) # Used to get a single batch or used to get the entire dataset
+            assert len(loader)>0, 'loader is empty'
 
-                data = data.to(pl_module.device)
+            for img, *label,indices in loader:
+                if isinstance(img, tuple) or isinstance(img, list):
+                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
 
+                img = img.to(pl_module.device)
                 # Nawid - distance which is the score as well as the prediciton for the accuracy is obtained
-                output = pl_module.callback_vector(data) # representation of the data
+                output = self.vector_dict['vector_level'][self.vector_level](img) # Performs the callback for the desired level 
                 
                 uniform_samples = uniform_distribution.sample(output.shape)
                 uniform_samples = torch.nn.functional.normalize(uniform_samples,dim=1) # obtain normalized representaitons on a hypersphere
@@ -99,7 +106,7 @@ class MMD_distance(pl.Callback):
         MMD_list = np.concatenate(MMD_values)
         MMD_dist = np.mean(MMD_list)
         # Logs the MMD distance into wandb
-        wandb.log({self.log_name:MMD_dist})
+        wandb.log({f'{self.log_name}:{self.vector_level}':MMD_dist})
 
         return MMD_dist
 

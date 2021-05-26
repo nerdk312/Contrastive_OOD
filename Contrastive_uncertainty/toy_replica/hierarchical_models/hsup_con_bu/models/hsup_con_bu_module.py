@@ -95,7 +95,7 @@ class HSupConBUToy(pl.LightningModule):
         
         return encoder_q, encoder_k
 
-
+    '''
     # Callback vector which uses both the representations for the task
     def callback_vector(self, x):  # vector for the representation before using separate branches for the task
         """
@@ -119,6 +119,28 @@ class HSupConBUToy(pl.LightningModule):
 
     # Callback vector for coarse branch
     def coarse_callback_vector(self,x):
+        z = self.encoder_k(x)
+        z = self.encoder_k.sequential[0:3](z)
+        z = self.encoder_k.branch_fc[2](z)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+    '''
+    
+    def instance_vector(self,x):
+        z = self.encoder_k(x)
+        z = self.encoder_k.sequential[0:1](z)
+        z = self.encoder_k.branch_fc[0](z)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+   
+    def fine_vector(self,x):
+        z = self.encoder_k(x)
+        z = self.encoder_k.sequential[0:2](z)
+        z = self.encoder_k.branch_fc[1](z)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+
+    def coarse_vector(self,x):
         z = self.encoder_k(x)
         z = self.encoder_k.sequential[0:3](z)
         z = self.encoder_k.branch_fc[2](z)

@@ -23,13 +23,14 @@ import wandb
 from tqdm import tqdm
 
 from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloading
-
-
-
 from scipy.spatial.distance import cdist # Required for TwoMoons visualisation involving pairwise distances
 
 class Visualisation(pl.Callback): # General class for visualisation
-    def __init__(self, datamodule, ood_datamodule, quick_callback):
+    def __init__(self, datamodule, ood_datamodule, 
+        vector_level: str ='instance',
+        label_level: str ='fine',
+        quick_callback:bool = True):
+
         self.datamodule = datamodule
         self.ood_datamodule = ood_datamodule
         self.ood_datamodule.test_transforms= self.datamodule.test_transforms   # Make it so that the OOD datamodule has the same transform as the true module
@@ -39,17 +40,27 @@ class Visualisation(pl.Callback): # General class for visualisation
         # setup data
         self.quick_callback = quick_callback
 
+        self.vector_level = vector_level
+        self.label_level = label_level
+
+        self.num_fine_classes = self.datamodule.num_classes
+        self.num_coarse_classes = self.datamodule.num_coarse_classes
+
     
     def on_test_epoch_end(self, trainer, pl_module):
-        # Obtain representations for the normal case as well as the concatenated representations
-        
-        representations, labels = self.obtain_representations(pl_module)
-        for i in len(representations):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1},
+        'num_classes':{'fine':self.num_fine_classes,'coarse':self.num_coarse_classes}} 
 
-            # PCA visalisation
-            self.pca_visualisation(representations[i], labels[i], f'inliers {i+1}')
-            # T-SNE visualisation
-            self.tsne_visualisation(representations[i], labels[i], f'inliers {i+1}')
+        num_classes = self.vector_dict['num_classes'][self.label_level]
+
+        # Obtain representations for the normal case as well as the concatenated representations
+        representations, labels = self.obtain_representations(pl_module)
+        # PCA visalisation
+        self.pca_visualisation(representations, labels, f'inliers: {self.vector_level}: {self.label_level}',num_classes)
+        # T-SNE visualisation
+        self.tsne_visualisation(representations, labels, f'inliers: {self.vector_level}: {self.label_level}',num_classes)
+
         # +1 in num classes to represent outlier data, *2 represents class specific outliers
         #self.pca_visualisation(concat_representations, concat_labels,config['num_classes']+1,'general')
 
@@ -98,37 +109,32 @@ class Visualisation(pl.Callback): # General class for visualisation
     '''
     @torch.no_grad()
     def compute_representations(self, pl_module, loader):
+        features, collated_labels = [],[]
 
-        features = {}
-        collated_labels = {}
-        for i in range(self.num_hierarchy):
-            features[i] = []
-            collated_labels[i] = []
-        
         for i, (images, *labels, indices) in enumerate(tqdm(loader)): # Obtain data and labels from dataloader
             assert len(loader) >0, 'loader is empty'
             if isinstance(images, tuple) or isinstance(images, list):
                 images, *aug_imgs = images
             
+            # Selects the correct label based on the desired label level
+            if len(labels) > 1:
+                label_index = self.vector_dict['label_level'][self.label_level]
+                labels = labels[label_index]
+            else: # Used for the case of the OOD data
+                labels = labels[0]
+
+            # Obtain feature vector
             images = images.to(pl_module.device)  # cuda(non_blocking=True)
-            feature_vector = pl_module.callback_vector(images)
-            for i in range(self.num_hierarchy):
-                features[i].append(feature_vector[i])
-                collated_labels[i].append(labels[i])
+            feature_vector = self.vector_dict['vector_level'][self.vector_level](images) # Performs the callback for the desired level
 
-            #features.append(pl_module.callback_vector(images))  # Obtain features
+            features.append(feature_vector.cpu())
+            collated_labels.append(labels.cpu())
 
-            #collated_labels.append(labels)
-        for i in range(self.num_hierarchy):
-            features[i] = torch.cat(features[i]).cpu()
-            collated_labels[i] = torch.cat(collated_labels[i]).cpu()
-
-
-        #features = torch.cat(features)
-        #collated_labels = torch.cat(collated_labels)
+        features = torch.cat(features)
+        collated_labels = torch.cat(collated_labels)
         return features, collated_labels
 
-    def pca_visualisation(self, representations, labels, name):
+    def pca_visualisation(self, representations, labels, name,num_classes):
         pca = PCA(n_components=3)
         pca_result = pca.fit_transform(representations)
         pca_one = pca_result[:,0]
@@ -139,7 +145,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         sns.scatterplot(
         x=pca_one, y=pca_two,
         hue = labels,
-        #palette=sns.color_palette('hls',n_colors =10),
+        palette=sns.color_palette('hls',n_colors=num_classes),
         legend="full",
         alpha=0.3
         )
@@ -173,7 +179,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         wandb.log({wandb_3D_pca: wandb.Image(pca_3D_filename)})
         plt.close()
 
-    def tsne_visualisation(self, representations, labels, name):
+    def tsne_visualisation(self, representations, labels, name,num_classes):
         tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
         tsne_results = tsne.fit_transform(representations)
         tsne_one = tsne_results[:,0]
@@ -183,7 +189,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         sns.scatterplot(
         x=tsne_one, y=tsne_two,
         hue=labels,
-        #palette=sns.color_palette("hls", num_classes),
+        palette=sns.color_palette("hls", num_classes),
         legend="full",
         alpha=0.3
         )

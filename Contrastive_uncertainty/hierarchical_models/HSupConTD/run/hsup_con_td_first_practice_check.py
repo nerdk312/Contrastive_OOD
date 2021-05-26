@@ -4,7 +4,7 @@ from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_mo
 from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_model_instance import ModelInstance
 
 
-hsup_con_td_hparams['bsz'] = 16
+hsup_con_td_hparams['bsz'] = 64
 hsup_con_td_hparams['instance_encoder'] = 'resnet18'
 hsup_con_td_hparams['epochs'] = 1
 hsup_con_td_hparams['fast_run'] = True

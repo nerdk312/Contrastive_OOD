@@ -30,17 +30,17 @@ def train(params,model_module,model_function):
     #channels = Channel_selection(dataset_dict,config['dataset'])
 
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
+    #import ipdb; ipdb.set_trace()
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     '''
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
-                        callback_dict['Mahalanobis']]
-    '''
+                        callback_dict['MMD'],callback_dict['Visualisation']]
     
+    desired_callbacks = [callback_dict['Mahalanobis_instance_fine'],callback_dict['Mahalanobis_instance_coarse'],
+                        callback_dict['Visualisation_instance_fine'],callback_dict['Visualisation_instance_coarse']]
     '''
-    desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
-                        callback_dict['Mahalanobis']]
-    '''
-    desired_callbacks = []                 
+    desired_callbacks = [callback_dict['Metrics_instance_fine'],callback_dict['Metrics_instance_coarse'],
+                        callback_dict['MMD_instance'],callback_dict['Model_saving']]
     # model_function takes in the model module and the config and uses it to instantiate the model
     model = model_function(model_module,config,datamodule)
 

@@ -8,7 +8,7 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet18',
-bsz = 16,
+bsz = 64,
 dataset = 'MNIST',
 OOD_dataset = 'FashionMNIST',
 pretrained_network = None,
