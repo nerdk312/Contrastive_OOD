@@ -80,23 +80,42 @@ def select(metricname, pl_module):
 
 
 class MetricLogger(pl.Callback):
-    def __init__(self, metric_names,num_classes,dataloader,evaltypes,quick_callback):
+    def __init__(self, metric_names,datamodule,evaltypes,
+        vector_level: str='instance',
+        label_level:str='fine',
+        quick_callback:bool=True):
+
         super().__init__()
         self.metric_names = metric_names # Nawid - names of the metrics to compute
-        self.num_classes = num_classes
-        self.dataloader = dataloader
+        
+        self.vector_level = vector_level
+        self.label_level = label_level
+
+        self.datamodule = datamodule
+        self.num_fine_classes = self.datamodule.num_classes
+        self.num_coarse_classes = self.datamodule.num_coarse_classes
+        self.dataloader = self.datamodule.val_dataloader()
+        # Separate the val loader into two separate parts
+        if len(self.dataloader)> 1:
+            _, self.dataloader = self.dataloader
+        #import ipdb; ipdb.set_trace()
         self.evaltypes = evaltypes
         self.quick_callback = quick_callback
         
-
-    def metric_initialise(self,trainer,pl_module):
+    def metric_initialise(self, trainer,pl_module):
         self.list_of_metrics = [select(metricname, pl_module) for metricname in self.metric_names] # Nawid - Obtains the different metrics for the task
         self.requires        = [metric.requires for metric in self.list_of_metrics] # Nawid - says what each metric requires
         self.requires        = list(set([x for y in self.requires for x in y]))
 
-    def compute_standard(self, trainer,pl_module):
+    def compute_standard(self, trainer, pl_module):
+
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1},
+        'num_classes':{'fine':self.num_fine_classes,'coarse':self.num_coarse_classes}} 
+        
+
         evaltypes = copy.deepcopy(self.evaltypes)
-        n_classes = self.num_classes
+        n_classes = self.vector_dict['num_classes'][self.label_level]
 
         pl_module.to(pl_module.device).eval()
 
@@ -107,15 +126,22 @@ class MetricLogger(pl.Callback):
         with torch.no_grad():
             target_labels = []
             loader = quickloading(self.quick_callback,self.dataloader) # Used to choose using a single dataloader or using a wide variety of data loaders
+            assert len(loader) >0, 'loader is empty'
             final_iter = tqdm(loader, desc='Embedding Data...'.format(len(evaltypes)))# Nawid - loading of dataloader I believe
-            for idx,inp in enumerate(final_iter):
-                input_img,target = inp[0], inp[1] # Nawid - obtain data
-                if isinstance(input_img, tuple) or isinstance(input_img,list):input_img, *aug_imgs = input_img
+            
+            for i, (images, *labels, indices) in enumerate(final_iter): # Obtain data and labels from dataloader
+                if isinstance(images, tuple) or isinstance(images, list):
+                    images, *aug_imgs = images
 
-                target_labels.extend(target.numpy().tolist()) # Nawid- obtain labels
-                #embeddings = model.embedding_encoder.update_embeddings(input_img.to(self.pars['device']),target.to(self.pars['device']))
-                #out = model.online_encoder(input_img.to(self.pars['device']),embeddings) # Nawid - Obtain output
-                out = pl_module.callback_vector(input_img.to(pl_module.device)) # Nawid - Need to use instance embed for DUQP due to outputtng a 3D tensor
+                # Selects the correct label based on the desired label level
+                if len(labels) > 1:
+                    label_index = self.vector_dict['label_level'][self.label_level]
+                    labels = labels[label_index]
+                else: # Used for the case of the OOD data
+                    labels = labels[0]
+
+                target_labels.extend(labels.numpy().tolist())  # Nawid- obtain labels
+                out = self.vector_dict['vector_level'][self.vector_level](images.to(pl_module.device))
                 if isinstance(out, tuple): out, *aux_f = out #  Nawid - if the output is a tuple, separate the output
 
                 ### Include embeddings of all output features
@@ -267,16 +293,19 @@ class MetricLogger(pl.Callback):
         for evaltype in histogr_metrics.keys():
             for eval_metric, hist in histogr_metrics[evaltype].items(): # Nawid - plot the histogram metrics on wandb
                 import wandb, numpy
-                wandb.log({log_key+': '+evaltype+'_{}'.format(eval_metric): wandb.Histogram(np_histogram=(list(hist),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
-                wandb.log({log_key+': '+evaltype+'_LOG-{}'.format(eval_metric): wandb.Histogram(np_histogram=(list(np.log(hist)+20),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
+                               
+                wandb.log({f'{log_key}: {evaltype}: {eval_metric}: {self.vector_level}: {self.label_level}': wandb.Histogram(np_histogram=(list(hist),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
+                wandb.log({f'{log_key}: {evaltype} LOG-{eval_metric}:{self.vector_level}: {self.label_level}': wandb.Histogram(np_histogram=(list(np.log(hist)+20),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
+                #wandb.log({log_key+': '+evaltype+'_{}'.format(eval_metric): wandb.Histogram(np_histogram=(list(hist),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
+                #wandb.log({log_key+': '+evaltype+'_LOG-{}'.format(eval_metric): wandb.Histogram(np_histogram=(list(np.log(hist)+20),list(np.arange(len(hist)+1))))}, step=trainer.global_step)
 
         for evaltype in numeric_metrics.keys():# Nawid - plot the numeric metrics on wandb
             for eval_metric in numeric_metrics[evaltype].keys():
                 parent_metric = evaltype+'_{}'.format(eval_metric.split('@')[0])
                 if 'dists' in eval_metric or 'rho_spectrum' in eval_metric:
-                    wandb.log({eval_metric:numeric_metrics[evaltype][eval_metric]})
+                    wandb.log({f'{eval_metric}: {self.vector_level}: {self.label_level}':numeric_metrics[evaltype][eval_metric]})
                 else:
-                    wandb.run.summary[eval_metric] = numeric_metrics[evaltype][eval_metric]
+                    wandb.run.summary[f'{eval_metric}: {self.vector_level}: {self.label_level}'] = numeric_metrics[evaltype][eval_metric]
                 #wandb.log({eval_metric:numeric_metrics[evaltype][eval_metric]})
                 #print('parent metric',parent_metric)
 
