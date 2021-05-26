@@ -47,7 +47,7 @@ class HSupConBUCentroidToy(pl.LightningModule):
         self.anchor_classes = [datamodule.num_classes, datamodule.num_coarse_classes]
         self.positive_classes = [None, datamodule.num_classes] # None is used for the instance discrimination case
         self.coarse_mapping = self.datamodule.coarse_mapping # Coarse mapping is the mapping from the fine labels to the coarse labels
-        #import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
 
         self.encoder_q, self.encoder_k = self.init_encoders()
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
@@ -122,6 +122,28 @@ class HSupConBUCentroidToy(pl.LightningModule):
 
     # Callback vector for coarse branch
     def coarse_callback_vector(self,x):
+        z = self.encoder_k(x)
+        z = self.encoder_k.sequential[0:3](z)
+        z = self.encoder_k.branch_fc[2](z)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+
+    def instance_vector(self,x):
+        z = self.encoder_k(x)
+        z = self.encoder_k.sequential[0:1](z)
+        z = self.encoder_k.branch_fc[0](z)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+
+    
+    def fine_vector(self,x):
+        z = self.encoder_k(x)
+        z = self.encoder_k.sequential[0:2](z)
+        z = self.encoder_k.branch_fc[1](z)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+
+    def coarse_vector(self,x):
         z = self.encoder_k(x)
         z = self.encoder_k.sequential[0:3](z)
         z = self.encoder_k.branch_fc[2](z)

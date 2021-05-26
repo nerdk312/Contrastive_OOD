@@ -9,15 +9,14 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
     val_loader = Datamodule.val_dataloader() # Used for metric logger callback also
     num_classes = Datamodule.num_classes
     quick_callback = config['quick_callback']
-    inference_clusters = [num_classes]
     
 
     callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Toy_Models'),
                 'Metrics': MetricLogger(evaluation_metrics,num_classes,val_loader,evaltypes,config['quick_callback']),
-                'Mahalanobis': Mahalanobis_OOD(Datamodule,OOD_Datamodule,num_inference_clusters=inference_clusters, quick_callback=quick_callback),
+                'Mahalanobis_instance_fine': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance',label_level='fine'),
+                'Mahalanobis_instance_coarse': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance',label_level='coarse'),
                 'MMD': MMD_distance(Datamodule, quick_callback=quick_callback),
                 'Visualisation': Visualisation(Datamodule, OOD_Datamodule, config['quick_callback']),
-                
                 }
     
     return callback_dict

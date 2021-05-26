@@ -28,7 +28,9 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
         self.seed = seed
+        self.name = 'TwoMoons'
 
+        
     def setup(self, stage=None):
         '''called one each GPU separately - stage defines if we are at fit or test step'''
         # we set up only relevant datasets when stage is specified (automatically set by Pytorch-Lightning)
