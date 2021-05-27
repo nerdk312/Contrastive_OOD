@@ -9,8 +9,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'MNIST',
-OOD_dataset = 'FashionMNIST',
+dataset = 'CIFAR10',
+OOD_dataset = 'SVHN',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -28,8 +28,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'Architecture training experiment',
-notes = 'Examining whether HSupConBUCentroid, HSupConBU and HSupConTD can train',  # Add notes to the specific models each time
+group = 'OOD detection at different scales experiment',
+notes = 'Examing how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
 label_smoothing = False,

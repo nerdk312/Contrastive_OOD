@@ -10,14 +10,17 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
     #num_classes = Datamodule.num_classes
     quick_callback = config['quick_callback']
     
-    callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Toy_Models'),
+    callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Models'),
                 'Mahalanobis_instance_fine': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance',label_level='fine'),
-                'Mahalanobis_instance_coarse': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance',label_level='coarse'),
+                'Mahalanobis_fine_fine': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='fine',label_level='fine'),
+                'Mahalanobis_coarse_coarse': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='coarse',label_level='coarse'),
                 'MMD_instance': MMD_distance(Datamodule,vector_level='instance', quick_callback=quick_callback),
                 'Visualisation_instance_fine': Visualisation(Datamodule, OOD_Datamodule,vector_level='instance',label_level='fine',quick_callback=quick_callback),
-                'Visualisation_instance_coarse': Visualisation(Datamodule, OOD_Datamodule,vector_level='instance',label_level='coarse',quick_callback=quick_callback),
+                'Visualisation_fine_fine': Visualisation(Datamodule, OOD_Datamodule,vector_level='fine',label_level='fine',quick_callback=quick_callback),
+                'Visualisation_coarse_coarse': Visualisation(Datamodule, OOD_Datamodule,vector_level='coarse',label_level='coarse',quick_callback=quick_callback),
                 'Metrics_instance_fine': MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='instance', label_level='fine', quick_callback=quick_callback),
-                'Metrics_instance_coarse': MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='instance', label_level='coarse', quick_callback=quick_callback)
+                'Metrics_fine_fine': MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='fine', label_level='fine', quick_callback=quick_callback),
+                'Metrics_coarse_coarse': MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='coarse', label_level='coarse', quick_callback=quick_callback)
                 }
     
     return callback_dict
