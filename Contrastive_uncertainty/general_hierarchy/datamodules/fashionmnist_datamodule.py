@@ -264,11 +264,3 @@ class FashionMNISTDataModule(LightningDataModule):
             fashionmnist_normalization()
         ])
         return FashionMNIST_transforms
-
-'''
-Module = FashionMNISTDataModule()
-Module.setup()
-import ipdb; ipdb.set_trace()
-
-#Module.idx2class = {k:v for k,v in self.idx2class.items() if k < self.num_classes}  
-'''

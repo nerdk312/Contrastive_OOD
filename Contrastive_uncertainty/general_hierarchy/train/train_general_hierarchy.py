@@ -38,6 +38,7 @@ def train(params,model_module,model_function):
                         callback_dict['Visualisation_instance_fine'],callback_dict['Visualisation_fine_fine'],callback_dict['Visualisation_coarse_coarse'],
                         callback_dict['MMD_instance'],callback_dict['Model_saving']]
     
+    #desired_callbacks = []
     # model_function takes in the model module and the config and uses it to instantiate the model
     model = model_function(model_module,config,datamodule)
 
