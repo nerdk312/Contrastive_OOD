@@ -26,7 +26,18 @@ CIFAR100_coarse_labels = np.array([ 4,  1, 14,  8,  0,  6,  7,  7, 18,  3,
 
 # MNIST Coarse labels
 MNIST_coarse_labels = np.array([ 0, 2, 1,  4,  3,  4,  0,  2, 1, 3])
-    
+
+
+# FashionMNIST Coarse labels
+# {0: '0 - T-shirt/top', 1: '1 - Trouser', 2: '2 - Pullover', 3: '3 - Dress', 4: '4 - Coat', 5: '5 - Sandal', 6: '6 - Shirt', 7: '7 - Sneaker', 8: '8 - Bag', 9: '9 - Ankle boot'}
+# Group together [(t-shirt, shirt), (trouser), (pullover, coat), (dress), (sandal, sneaker,ankle boot),(bag)]
+FashionMNIST_coarse_labels = np.array([0,1,2,3,2,4,0,4,5,4])
+
+#KMNIST Coarse labels
+# https://github.com/rois-codh/kmnist Grouping decided based on how the prototypes look like from this link
+#{0: 'o', 1: 'ki', 2: 'su', 3: 'tsu', 4: 'na', 5: 'ha', 6: 'ma', 7: 'ya', 8: 're', 9: 'wo'}
+# Group together [(o,tsu), (ki,ma),(su),(na,ha),(ya,re),(wo)]
+KMNIST_coarse_labels = np.array([0, 1, 2, 0, 3, 3, 1, 4, 4, 5])
 
 # CIFAR10 Coarse labels
 #{0: '0 - airplane', 1: '1 - automobile', 2: '2 - bird', 3: '3 - cat', 4: '4 - deer', 5: '5 - dog', 6: '6 - frog', 7: '7 - horse', 8: '8 - ship', 9: '9 - truck'}

@@ -18,4 +18,4 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
 
-from Contrastive_uncertainty.toy_replica.toy_general.callbacks.ood_callbacks import Mahalanobis_OOD, get_fpr, get_pr_sklearn, get_roc_sklearn
+from Contrastive_uncertainty.toy_replica.toy_general.callbacks.ood_callbacks import Mahalanobis_OOD,Aggregated_Mahalanobis_OOD, get_fpr, get_pr_sklearn, get_roc_sklearn
