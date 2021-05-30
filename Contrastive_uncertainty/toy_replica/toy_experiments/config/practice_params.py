@@ -10,7 +10,7 @@ emb_dim = 128,
 instance_encoder = 'resnet18',
 bsz = 64,
 dataset = 'Blobs',
-OOD_dataset = 'TwoMoons',
+OOD_dataset = ['TwoMoons','Diagonal'],
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -59,6 +59,11 @@ num_cluster = [10],
 
 # HSupConBU parameters
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
+vector_level = ['instance', 'fine', 'coarse'],
+label_level = ['fine','fine','coarse'],
+callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
+
+
 
 # Either goes through all the models or goes through baselines
 
