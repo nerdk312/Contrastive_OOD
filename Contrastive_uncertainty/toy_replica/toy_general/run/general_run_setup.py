@@ -50,6 +50,7 @@ def specific_callbacks(callback_dict, names):
     desired_callbacks = []    
     for index, name in enumerate(names):
     #for index, name in enumerate(config['callbacks']):
+        #import ipdb; ipdb.set_trace()
         desired_callbacks.append(callback_dict[name])
 
     return desired_callbacks

@@ -3,7 +3,7 @@ from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.config.
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_module import HSupConBUToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_model_instance import ModelInstance
 
-hsup_con_bu_hparams['bsz'] = 16
+hsup_con_bu_hparams['bsz'] = 64
 hsup_con_bu_hparams['instance_encoder'] = 'resnet18'
 hsup_con_bu_hparams['epochs'] = 1
 hsup_con_bu_hparams['fast_run'] = True
