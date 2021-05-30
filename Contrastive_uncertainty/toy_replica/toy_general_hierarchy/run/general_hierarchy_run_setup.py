@@ -3,7 +3,7 @@ from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.callbacks.ood_cal
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.toy_replica.toy_general.run.general_run_setup import train_run_name, eval_run_name,\
-    Datamodule_selection 
+    Datamodule_selection, specific_callbacks 
 
 def callback_dictionary(Datamodule,OOD_Datamodule,config):
     #val_loader = Datamodule.val_dataloader() # Used for metric logger callback also
@@ -25,4 +25,5 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
                 }
     
     return callback_dict
+
 

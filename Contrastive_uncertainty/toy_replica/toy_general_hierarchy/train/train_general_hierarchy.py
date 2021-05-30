@@ -33,13 +33,13 @@ def train(params,model_module,model_function):
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
     #import ipdb; ipdb.set_trace()
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-    '''
+    
     desired_callbacks = [callback_dict['Metrics_instance_fine'],callback_dict['Metrics_fine_fine'],callback_dict['Metrics_coarse_coarse'],
                         callback_dict['Mahalanobis_instance_fine'],callback_dict['Mahalanobis_fine_fine'],callback_dict['Mahalanobis_coarse_coarse'],
                         callback_dict['Visualisation_instance_fine'],callback_dict['Visualisation_fine_fine'],callback_dict['Visualisation_coarse_coarse'],
                         callback_dict['MMD_instance'],callback_dict['Model_saving']]
-    '''
-    desired_callbacks = [callback_dict['Aggregated_Mahalanobis']]
+    
+    #desired_callbacks = [callback_dict['Aggregated_Mahalanobis']]
                         
     # model_function takes in the model module and the config and uses it to instantiate the model
     model = model_function(model_module,config,datamodule)

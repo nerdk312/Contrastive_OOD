@@ -1,56 +1,43 @@
 import wandb
 
+# Import parameters for different training methods
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.config.hsup_con_bu_params import hsup_con_bu_hparams
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.config.hsup_con_td_params import hsup_con_td_hparams
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.config.hsup_con_bu_centroid_params import hsup_con_bu_centroid_hparams
+
+
 # Importing the different lightning modules for the baselines
-from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import CrossEntropyModule
-from Contrastive_uncertainty.Contrastive.models.contrastive_module import ContrastiveModule
-from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
-from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
-from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_module import HSupConModule
-from Contrastive_uncertainty.hierarchical_models.HSupConBU.models.hsup_con_bu_module import HSupConBUModule
-from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_module import HSupConTDModule
-from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroid
-from Contrastive_uncertainty.multi_PCL.models.multi_pcl_module import MultiPCLModule
-from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_module import UnSupConMemoryModule
+
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_module import HSupConBUToy
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_module import HSupConTDToy
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroidToy
 
 
 # Model instances for the different methods
-from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance import ModelInstance as CEModelInstance
-from Contrastive_uncertainty.Contrastive.models.contrastive_model_instance import ModelInstance as ContrastiveModelInstance
-from Contrastive_uncertainty.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
-from Contrastive_uncertainty.PCL.models.pcl_model_instance import ModelInstance as PCLModelInstance
-from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_model_instance import ModelInstance as HSupConModelInstance
-from Contrastive_uncertainty.hierarchical_models.HSupConBU.models.hsup_con_bu_model_instance import ModelInstance as HSupConBUModelInstance
-from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_model_instance import ModelInstance as HSupConBUCentroidModelInstance
-from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_model_instance import ModelInstance as HSupConTDModelInstance
-from Contrastive_uncertainty.multi_PCL.models.multi_pcl_model_instance import ModelInstance as MultiPCLModelInstance
-from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_model_instance import ModelInstance as UnSupConMemoryModelInstance
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_model_instance import ModelInstance as HSupConBUModelInstance
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_model_instance import ModelInstance as HSupConTDModelInstance
+from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_model_instance import ModelInstance as HSupConBUCentroidModelInstance
 
-# Import evaluate
-from Contrastive_uncertainty.general.train.evaluate_general import evaluation as general_evaluation
-from Contrastive_uncertainty.general_clustering.train.evaluate_general_clustering import evaluation as general_clustering_evaluation
-from Contrastive_uncertainty.general_hierarchy.train.evaluate_general_hierarchy import evaluation as general_hierarchy_evaluation
 
+# Import training methods 
+from Contrastive_uncertainty.toy_replica.toy_general.train.evaluate_general import evaluation as general_evaluation
+from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.train.evaluate_general_hierarchy import evaluation as general_hierarchy_evaluation
 
 def evaluate(run_paths):    
-    acceptable_single_models = ['Baselines','CE','Moco','SupCon','PCL','UnSupConMemory','HSupCon']
+    
+    acceptable_single_models = ['Baselines','CE','Moco','SupCon',
+    'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU','HSupConBUCentroid','HSupConTD']
 
     # Dict for the model name, parameters and specific training loop
-    
-    model_dict = {'CE':{'model_module':CrossEntropyModule,
-                 'model_instance':CEModelInstance,'evaluate':general_evaluation},                
+    model_dict = {'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module': HSupConBUCentroidToy, 
+                    'model_instance':HSupConBUCentroidModelInstance, 'evaluate':general_hierarchy_evaluation},
                     
-                    'Moco':{'model_module':ContrastiveModule, 
-                    'model_instance':ContrastiveModelInstance,'evaluate':general_evaluation},
-                    
-                    'SupCon':{'model_module':SupConModule, 
-                    'model_instance':SupConModelInstance,'evaluate':general_evaluation},
-                    
-                    'PCL':{'model_module':PCLModule,
-                    'model_instance':PCLModelInstance,'evaluate':general_clustering_evaluation},
+                    'HSupConBU':{'params':hsup_con_bu_hparams,'model_module': HSupConBUToy, 
+                    'model_instance':HSupConBUModelInstance,'evaluate':general_hierarchy_evaluation},
 
-                    'UnSupConMemory':{'model_module':UnSupConMemoryModule,
-                    'model_instance':UnSupConMemoryModelInstance,'evaluate':general_clustering_evaluation}
-                    }
+                    'HSupConTD':{'params':hsup_con_td_hparams,'model_module': HSupConTDToy, 
+                    'model_instance':HSupConTDModelInstance,'evaluate':general_hierarchy_evaluation},
+    }
 
     # Iterate through the run paths
     for run_path in run_paths:
@@ -63,4 +50,4 @@ def evaluate(run_paths):
         evaluate_method = model_dict[model_type]['evaluate']
         model_module = model_dict[model_type]['model_module'] 
         model_instance_method = model_dict[model_type]['model_instance']
-        evaluate_method(run_path,model_module,model_instance_method)
+        evaluate_method(run_path, model_module, model_instance_method)

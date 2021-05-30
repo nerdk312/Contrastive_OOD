@@ -38,6 +38,8 @@ def train(base_dict):
                     'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},
           
     }
+
+    
     # Update the parameters of each model
 
     # iterate through all items of the state dict

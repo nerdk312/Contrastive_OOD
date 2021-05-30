@@ -9,13 +9,13 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'KMNIST',
-OOD_dataset = 'MNIST',
+dataset = 'Blobs',
+OOD_dataset = 'TwoMoons',
 pretrained_network = None,
 
 # Miscellaneous arguments in common
 seed = 26,
-epochs = 300,
+epochs = 2,
 
 # Trainer configurations in common
 fast_run = False,
@@ -27,9 +27,9 @@ val_check = 20,
 model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
-project = 'evaluation',
-group = 'OOD detection at different scales experiment',
-notes = 'Examining how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
+project = 'Toy_evaluation',
+group = 'Testing experiments',
+notes = 'Examining the behaviour of how to automate network training',  # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
 label_smoothing = False,

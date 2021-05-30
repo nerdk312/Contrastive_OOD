@@ -20,7 +20,6 @@ from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import Custo
 
 
 class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons dataset
-
     def __init__(self,data_dir: str = None,batch_size=32,seed = 42, train_transforms=None, test_transforms=None, noise=0.1):
         super().__init__()
         self.batch_size = batch_size

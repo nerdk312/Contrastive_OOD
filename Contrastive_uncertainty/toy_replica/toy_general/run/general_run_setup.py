@@ -45,3 +45,11 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
                 }
     
     return callback_dict
+
+def specific_callbacks(callback_dict, names):
+    desired_callbacks = []    
+    for index, name in enumerate(names):
+    #for index, name in enumerate(config['callbacks']):
+        desired_callbacks.append(callback_dict[name])
+
+    return desired_callbacks
