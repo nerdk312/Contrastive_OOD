@@ -203,9 +203,10 @@ class Mahalanobis_OOD(pl.Callback):
         # Nawid- get false postive rate and asweel as AUROC and aupr
         fpr95 = get_fpr(dtest, dood)
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
-        
-        
+                
         wandb.log({self.log_name + f' AUROC: {self.vector_level} vector: {num_clusters} classes: {self.OOD_dataname}': auroc})
+        wandb.log({self.log_name + f' AUPR: {num_clusters} classes: {self.OOD_dataname}': aupr})
+        wandb.log({self.log_name + f' FPR: {num_clusters} classes: {self.OOD_dataname}': fpr95})
         return fpr95, auroc, aupr, indices_dtest, indices_dood
     
     # Changes OOD scores to confidence scores 
@@ -220,7 +221,6 @@ class Mahalanobis_OOD(pl.Callback):
         true_histogram_name = self.true_histogram + f': Supervised: {self.vector_level} vector: {num_clusters} classes'
         ood_histogram_name = self.ood_histogram + f': Supervised: {self.vector_level} vector:{num_clusters} classes: {self.OOD_dataname}'
        
-
         #import ipdb; ipdb.set_trace()
         wandb.log({true_histogram_name: wandb.plot.histogram(true_table, "scores",title=true_histogram_name)})
 
@@ -631,10 +631,10 @@ class Differing_Mahalanobis_OOD(pl.Callback):
                     #mapped_din[j] =  din[coarse]
                     #mapped_dood[j] = dood[coarse]
                 # Update the values with the coarse to fine
+                #import ipdb; ipdb.set_trace()
                 din = mapped_din
                 dood = mapped_dood
 
-            #import ipdb; ipdb.set_trace()
             # total is a list of lists which takes in a list din (or dood)
             total_din.append(din)
             total_dood.append(dood)
@@ -643,7 +643,6 @@ class Differing_Mahalanobis_OOD(pl.Callback):
         # aggregated sums together the values in the list of lists into a single list https://stackoverflow.com/questions/14050824/add-sum-of-values-of-two-lists-into-new-list
         aggregated_din = [sum(x) for x in zip(*total_din)]
         aggregated_dood = [sum(x) for x in zip(*total_dood)]
-        
         
             #total_din += din
             #total_dood +=dood
