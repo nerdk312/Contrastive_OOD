@@ -228,7 +228,6 @@ class HSupConBUCentroidToy(pl.LightningModule):
         
         proto_loss_terms = [0, 0]
         
-        #print('label length',len(labels))
         assert len(proto_loss_terms) == len(labels), 'number of label types different than loss terms'
         assert len(labels) == len(self.anchor_classes)
         for index, data_labels in enumerate(labels):

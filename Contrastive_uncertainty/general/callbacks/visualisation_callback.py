@@ -26,17 +26,17 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloa
 from scipy.spatial.distance import cdist # Required for TwoMoons visualisation involving pairwise distances
 
 class Visualisation(pl.Callback): # General class for visualisation
-    def __init__(self, datamodule, ood_datamodule, 
+    def __init__(self, datamodule, 
         vector_level: str ='instance',
         label_level: str ='fine',
         quick_callback:bool = True):
 
         self.datamodule = datamodule
-        self.ood_datamodule = ood_datamodule
-        self.ood_datamodule.test_transforms= self.datamodule.test_transforms   # Make it so that the OOD datamodule has the same transform as the true module
+        #self.ood_datamodule = ood_datamodule
+        #self.ood_datamodule.test_transforms= self.datamodule.test_transforms   # Make it so that the OOD datamodule has the same transform as the true module
 
         self.datamodule.setup()
-        self.ood_datamodule.setup()
+        #self.ood_datamodule.setup()
         # setup data
         self.quick_callback = quick_callback
 

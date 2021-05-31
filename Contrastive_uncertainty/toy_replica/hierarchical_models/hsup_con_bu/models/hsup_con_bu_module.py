@@ -310,7 +310,6 @@ class HSupConBUToy(pl.LightningModule):
         # Initialise loss value
         
         proto_loss_terms = [0, 0]
-        print('label length',len(labels))
         assert len(proto_loss_terms) == len(labels), 'number of label types different than loss terms'
         for index, data_labels in enumerate(labels):
             

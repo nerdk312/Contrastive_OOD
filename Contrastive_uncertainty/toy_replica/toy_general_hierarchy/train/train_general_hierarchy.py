@@ -65,12 +65,4 @@ def train(params,model_module,model_function):
     trainer.test(datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
     
-    '''
-    # finetune
-    print('fine tuning')
-    tuner = SSLFineTuner(model, in_features=model.z_dim, num_classes=model.num_classes)
-    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,max_epochs = config['epochs'],
-                        limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks=[EarlyStopping(monitor='val_loss')])
-    trainer.fit(tuner,datamodule)
-    '''
     run.finish()

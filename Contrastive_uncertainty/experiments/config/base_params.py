@@ -9,8 +9,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'KMNIST',
-OOD_dataset = 'MNIST',
+dataset = 'MNIST',
+OOD_dataset = ['EMNIST','FashionMNIST','KMNIST'],
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -58,6 +58,9 @@ num_cluster = [100],
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
 
 # Either goes through all the models or goes through baselines
+vector_level = ['instance', 'fine', 'coarse'],
+label_level = ['fine','fine','coarse'],
+callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
 single_model = 'Baselines'
 )  # evaluation

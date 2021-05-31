@@ -11,11 +11,14 @@ from re import search
 def callback_dictionary(Datamodule,config):
     #val_loader = Datamodule.val_dataloader() # Used for metric logger callback also
     #num_classes = Datamodule.num_classes
-
+    ood_dataset = config['OOD_dataset'][0]
+    OOD_Datamodule = Datamodule_selection(dataset_dict,ood_dataset,config)
     quick_callback = config['quick_callback']
+    #import ipdb; ipdb.set_trace()
     # Manually added callbacks
     callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Models'),
-                    'MMD_instance': MMD_distance(Datamodule,vector_level='instance', quick_callback=quick_callback)}
+                    'MMD_instance': MMD_distance(Datamodule,vector_level='instance', quick_callback=quick_callback),
+                    'Aggregated':Aggregated_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback)}
     
     # Iterate through the different vector and label levels to get different metrics and visualisations
     for (vector_level,label_level) in zip(config['vector_level'],config['label_level']):
@@ -48,7 +51,7 @@ def specific_callbacks(callback_dict, names):
         # Need to obtain list of names which contain the substring of interest
         #import ipdb; ipdb.set_trace()
         #desired_callbacks.append(callback_dict[name])
-
+    #import ipdb; ipdb.set_trace()
     return desired_callbacks
 
 

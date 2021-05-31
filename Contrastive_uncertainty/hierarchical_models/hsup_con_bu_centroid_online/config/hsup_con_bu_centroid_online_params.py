@@ -13,7 +13,7 @@ weight_decay = 1e-4,
 
 bsz = 256,
 dataset = 'MNIST',
-OOD_dataset = 'FashionMNIST',
+OOD_dataset = ['FashionMNIST','KMNIST'],
 
 contrast_mode = 'one',
 use_mlp = True,
@@ -32,6 +32,10 @@ val_check = 20,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
+vector_level = ['instance', 'fine', 'coarse'],
+label_level = ['fine','fine','coarse'],
+callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
+
 
 model_type ='HSupConBUCentroidOnline',
 project = 'evaluation',# evaluation, Moco_training

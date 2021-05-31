@@ -14,5 +14,5 @@ hsup_con_bu_hparams['val_check'] = 1
 hsup_con_bu_hparams['project'] = 'practice'  # evaluation, contrastive_training
 hsup_con_bu_hparams['pretrained_network'] = None  # 'Pretrained_models/finetuned_network.pt'
 hsup_con_bu_hparams['quick_callback'] = True
-
+#import ipdb; ipdb.set_trace()
 train(hsup_con_bu_hparams,HSupConBUToy, ModelInstance)
