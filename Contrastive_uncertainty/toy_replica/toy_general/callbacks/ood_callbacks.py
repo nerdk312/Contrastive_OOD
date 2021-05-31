@@ -478,56 +478,13 @@ class Aggregated_Mahalanobis_OOD(pl.Callback):
             wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
         
          
-        '''
-        import ipdb; ipdb.set_trace()
-        # histogram of the confidence scores for the true data
-        true_data = [[s] for s in confidence_test]
-        true_table = wandb.Table(data=true_data, columns=["scores"])
 
 
-        true_histogram_name = self.true_histogram + f': Aggregated: {num_clusters} classes'
-        ood_histogram_name = self.ood_histogram + f': Aggregated: {num_clusters} classes: {self.OOD_dataname}'
-       
 
-        #import ipdb; ipdb.set_trace()
-        wandb.log({true_histogram_name: wandb.plot.histogram(true_table, "scores",title=true_histogram_name)})
-
-        # Histogram of the confidence scores for the OOD data
-        ood_data = [[s] for s in confidence_OOD]
-        ood_table = wandb.Table(data=ood_data, columns=["scores"])
-        wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
-        '''
-
-        '''
-        confidence_test = Dtest
-        confidence_OOD  = DOOD
-         # histogram of the confidence scores for the true data
-        true_data = [[s] for s in confidence_test]
-        true_table = wandb.Table(data=true_data, columns=["scores"])
-        # Examine if the centroid was obtained in supervised or unsupervised manner
-            
-        true_histogram_name = self.true_histogram + f': Aggregated: {num_clusters} classes'
-        ood_histogram_name = self.ood_histogram + f': Aggregated: {num_clusters} classes: {self.OOD_dataname}'
-       
-
-        #import ipdb; ipdb.set_trace()
-        wandb.log({true_histogram_name: wandb.plot.histogram(true_table, "scores",title=true_histogram_name)})
-
-        # Histogram of the confidence scores for the OOD data
-        ood_data = [[s] for s in confidence_OOD]
-        ood_table = wandb.Table(data=ood_data, columns=["scores"])
-        wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
-        '''
-
-
-'''
-class Aggregated_Mahalanobis_OOD(pl.Callback):
+class Differing_Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
-        vector_level:list = ['instance'],
-        label_level:list = ['fine'],
         quick_callback:bool = True):
-
-        super().__init__()
+        #import ipdb; ipdb.set_trace()
 
         self.Datamodule = Datamodule
         self.OOD_Datamodule = OOD_Datamodule
@@ -540,11 +497,15 @@ class Aggregated_Mahalanobis_OOD(pl.Callback):
         self.ood_histogram = 'Mahalanobis_OOD_data_scores'
         
         # Chooses what vector representation to use as well as which level of label hierarchy to use
-        self.vector_level = vector_level
-        self.label_level = label_level
-        
         self.OOD_dataname = self.OOD_Datamodule.name
-
+        
+    def on_validation_epoch_end(self, trainer, pl_module):
+        # Skip if fast testing as this can lead to issues with the code
+        self.forward_callback(trainer=trainer, pl_module=pl_module) 
+    
+    def on_test_epoch_end(self, trainer, pl_module):
+        self.forward_callback(trainer=trainer, pl_module=pl_module) 
+    
     # Performs all the computation in the callback
     def forward_callback(self,trainer,pl_module):
         self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
@@ -553,35 +514,37 @@ class Aggregated_Mahalanobis_OOD(pl.Callback):
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
         ood_loader = self.OOD_Datamodule.test_dataloader()
-        assert len(self.vector_level) == len(self.label_level)
-        features_train = []
-        labels_train = []
-        features_test = []
-        features_ood = []
-
-        for index in len(self.vector_level):
-            train_features, train_labels = self.get_features(pl_module, train_loader,self.vector_level[index], self.label_level[index])
-            test_features, test_labels = self.get_features(pl_module, test_loader,self.vector_level[index], self.label_level[index]) 
-            ood_features, ood_labels = self.get_features(pl_module, ood_loader, self.vector_level[index], self.label_level[index])    
-            
-            features_train.append(train_features)
-            features_test.append(test_features)
-            features_ood.append(ood_features)
-            labels_train.append(train_labels)
-        
-
         
         # Obtain representations of the data
+        features_train_instance, _ = self.get_features(pl_module, train_loader,'instance','fine')
+        features_train_fine, labels_train_fine = self.get_features(pl_module, train_loader,'fine','fine')
+        features_train_coarse, labels_train_coarse = self.get_features(pl_module, train_loader,'coarse','coarse')
         
+        features_test_instance, _ = self.get_features(pl_module, test_loader,'instance','fine')
+        features_test_fine, labels_test_fine = self.get_features(pl_module, test_loader,'fine','fine') 
+        features_test_coarse, labels_test_coarse = self.get_features(pl_module, test_loader,'coarse','coarse')
+
+        features_ood_instance, _ = self.get_features(pl_module, ood_loader,'instance','fine')
+        features_ood_fine, labels_ood_fine = self.get_features(pl_module, ood_loader,'fine','fine')
+        features_ood_coarse, labels_ood_coarse = self.get_features(pl_module, ood_loader,'coarse','coarse')
+
+        features_train = [features_train_instance, features_train_fine, features_train_coarse]
+        # Using the fine and coarse labels to obtain the OOD scores in this case
+        labels_train = [labels_train_fine,labels_train_fine, labels_train_coarse]
+
+        features_test = [features_test_instance, features_test_fine, features_test_coarse]
+        features_ood = [features_ood_instance, features_ood_fine, features_ood_coarse]
         # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
+        num_classes = max(labels_train_fine + 1)
         fpr95, auroc, aupr, indices_dtest, indices_dood = self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
             np.copy(features_ood),
-            np.copy(labels_train))
+            np.copy(labels_train),
+            num_classes)
 
         # Calculates the mahalanobis distance using unsupervised approach 
-        return fpr95,auroc,aupr 
+        return fpr95, auroc, aupr, indices_dtest, indices_dood
 
     def get_features(self, pl_module, dataloader,vector_level, label_level, max_images=10**10, verbose=False):
         features, labels = [], []
@@ -618,17 +581,15 @@ class Aggregated_Mahalanobis_OOD(pl.Callback):
         
         return np.array(features), np.array(labels)
     
-    def get_scores(self,ftrain, ftest, food, labelstrain):
+    def get_scores(self,ftrain, ftest, food, labelstrain,n_clusters):
         ypred = labelstrain
         return self.get_scores_multi_cluster(ftrain, ftest, food, ypred)
 
-        
-    
     def get_scores_multi_cluster(self,ftrain, ftest, food, ypred):
         # Nawid - get all the features which belong to each of the different classes
         total_din = []
         total_dood = []
-        for index in range(len(self.vector_level)):
+        for index in range(3):
             xc = [ftrain[index][ypred[index] == i] for i in np.unique(ypred[index])] # Nawid - training data which have been predicted to belong to a particular class
         
             din = [
@@ -656,8 +617,24 @@ class Aggregated_Mahalanobis_OOD(pl.Callback):
                 )
                 for x in xc # Nawid- this calculates the score for all the OOD examples 
             ]
-            # Need to have a mapping for the different results to see how the performance changes for the task
+            # Inverse mapping for the coarse situation
+            if index ==2:
+                # Make new lists to contain values from the mapping
+                mapped_din = []
+                mapped_dood = []
+                # Go through the coarse mapping
+                
+                for j,coarse in enumerate(self.Datamodule.coarse_mapping):
+                    #import ipdb; ipdb.set_trace()
+                    mapped_din.insert(j,din[coarse])
+                    mapped_dood.insert(j,dood[coarse])
+                    #mapped_din[j] =  din[coarse]
+                    #mapped_dood[j] = dood[coarse]
+                # Update the values with the coarse to fine
+                din = mapped_din
+                dood = mapped_dood
 
+            #import ipdb; ipdb.set_trace()
             # total is a list of lists which takes in a list din (or dood)
             total_din.append(din)
             total_dood.append(dood)
@@ -666,31 +643,61 @@ class Aggregated_Mahalanobis_OOD(pl.Callback):
         # aggregated sums together the values in the list of lists into a single list https://stackoverflow.com/questions/14050824/add-sum-of-values-of-two-lists-into-new-list
         aggregated_din = [sum(x) for x in zip(*total_din)]
         aggregated_dood = [sum(x) for x in zip(*total_dood)]
-    
+        
+        
             #total_din += din
             #total_dood +=dood
         
         # Calculate the indices corresponding to the values
         indices_din = np.argmin(aggregated_din,axis = 0)
         indices_dood = np.argmin(aggregated_dood, axis=0)
-        #import ipdb; ipdb.set_trace()
-
+                 
         aggregated_din = np.min(aggregated_din, axis=0) # Nawid - calculate the minimum distance 
         aggregated_dood = np.min(aggregated_dood, axis=0)
 
+        collated_din_values = []
+        collated_dood_values = []
+
+        for index in range(3):
+            # Concatenate the different classes into a single array
+            single_branch_in, single_branch_ood = torch.from_numpy(np.column_stack(total_din[index])), torch.from_numpy(np.column_stack(total_dood[index]))
+            
+            # Make into a tensor and make it have the same shape as the other case
+            tensor_indices_din, tensor_indices_dood = torch.from_numpy(indices_din).unsqueeze(1), torch.from_numpy(indices_dood).unsqueeze(1)
+            
+            # Obtain the values corresponding to the prediction indices
+            specific_values_in, specific_values_ood = torch.gather(single_branch_in,1,tensor_indices_din), torch.gather(single_branch_ood,1,tensor_indices_dood)
+            collated_din_values.append(specific_values_in)
+            collated_dood_values.append(specific_values_ood)
+
         
-        return aggregated_din, aggregated_dood, indices_din, indices_dood
+        # Scores for the particular case where there are different values present
+        collated_in_scores, collated_ood_scores = torch.cat(collated_din_values,dim=1), torch.cat(collated_dood_values,dim=1)
+
+        # Characteristic properties of the data for the task
+        mean_collated_in_scores, mean_collated_ood_scores = torch.mean(collated_in_scores,dim=1),torch.mean(collated_ood_scores,dim=1)
+        std_collated_in_scores, std_collated_ood_scores = torch.std(collated_in_scores,dim=1), torch.std(collated_ood_scores,dim=1)
+        min_collated_in_scores, _ = torch.min(collated_in_scores,dim=1)
+        max_collated_in_scores,_ = torch.max(collated_in_scores,dim=1)
+        
+        min_collated_ood_scores, _ = torch.min(collated_ood_scores,dim=1)
+        max_collated_ood_scores,_ = torch.max(collated_ood_scores,dim=1)
+        #import ipdb; ipdb.set_trace()
+        in_statistics = (mean_collated_in_scores,std_collated_in_scores,min_collated_in_scores,max_collated_in_scores)
+        ood_statistics = (mean_collated_ood_scores,std_collated_ood_scores,min_collated_ood_scores,max_collated_ood_scores)
+
+        return aggregated_din, aggregated_dood, in_statistics, ood_statistics, indices_din, indices_dood
     
 
         
-    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+    def get_eval_results(self,ftrain, ftest, food, labelstrain, num_clusters):
         """
             None.
         """
         #import ipdb; ipdb.set_trace()
         # Nawid -normalise the featues for the training, test and ood data
         # standardize data
-        for index in range(len(self.vector_level)):
+        for index in range(3):
             
             ftrain[index] /= np.linalg.norm(ftrain[index], axis=-1, keepdims=True) + 1e-10
             ftest[index] /= np.linalg.norm(ftest[index], axis=-1, keepdims=True) + 1e-10
@@ -702,39 +709,44 @@ class Aggregated_Mahalanobis_OOD(pl.Callback):
             ftest[index] = (ftest[index] - m) / (s + 1e-10)
             food[index] = (food[index] - m) / (s + 1e-10)
             # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain)
-        
-        self.log_confidence_scores(dtest,dood)
+        aggregated_dtest, aggregated_dood, in_statistics, ood_statistics,indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain, num_clusters)
+                
+        self.log_confidence_scores(in_statistics,ood_statistics,num_clusters)
 
         # Nawid- get false postive rate and asweel as AUROC and aupr
-        fpr95 = get_fpr(dtest, dood)
-        auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
+        fpr95 = get_fpr(aggregated_dtest, aggregated_dood)
+
+        # Calculates the AUROC
+        auroc, aupr = get_roc_sklearn(aggregated_dtest, aggregated_dood), get_pr_sklearn(aggregated_dtest, aggregated_dood)
         
-        wandb.log({self.log_name + f' Full Aggregated AUROC: {self.OOD_dataname}': auroc})
+        wandb.log({self.log_name + f' Differing AUROC: {num_clusters} classes: {self.OOD_dataname}': auroc})
+        wandb.log({self.log_name + f' Differing AUPR: {num_clusters} classes: {self.OOD_dataname}': aupr})
+        wandb.log({self.log_name + f' Differing FPR: {num_clusters} classes: {self.OOD_dataname}': fpr95})
         
         return fpr95, auroc, aupr, indices_dtest, indices_dood
     
     # Changes OOD scores to confidence scores 
-    def log_confidence_scores(self,Dtest,DOOD):  
-        confidence_test = Dtest
-        confidence_OOD  = DOOD
-         # histogram of the confidence scores for the true data
-        true_data = [[s] for s in confidence_test]
-        true_table = wandb.Table(data=true_data, columns=["scores"])
-        # Examine if the centroid was obtained in supervised or unsupervised manner
-            
-        true_histogram_name = self.true_histogram + f': Full Aggregated'
-        ood_histogram_name = self.ood_histogram + f': Full Aggregated: {self.OOD_dataname}'
-       
+    def log_confidence_scores(self,in_statistics,ood_statistics,num_clusters):  
+        names = ['Mean','Std','Min','Max']
+        # confidence_test_mean, confidence_test_std, confidence_test_min, confidence_test_max = in_statistics
+        # confidence_OOD_mean, confidence_OOD_std, confidence_OOD_min, confidence_OOD_max = ood_statistics
 
-        #import ipdb; ipdb.set_trace()
-        wandb.log({true_histogram_name: wandb.plot.histogram(true_table, "scores",title=true_histogram_name)})
+        for index in range(len(in_statistics)):
+            true_data = [[s] for s in in_statistics[index]]
+            true_table = wandb.Table(data=true_data, columns=["scores"])
 
-        # Histogram of the confidence scores for the OOD data
-        ood_data = [[s] for s in confidence_OOD]
-        ood_table = wandb.Table(data=ood_data, columns=["scores"])
-        wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
-'''
+            true_histogram_name = self.true_histogram + f': Differing {names[index]}: {num_clusters} classes'
+            ood_histogram_name = self.ood_histogram + f': Differing {names[index]}: {num_clusters} classes: {self.OOD_dataname}'
+
+            wandb.log({true_histogram_name: wandb.plot.histogram(true_table, "scores",title=true_histogram_name)})
+
+            # Histogram of the confidence scores for the OOD data
+            ood_data = [[s] for s in ood_statistics[index]]
+            ood_table = wandb.Table(data=ood_data, columns=["scores"])
+            wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
+        
+         
+
 
 
 def get_roc_sklearn(xin, xood):

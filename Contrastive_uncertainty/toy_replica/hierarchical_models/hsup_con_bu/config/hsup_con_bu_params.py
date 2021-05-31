@@ -37,7 +37,8 @@ branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
-callbacks = ['Aggregated'],
+#callbacks = ['Aggregated'],
+callbacks = ['Differing'],
 
 model_type ='HSupConBU',
 project = 'evaluation',# evaluation, Moco_training
