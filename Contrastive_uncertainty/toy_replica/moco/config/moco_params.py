@@ -1,5 +1,7 @@
-sup_con_hparams = dict(
+moco_hparams = dict(
 emb_dim = 128,
+num_negatives = 65536,
+encoder_momentum = 0.999,
 softmax_temperature = 0.07,
 instance_encoder = 'resnet50',
 
@@ -13,7 +15,6 @@ bsz = 256,
 dataset = 'Blobs',
 OOD_dataset = ['TwoMoons','Diagonal'],
 
-contrast_mode = 'one',
 use_mlp = True,
 
 # Miscellaneous arguments
@@ -31,7 +32,8 @@ model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
-model_type ='SupCon',
+
+model_type = 'Moco',
 project = 'toy_replica',# evaluation, Moco_training
 group = None,
 notes = None,
