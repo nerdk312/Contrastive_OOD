@@ -11,7 +11,7 @@ weight_decay = 1e-4,
 
 bsz = 256,
 dataset = 'Blobs',
-OOD_dataset = 'TwoMoons',
+OOD_dataset = ['TwoMoons','Diagonal'],
 
 contrast_mode = 'one',
 use_mlp = True,
@@ -29,9 +29,11 @@ test_ratio = 1.0,
 val_check = 20,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
+callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
+
 
 model_type ='SupCon',
-project = 'toy_replicat',# evaluation, Moco_training
+project = 'toy_replica',# evaluation, Moco_training
 group = None,
 notes = None,
 )

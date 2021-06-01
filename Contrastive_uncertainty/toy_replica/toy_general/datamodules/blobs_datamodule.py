@@ -60,7 +60,7 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
             0
         """
         return 0
-        
+    
     # Outputs the mapping for the coarse vector
     @property
     def coarse_mapping(self):
@@ -69,7 +69,7 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
             mapping to coarse labels
         """
         return torch.tensor(blobs_coarse_labels)
-
+    
 
     def setup(self, stage=None):
         '''called one each GPU separately - stage defines if we are at fit or test step'''
@@ -88,11 +88,11 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
             self.test_data, self.test_labels = sklearn.datasets.make_blobs(n_samples=600, centers=self.centers)
             self.test_data = (self.test_data - self.mean)/self.std
 
-        self.train_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels), torch.from_numpy(blobs_coarse_labels[self.train_labels])),transform = self.train_transforms)
-        self.val_train_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels), torch.from_numpy(blobs_coarse_labels[self.val_labels])),transform = self.train_transforms)
-        self.val_test_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels), torch.from_numpy(blobs_coarse_labels[self.val_labels])),transform = self.test_transforms)
+        self.train_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.train_transforms)
+        self.val_train_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels)),transform = self.train_transforms)
+        self.val_test_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels)),transform = self.test_transforms)
         
-        self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels), torch.from_numpy(blobs_coarse_labels[self.test_labels])),transform = self.test_transforms)
+        self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)),transform = self.test_transforms)
         
         #import ipdb; ipdb.set_trace()
         #self.test_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)

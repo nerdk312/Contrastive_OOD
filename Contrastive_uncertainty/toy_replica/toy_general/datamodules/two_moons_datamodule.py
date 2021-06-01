@@ -16,10 +16,11 @@ import sklearn.datasets
 import numpy as np
 from math import ceil, floor
 
-from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import CustomTensorDataset
+from Contrastive_uncertainty.toy_replica.toy_general.datamodules.toy_transforms import CustomTensorDataset
 
 
 class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons dataset
+
     def __init__(self,data_dir: str = None,batch_size=32,seed = 42, train_transforms=None, test_transforms=None, noise=0.1):
         super().__init__()
         self.batch_size = batch_size
@@ -27,6 +28,8 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
         self.seed = seed
+        self.name = 'TwoMoons'
+
 
     def setup(self, stage=None):
         '''called one each GPU separately - stage defines if we are at fit or test step'''
@@ -71,6 +74,7 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         
         test_loader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
         return test_loader
+
 
 
 

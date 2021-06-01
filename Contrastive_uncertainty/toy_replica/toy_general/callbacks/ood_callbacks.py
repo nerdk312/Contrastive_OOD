@@ -47,7 +47,7 @@ class Mahalanobis_OOD(pl.Callback):
         self.OOD_dataname = self.OOD_Datamodule.name
     
     def on_validation_epoch_end(self, trainer, pl_module):
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         # Skip if fast testing as this can lead to issues with the code
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
     
@@ -79,7 +79,7 @@ class Mahalanobis_OOD(pl.Callback):
         self.mahalanobis_classification(indices_dtest, labels_test,f'Mahalanobis Classification: {self.vector_level}: {self.label_level}')
 
         # Calculates the mahalanobis distance using unsupervised approach 
-        return fpr95,auroc,aupr 
+        return fpr95,auroc,aupr
 
     # Calaculates the accuracy of a data point based on the closest distance to a centroid
     def mahalanobis_classification(self,predictions, labels, name):
@@ -205,8 +205,8 @@ class Mahalanobis_OOD(pl.Callback):
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
                 
         wandb.log({self.log_name + f' AUROC: {self.vector_level} vector: {num_clusters} classes: {self.OOD_dataname}': auroc})
-        wandb.log({self.log_name + f' AUPR: {num_clusters} classes: {self.OOD_dataname}': aupr})
-        wandb.log({self.log_name + f' FPR: {num_clusters} classes: {self.OOD_dataname}': fpr95})
+        wandb.log({self.log_name + f' AUPR: {self.vector_level} vector: {num_clusters} classes: {self.OOD_dataname}': aupr})
+        wandb.log({self.log_name + f' FPR: {self.vector_level} vector: {num_clusters} classes: {self.OOD_dataname}': fpr95})
         return fpr95, auroc, aupr, indices_dtest, indices_dood
     
     # Changes OOD scores to confidence scores 

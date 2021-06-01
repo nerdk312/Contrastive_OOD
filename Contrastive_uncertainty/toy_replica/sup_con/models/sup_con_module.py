@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from Contrastive_uncertainty.toy_replica.sup_con_toy.models.encoder_model import Backbone
+from Contrastive_uncertainty.toy_replica.sup_con.models.encoder_model import Backbone
 
 class SupConToy(pl.LightningModule):
     def __init__(self,
@@ -53,6 +53,18 @@ class SupConToy(pl.LightningModule):
         """
         z = self.encoder(x)
         z = nn.functional.normalize(z, dim=1)
+        return z
+    
+    def instance_vector(self,x):
+        z = self.callback_vector(x)
+        return z
+   
+    def fine_vector(self,x):
+        z = self.callback_vector(x)
+        return z
+
+    def coarse_vector(self,x):
+        z = self.callback_vector(x)
         return z
 
     def forward(self, features, labels=None, mask=None):

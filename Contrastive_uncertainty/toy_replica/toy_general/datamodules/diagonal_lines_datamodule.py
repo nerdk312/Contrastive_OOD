@@ -14,7 +14,7 @@ from Contrastive_uncertainty.toy_example.datamodules.toy_transforms import ToyTr
 
 class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons dataset
 
-    def __init__(self,batch_size=32,train_transforms = None, test_transforms = None, noise_perc = 0.9):
+    def __init__(self,data_dir: str = None,batch_size=32,seed=42, train_transforms = None, test_transforms = None, noise_perc = 0.9):
         super().__init__()
         self.batch_size = batch_size
         self.noise_perc = noise_perc
@@ -51,7 +51,7 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
         idxs  = np.random.choice(data_length, data_length,replace=False)
         # Shuffle the data before placing in different data to allow points in different datasets to be present
         self.data, self.labels =self.data[idxs], self.labels[idxs]
-        
+        self.idx2class  = {0:'0', 1:'1', 2:'2 ', 3:'3'} # Dict for two moons
         
         self.train_data, self.train_labels = self.data[:int(0.7*data_length)], self.labels[:int(0.7*data_length)]
         #print('train data',self.train_data)
@@ -69,6 +69,7 @@ class DiagonalLinesDataModule(LightningDataModule): # Data module for Two Moons 
         self.val_dataset =  CustomTensorDataset(tensors = (torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels)), transform= self.test_transforms)
         self.test_dataset = CustomTensorDataset(tensors = (torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)), transform = self.test_transforms)
 
+    
     def visualise_data(self):
         #colors = cm.rainbow(np.linspace(0, 0.5,self.n_lines)) # Creates a list of numbers which represents colors
         #import ipdb; ipdb.set_trace()

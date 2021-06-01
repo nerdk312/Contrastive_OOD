@@ -1,0 +1,8 @@
+from Contrastive_uncertainty.toy_replica.toy_general.train.train_general import train
+
+from Contrastive_uncertainty.toy_replica.cross_entropy.config.cross_entropy_params import cross_entropy_hparams
+from Contrastive_uncertainty.toy_replica.cross_entropy.models.cross_entropy_module import CrossEntropyToy
+from Contrastive_uncertainty.toy_replica.cross_entropy.models.cross_entropy_model_instance import ModelInstance
+
+# calls the function
+train(cross_entropy_hparams,CrossEntropyToy, ModelInstance)
