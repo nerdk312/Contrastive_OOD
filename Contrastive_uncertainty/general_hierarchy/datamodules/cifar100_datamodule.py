@@ -117,6 +117,14 @@ class CIFAR100DataModule(LightningDataModule):
             number of layers in hierarchy
         '''
         return 2 
+    
+    @property
+    def coarse_mapping(self):
+        """
+        Return:
+            mapping to coarse labels
+        """
+        return torch.tensor(CIFAR100_coarse_labels)
 
     def prepare_data(self):
         """

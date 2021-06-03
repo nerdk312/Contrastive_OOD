@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, random_split
 
 
 from Contrastive_uncertainty.general.datamodules.dataset_normalizations import cifar10_normalization
-from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, CIFAR10_coarse_labels
 from warnings import warn
 
 
@@ -93,12 +93,36 @@ class CIFAR10DataModule(LightningDataModule):
         return 10
     
     @property
+    def num_coarse_classes(self):
+        """
+        Return:
+            7
+        """
+        return 7
+    
+    @property
+    def num_hierarchy(self):
+        '''
+        Return:
+            number of layers in hierarchy
+        '''
+        return 2 
+
+    @property
     def num_channels(self):
         """
         Return:
             3
         """
         return 3
+    
+    @property
+    def coarse_mapping(self):
+        """
+        Return:
+            mapping to coarse labels
+        """
+        return torch.tensor(CIFAR10_coarse_labels)
 
     def prepare_data(self):
         """

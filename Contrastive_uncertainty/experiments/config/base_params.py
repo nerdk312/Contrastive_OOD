@@ -14,7 +14,7 @@ OOD_dataset = ['EMNIST','MNIST','KMNIST'],
 pretrained_network = None,
 
 # Miscellaneous arguments in common
-seed = 26,
+seed = 42,
 epochs = 300,
 
 # Trainer configurations in common

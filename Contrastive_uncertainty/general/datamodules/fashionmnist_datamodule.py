@@ -12,7 +12,7 @@ from torchvision import transforms as transform_lib
 from torchvision.datasets import FashionMNIST
 
 from Contrastive_uncertainty.general.datamodules.dataset_normalizations import fashionmnist_normalization
-from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, FashionMNIST_coarse_labels
 
 
 
@@ -83,6 +83,7 @@ class FashionMNISTDataModule(LightningDataModule):
         """
         return 60_000
 
+        
     @property
     def num_classes(self):
         """
@@ -92,12 +93,36 @@ class FashionMNISTDataModule(LightningDataModule):
         return 10
     
     @property
+    def num_coarse_classes(self):
+        """
+        Return:
+            6
+        """
+        return 6
+    
+    @property
+    def num_hierarchy(self):
+        '''
+        Return:
+            number of layers in hierarchy
+        '''
+        return 2 
+    
+    @property
     def num_channels(self):
         """
         Return:
             1
         """
         return 1
+    
+    @property
+    def coarse_mapping(self):
+        """
+        Return:
+            mapping to coarse labels
+        """
+        return torch.tensor(FashionMNIST_coarse_labels)
 
     def prepare_data(self):
         """

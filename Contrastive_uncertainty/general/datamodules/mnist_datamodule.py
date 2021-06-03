@@ -10,7 +10,7 @@ from torchvision import transforms as transform_lib
 from torchvision.datasets import MNIST
 
 from Contrastive_uncertainty.general.datamodules.dataset_normalizations import mnist_normalization
-from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, MNIST_coarse_labels
 
 
 class MNISTDataModule(LightningDataModule):
@@ -73,15 +73,6 @@ class MNISTDataModule(LightningDataModule):
 
 
     @property
-    def total_samples(self):
-        """
-        Return:
-            60000
-        """
-        return 60_000
-
-        
-    @property
     def num_classes(self):
         """
         Return:
@@ -90,12 +81,36 @@ class MNISTDataModule(LightningDataModule):
         return 10
     
     @property
+    def num_coarse_classes(self):
+        """
+        Return:
+            5
+        """
+        return 5
+    
+    @property
+    def num_hierarchy(self):
+        '''
+        Return:
+            number of layers in hierarchy
+        '''
+        return 2 
+    
+    @property
     def num_channels(self):
         """
         Return:
             1
         """
         return 1
+    
+    @property
+    def coarse_mapping(self):
+        """
+        Return:
+            mapping to coarse labels
+        """
+        return torch.tensor(MNIST_coarse_labels)
 
     def prepare_data(self):
         """
