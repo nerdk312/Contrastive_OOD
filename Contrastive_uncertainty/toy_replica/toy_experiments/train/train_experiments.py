@@ -1,19 +1,25 @@
 # Import parameters for different training methods
-
-
+from Contrastive_uncertainty.toy_replica.cross_entropy.config.cross_entropy_params import cross_entropy_hparams
+from Contrastive_uncertainty.toy_replica.moco.config.moco_params import moco_hparams
+from Contrastive_uncertainty.toy_replica.sup_con.config.sup_con_params import sup_con_hparams
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.config.hsup_con_bu_params import hsup_con_bu_hparams
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.config.hsup_con_td_params import hsup_con_td_hparams
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.config.hsup_con_bu_centroid_params import hsup_con_bu_centroid_hparams
 
 
 # Importing the different lightning modules for the baselines
-
+from Contrastive_uncertainty.toy_replica.cross_entropy.models.cross_entropy_module import CrossEntropyToy
+from Contrastive_uncertainty.toy_replica.moco.models.moco_module import MocoToy
+from Contrastive_uncertainty.toy_replica.sup_con.models.sup_con_module import SupConToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_module import HSupConBUToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_module import HSupConTDToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroidToy
 
 
 # Model instances for the different methods
+from Contrastive_uncertainty.toy_replica.cross_entropy.models.cross_entropy_model_instance import ModelInstance as CEModelInstance
+from Contrastive_uncertainty.toy_replica.moco.models.moco_model_instance import ModelInstance as MocoModelInstance
+from Contrastive_uncertainty.toy_replica.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_model_instance import ModelInstance as HSupConBUModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_model_instance import ModelInstance as HSupConTDModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_model_instance import ModelInstance as HSupConBUCentroidModelInstance
@@ -28,7 +34,22 @@ def train(base_dict):
     'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU','HSupConBUCentroid','HSupConTD']
 
     # Dict for the model name, parameters and specific training loop
-    model_dict = {'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidToy, 
+    model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyToy, 
+                    'model_instance':CEModelInstance, 'train':general_training},
+
+                    'Moco':{'params':moco_hparams,'model_module':MocoToy, 
+                    'model_instance':MocoModelInstance, 'train':general_training},
+
+                    'SupCon':{'params':sup_con_hparams,'model_module':SupConToy, 
+                    'model_instance':SupConModelInstance, 'train':general_training},
+
+                    'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidToy, 
+                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
+                
+                    'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidToy, 
+                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
+                    
+                    'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidToy, 
                     'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
                     
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUToy, 
