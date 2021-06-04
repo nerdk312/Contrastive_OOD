@@ -70,6 +70,18 @@ class CrossEntropyModule(pl.LightningModule):
         z = nn.functional.normalize(z, dim=1)
         return z
     
+    def instance_vector(self, x):
+        z = self.callback_vector(x)
+        return z
+   
+    def fine_vector(self, x):
+        z = self.callback_vector(x)
+        return z
+
+    def coarse_vector(self, x):
+        z = self.callback_vector(x)
+        return z
+    
     def class_forward(self, x):
         z = self.encoder(x)
         z = nn.functional.normalize(z, dim=1)
@@ -83,14 +95,12 @@ class CrossEntropyModule(pl.LightningModule):
             loss = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
             loss = torch.mean(loss)
         else:
-            #import ipdb; ipdb.set_trace()
             loss = F.cross_entropy(logits.float(), labels.long())
 
         class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
         metrics = {'Class Loss': loss, 'Class Accuracy @ 1': class_acc1, 'Class Accuracy @ 5': class_acc5}
 
         return metrics
-
 
     def training_step(self, batch, batch_idx):
         metrics = self.loss_function(batch)
@@ -99,14 +109,11 @@ class CrossEntropyModule(pl.LightningModule):
         loss = metrics['Class Loss']
         return loss
         
-
-    def validation_step(self, batch, batch_idx,dataset_idx):
+    def validation_step(self, batch, batch_idx, dataset_idx):
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
             if v is not None: self.log('Validation ' + k, v.item(),on_epoch=True)
         
-        
-
     def test_step(self, batch, batch_idx):
         metrics = self.loss_function(batch)
         for k,v in metrics.items():
@@ -125,9 +132,7 @@ class CrossEntropyModule(pl.LightningModule):
                                         weight_decay=self.hparams.weight_decay)
         return optimizer
     
-
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):
         checkpoint = torch.load(pretrained_network)
         self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
-        

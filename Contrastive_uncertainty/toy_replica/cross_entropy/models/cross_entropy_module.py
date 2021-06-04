@@ -64,15 +64,15 @@ class CrossEntropyToy(pl.LightningModule):
         z = nn.functional.normalize(z, dim=1)
         return z
     
-    def instance_vector(self,x):
+    def instance_vector(self, x):
         z = self.callback_vector(x)
         return z
    
-    def fine_vector(self,x):
+    def fine_vector(self, x):
         z = self.callback_vector(x)
         return z
 
-    def coarse_vector(self,x):
+    def coarse_vector(self, x):
         z = self.callback_vector(x)
         return z
     

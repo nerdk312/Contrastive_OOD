@@ -9,8 +9,8 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'CIFAR10',
-OOD_dataset = 'SVHN',
+dataset = 'MNIST',
+OOD_dataset = ['FashionMNIST'],
 
 label_smoothing =False,
 
@@ -28,6 +28,10 @@ val_check = 10,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
+vector_level = ['instance'],
+label_level = ['fine'],
+#callbacks = ['Model_saving'],
+callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
 model_type = 'CE',
 project = 'evaluation',# evaluation, Moco_training
