@@ -26,7 +26,6 @@ class Metric():
             svd.fit(features)
             s = svd.singular_values_
         
-        
         if self.mode!=0:
             s = s[np.abs(self.mode)-1:] # Nawid - select a subset of the values (from the mode -1 value to the last value)
         s_norm  = s/np.sum(s) # Nawid- normalise by sum of spectral values
@@ -39,9 +38,11 @@ class Metric():
             kl = entropy(uniform, s_norm)
         if self.mode==0:
             kl = s_norm
+            '''
             # Log the value for the first 3 singular values
             wandb.log({f'singular value {0}':s_norm[0]})
             wandb.log({f'singular value {1}':s_norm[1]})
             wandb.log({f'singular value {2}':s_norm[2]})
             wandb.log({f'singular value {10}':s_norm[10]})
+            '''
         return kl
