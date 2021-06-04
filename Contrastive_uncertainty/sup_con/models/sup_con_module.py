@@ -19,7 +19,6 @@ class SupConModule(pl.LightningModule):
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        use_mlp: bool = False,
         instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
         ):
@@ -35,9 +34,6 @@ class SupConModule(pl.LightningModule):
         # num_classes is the output fc dimension
         
         self.encoder = self.init_encoders()
-        if use_mlp:  # hack: brute-force replacement
-            dim_mlp = self.encoder.fc.weight.shape[1]
-            self.encoder.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder.fc)
         '''  
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
@@ -60,7 +56,7 @@ class SupConModule(pl.LightningModule):
         
         return encoder
     
-    def callback_vector(self,x): # vector for the representation before using separate branches for the task
+    def callback_vector(self, x): # vector for the representation before using separate branches for the task
         """
         Input:
             x: a batch of images for classification
@@ -70,8 +66,18 @@ class SupConModule(pl.LightningModule):
         z = self.encoder(x)
         z = nn.functional.normalize(z, dim=1)
         return z
+    
+    def instance_vector(self, x):
+        z = self.callback_vector(x)
+        return z
+   
+    def fine_vector(self, x):
+        z = self.callback_vector(x)
+        return z
 
-
+    def coarse_vector(self, x):
+        z = self.callback_vector(x)
+        return z
 
     def forward(self, features, labels=None, mask=None):
         """Compute loss for model. If both `labels` and `mask` are None,

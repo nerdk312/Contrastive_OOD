@@ -4,6 +4,6 @@ def ModelInstance(model_module,config,datamodule):
             softmax_temperature = config['softmax_temperature'],
             optimizer = config['optimizer'],learning_rate = config['learning_rate'],
             momentum = config['momentum'], weight_decay = config['weight_decay'],
-            datamodule = datamodule)
+            datamodule = datamodule, pretrained_network = config['pretrained_network'])
     
     return model
