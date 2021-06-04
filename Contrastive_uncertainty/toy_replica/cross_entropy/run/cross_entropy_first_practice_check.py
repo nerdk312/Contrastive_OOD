@@ -4,7 +4,7 @@ from Contrastive_uncertainty.toy_replica.cross_entropy.config.cross_entropy_para
 from Contrastive_uncertainty.toy_replica.cross_entropy.models.cross_entropy_module import CrossEntropyToy
 from Contrastive_uncertainty.toy_replica.cross_entropy.models.cross_entropy_model_instance import ModelInstance
 
-cross_entropy_hparams['bsz'] = 16
+cross_entropy_hparams['bsz'] = 64
 cross_entropy_hparams['instance_encoder'] = 'resnet18'
 cross_entropy_hparams['epochs'] = 1
 cross_entropy_hparams['fast_run'] = True

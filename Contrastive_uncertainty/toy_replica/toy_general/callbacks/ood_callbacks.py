@@ -52,6 +52,7 @@ class Mahalanobis_OOD(pl.Callback):
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
     
     def on_test_epoch_end(self, trainer, pl_module):
+        #import ipdb; ipdb.set_trace()
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
 
     # Performs all the computation in the callback
@@ -69,7 +70,7 @@ class Mahalanobis_OOD(pl.Callback):
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
         num_classes = max(labels_train+1)
-        fpr95, auroc, aupr, indices_dtest, indices_dood = self.get_eval_results(
+        fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
             np.copy(features_ood),
@@ -78,7 +79,10 @@ class Mahalanobis_OOD(pl.Callback):
 
         self.mahalanobis_classification(indices_dtest, labels_test,f'Mahalanobis Classification: {self.vector_level}: {self.label_level}')
 
-        # Calculates the mahalanobis distance using unsupervised approach 
+        # Calculates the mahalanobis distance using unsupervised approach
+        # Plots the curve if during testing phase
+        if trainer.testing:
+            get_roc_plot(dtest,dood, self.OOD_dataname)  
         return fpr95,auroc,aupr
 
     # Calaculates the accuracy of a data point based on the closest distance to a centroid
@@ -203,11 +207,13 @@ class Mahalanobis_OOD(pl.Callback):
         # Nawid- get false postive rate and asweel as AUROC and aupr
         fpr95 = get_fpr(dtest, dood)
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
-                
+
         wandb.log({self.log_name + f' AUROC: {self.vector_level} vector: {num_clusters} classes: {self.OOD_dataname}': auroc})
         wandb.log({self.log_name + f' AUPR: {self.vector_level} vector: {num_clusters} classes: {self.OOD_dataname}': aupr})
         wandb.log({self.log_name + f' FPR: {self.vector_level} vector: {num_clusters} classes: {self.OOD_dataname}': fpr95})
-        return fpr95, auroc, aupr, indices_dtest, indices_dood
+        
+
+        return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
     
     # Changes OOD scores to confidence scores 
     def log_confidence_scores(self,Dtest,DOOD,labels_train,num_clusters):  
@@ -253,6 +259,7 @@ class Aggregated_Mahalanobis_OOD(pl.Callback):
 
     def on_validation_epoch_end(self, trainer, pl_module):
         # Skip if fast testing as this can lead to issues with the code
+        # if trainer.fast_dev_run:
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
     
     def on_test_epoch_end(self, trainer, pl_module):
@@ -454,7 +461,7 @@ class Aggregated_Mahalanobis_OOD(pl.Callback):
         wandb.log({self.log_name + f' Aggregated AUROC: {num_clusters} classes: {self.OOD_dataname}': auroc})
         wandb.log({self.log_name + f' Aggregated AUPR: {num_clusters} classes: {self.OOD_dataname}': aupr})
         wandb.log({self.log_name + f' Aggregated FPR: {num_clusters} classes: {self.OOD_dataname}': fpr95})
-        
+                
         return fpr95, auroc, aupr, indices_dtest, indices_dood
     
     # Changes OOD scores to confidence scores 
@@ -764,3 +771,26 @@ def get_pr_sklearn(xin, xood):
 # Nawid - calculate false positive rate
 def get_fpr(xin, xood):
     return np.sum(xood < np.percentile(xin, 95)) / len(xood)
+
+def get_roc_plot(xin, xood,OOD_name):
+    anomaly_targets = [0] * len(xin)  + [1] * len(xood)
+    outputs = np.concatenate((xin, xood))
+
+    fpr, trp, thresholds = skm.roc_curve(anomaly_targets, outputs)
+    plt.figure(figsize=(16,10))
+    sns.scatterplot(
+    x=trp, y=fpr,
+    legend="full",
+    alpha=0.3
+    )
+    ROC_filename = f'ROC_{OOD_name}.png'
+    plt.savefig(ROC_filename)
+    wandb_ROC = f'Images/ROC curve: OOD dataset {OOD_name}'
+    wandb.log({wandb_ROC:wandb.Image(ROC_filename)})
+
+    '''
+    wandb.log({f'ROC_{OOD_name}': wandb.plot.roc_curve(anomaly_targets, outputs,#scores,
+                        labels=None, classes_to_plot=None)})
+    '''
+    
+

@@ -56,8 +56,7 @@ def train(base_dict):
                     'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training},
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDToy, 
-                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},
-          
+                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},         
     }
 
     
