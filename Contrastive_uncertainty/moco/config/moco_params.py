@@ -12,10 +12,9 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'Blobs',
-OOD_dataset = ['TwoMoons','Diagonal'],
+dataset = 'MNIST',
+OOD_dataset = ['FashionMNIST'],
 
-use_mlp = True,
 
 # Miscellaneous arguments
 seed = 42,
@@ -36,7 +35,7 @@ label_level = ['fine'],
 callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
 model_type = 'Moco',
-project = 'toy_replica',# evaluation, Moco_training
+project = 'evaluation',# evaluation, Moco_training
 group = None,
 notes = None,
 )
