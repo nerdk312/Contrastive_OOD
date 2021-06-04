@@ -35,12 +35,10 @@ notes = 'Examining characteristics of the OOD Mahalanobis scores for the ID and 
 label_smoothing = False,
 
 # Contrastive specific parameters
-Contrastive = True,
-supervised_contrastive = False,
 num_negatives = 4096,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
-use_mlp =True,
+
 
 # Supcon specific parameters
 contrast_mode ='one',
