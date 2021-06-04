@@ -17,8 +17,6 @@ def callback_dictionary(Datamodule,config):
     # Manually added callbacks
     callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Models'),
                     'MMD_instance': MMD_distance(Datamodule,vector_level='instance', quick_callback=quick_callback)}
-                    #'Aggregated':Aggregated_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
-                    #'Differing':Differing_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback)}
     
     # Iterate through the different vector and label levels to get different metrics and visualisations
     for (vector_level, label_level) in zip(config['vector_level'],config['label_level']):

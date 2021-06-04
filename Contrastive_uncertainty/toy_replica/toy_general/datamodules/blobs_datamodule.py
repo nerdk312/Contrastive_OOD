@@ -37,6 +37,7 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
         Return:
             classes
         """
+        
         return self.centers
     
     @property

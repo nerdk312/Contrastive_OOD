@@ -135,7 +135,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         collated_labels = torch.cat(collated_labels)
         return features, collated_labels
 
-    def pca_visualisation(self, representations, labels, name,num_classes):
+    def pca_visualisation(self, representations, labels, name, num_classes):
         pca = PCA(n_components=3)
         pca_result = pca.fit_transform(representations)
         pca_one = pca_result[:,0]
