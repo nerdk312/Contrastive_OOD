@@ -235,7 +235,6 @@ class Mahalanobis_OOD(pl.Callback):
         ood_table = wandb.Table(data=ood_data, columns=["scores"])
         wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
 
-
 class Aggregated_Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
         quick_callback:bool = True):
@@ -750,9 +749,6 @@ class Differing_Mahalanobis_OOD(pl.Callback):
             ood_data = [[s] for s in ood_statistics[index]]
             ood_table = wandb.Table(data=ood_data, columns=["scores"])
             wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
-        
-         
-
 
 
 def get_roc_sklearn(xin, xood):
@@ -779,13 +775,17 @@ def get_roc_plot(xin, xood,OOD_name):
     fpr, trp, thresholds = skm.roc_curve(anomaly_targets, outputs)
     plt.figure(figsize=(16,10))
     sns.scatterplot(
-    x=trp, y=fpr,
+    x=fpr, y=trp,
     legend="full",
     alpha=0.3
     )
-    ROC_filename = f'ROC_{OOD_name}.png'
+    # Set  x and y-axis labels
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    
+    ROC_filename = f'Images/ROC_{OOD_name}.png'
     plt.savefig(ROC_filename)
-    wandb_ROC = f'Images/ROC curve: OOD dataset {OOD_name}'
+    wandb_ROC = f'ROC curve: OOD dataset {OOD_name}'
     wandb.log({wandb_ROC:wandb.Image(ROC_filename)})
 
     '''

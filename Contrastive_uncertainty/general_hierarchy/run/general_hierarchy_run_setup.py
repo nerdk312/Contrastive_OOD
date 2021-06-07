@@ -31,6 +31,13 @@ def callback_dictionary(Datamodule,OOD_Datamodule,config):
 #  'Euclidean': Euclidean_OOD(Datamodule,OOD_Datamodule,num_inference_clusters=inference_clusters,quick_callback=quick_callback),'MMD': MMD_distance(Datamodule, quick_callback=quick_callback),
 # 'Centroid': Centroid_distance(Datamodule, config['quick_callback']), 'SupCon': SupConLoss(Datamodule, config['quick_callback'])}
 '''
+# Run name which includes the branch weights
+def train_run_name(model_name, config, group=None):
+    run_name = "Train_" + model_name + "_DS:"+str(config["dataset"]) +"_Epochs:" + str(config["epochs"]) + "_seed:" +str(config["seed"]) + f'_instance:{config["branch_weights"][0]}_fine:{config["branch_weights"][1]}_coarse:{config["branch_weights"][2]}' 
+    if group is not None:
+        run_name = group + '_' + run_name
+    return run_name
+    
 # Generates the callbacks
 def callback_dictionary(Datamodule,config):
     #val_loader = Datamodule.val_dataloader() # Used for metric logger callback also

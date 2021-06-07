@@ -55,8 +55,8 @@ num_cluster = [100],
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
-callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
-
+#callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
+callbacks = [],
 
 
 # Either goes through all the models or goes through baselines

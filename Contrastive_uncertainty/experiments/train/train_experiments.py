@@ -66,20 +66,19 @@ def train(base_dict):
                     
     }
     '''
-    '''
-    model_dict = {'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
-                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
-                    
-                    'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
+    
+    model_dict = {'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
                     'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training},
 
+                '   HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
+                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
+
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDModule, 
-                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},
-          
+                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},          
     }
+
+
     '''
-
-
     model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyModule,
                     'model_instance':CEModelInstance,'train':general_training},
         
@@ -88,7 +87,7 @@ def train(base_dict):
                     
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConModule, 
                     'model_instance':SupConModelInstance,'train':general_training},
-                    
+    
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
                     'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
                     
@@ -99,6 +98,7 @@ def train(base_dict):
                     'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},
           
     }
+    '''
     # Update the parameters of each model
 
     # iterate through all items of the state dict

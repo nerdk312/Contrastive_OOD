@@ -20,6 +20,7 @@ def eval_run_name(model_name,config, group=None):
 
 def Datamodule_selection(data_dict, dataset, config):
     # Information regarding the configuration of the data module for the specific task
+    #import ipdb; ipdb.set_trace()
     datamodule_info =  data_dict[dataset] # Specific module
     Datamodule = datamodule_info['module'](data_dir= './',batch_size = config['bsz'],seed = config['seed'])
     Datamodule.train_transforms = datamodule_info['train_transform']

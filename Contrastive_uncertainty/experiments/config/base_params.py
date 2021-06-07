@@ -9,8 +9,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'FashionMNIST',
-OOD_dataset = ['EMNIST','MNIST','KMNIST'],
+dataset = 'CIFAR100',
+OOD_dataset = ['SVHN','CIFAR10'],
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -28,8 +28,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'OOD values characterisation',
-notes = 'Examining characteristics of the OOD Mahalanobis scores for the ID and OOD data',  # Add notes to the specific models each time
+group = 'OOD detection at different scales experiment',
+notes = 'Examining how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
 label_smoothing = False,
@@ -58,8 +58,8 @@ branch_weights = [1.0/3, 1.0/3, 1.0/3],
 # Either goes through all the models or goes through baselines
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
-#callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
-callbacks = ['Aggregated','Differing'],
+callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
+#callbacks = ['Aggregated','Differing'],
 
 single_model = 'Baselines'
 )  # evaluation

@@ -43,6 +43,9 @@ def train(base_dict):
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConToy, 
                     'model_instance':SupConModelInstance, 'train':general_training},
 
+
+    }
+    '''
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidToy, 
                     'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
                 
@@ -58,6 +61,7 @@ def train(base_dict):
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDToy, 
                     'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},         
     }
+    '''
 
     
     # Update the parameters of each model

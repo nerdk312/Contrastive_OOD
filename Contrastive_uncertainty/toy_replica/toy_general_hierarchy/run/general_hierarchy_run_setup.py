@@ -7,6 +7,14 @@ from Contrastive_uncertainty.toy_replica.toy_general.run.general_run_setup impor
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.datamodule_dict import dataset_dict
 from re import search
 
+# Run name which includes the branch weights
+def train_run_name(model_name, config, group=None):
+    run_name = "Train_" + model_name + "_DS:"+str(config["dataset"]) +"_Epochs:" + str(config["epochs"]) + "_seed:" +str(config["seed"]) + f'_instance:{config["branch_weights"][0]}_fine:{config["branch_weights"][1]}_coarse:{config["branch_weights"][2]}' 
+    if group is not None:
+        run_name = group + '_' + run_name
+    return run_name
+
+
 # Generates the callbacks
 def callback_dictionary(Datamodule,config):
     #val_loader = Datamodule.val_dataloader() # Used for metric logger callback also
