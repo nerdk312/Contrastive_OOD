@@ -202,27 +202,6 @@ class Mahalanobis_OOD(pl.Callback):
         food = (food - m) / (s + 1e-10)
         # Nawid - obtain the scores for the test data and the OOD data
         dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain,num_clusters)
-        '''
-        # Stack the OOD scores to enable it to be changed to dataframe
-        # https://towardsdatascience.com/histograms-and-density-plots-in-python-f6bda88f5ac0
-        data = np.stack((dtest,dood),axis=-1)
-        # Change to dataframe and assign colums
-        df = pd.DataFrame(data, columns=['Test','OOD'])
-        sns.displot(data =df,multiple ='stack',stat ='density',common_norm=False,kde =True)
-        #names = ['test','ood']   
-        #sns.displot(data = (dtest,dood),multiple ='stack',stat ='density',common_norm=False,kde =True,label = names)  
-
-        plt.xlabel('Distances')
-        plt.ylabel('Normalized frequency')
-        plt.title('Dataset Mahalanobis Distances')
-        '''
-        
-        distances_filename = 'Images/Mahalanobis_distances.png'
-        plt.savefig(distances_filename)
-        wandb_pca = ' Dataset Mahalanobis Distance'
-        wandb.log({wandb_pca:wandb.Image(distances_filename)})
-
-        import ipdb; ipdb.set_trace()
         self.log_confidence_scores(dtest,dood,labelstrain,num_clusters)
 
         # Nawid- get false postive rate and asweel as AUROC and aupr

@@ -4,6 +4,7 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import  ModelSa
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD #Euclidean_OOD, IsoForest
 from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
+from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
 from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
 
 def train_run_name(model_name, config, group=None):
@@ -41,7 +42,8 @@ def callback_dictionary(Datamodule,config):
     callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Models'),
                     'MMD_instance': MMD_distance(Datamodule,vector_level='instance', quick_callback=quick_callback),
                     'Metrics_instance_fine':MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='instance', label_level='fine', quick_callback=quick_callback),
-                    'Visualisation_instance_fine': Visualisation(Datamodule, vector_level='instance',label_level='fine',quick_callback=quick_callback)}
+                    'Visualisation_instance_fine': Visualisation(Datamodule, vector_level='instance',label_level='fine',quick_callback=quick_callback),
+                    'Variational':Variational(Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)}
     
     # Automatically adding callbacks for the Mahalanobis distance for each different vector level as well as each different OOD dataset
     for ood_dataset in config['OOD_dataset']:

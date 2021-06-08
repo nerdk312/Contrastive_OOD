@@ -1,6 +1,5 @@
-cross_entropy_vae_hparams = dict(
-emb_dim = 8,
-instance_encoder = 'resnet50',
+vae_hparams = dict(
+emb_dim = 128,
 
 # optimizer args
 optimizer = 'sgd',
@@ -9,15 +8,13 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'Blobs',
-OOD_dataset = ['TwoMoons','Diagonal'],
-
-label_smoothing =False,
-kl_coeff = 0.1,
+dataset = 'MNIST',
+OOD_dataset = ['FashionMNIST'],
 
 # Miscellaneous arguments
 seed = 42,
 epochs = 300,
+
 
 # Trainer configurations
 fast_run = False,
@@ -28,13 +25,15 @@ test_ratio = 1.0,
 val_check = 10,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
-#callbacks = ['Differing'],
+kl_coeff = 0.1,
 #vector_level = ['instance'],
 #label_level = ['fine'],
-#callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 callbacks = ['Variational'],
-model_type = 'CEVAE',
-project = 'toy_replica',  # evaluation, Moco_training
+#callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
+
+
+model_type = 'VAE',
+project = 'evaluation',# evaluation, Moco_training
 group = None,
 notes = None,
 )
