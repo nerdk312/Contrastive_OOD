@@ -18,4 +18,4 @@ cross_entropy_vae_hparams['project'] = 'practice'  # evaluation, Moco_training
 cross_entropy_vae_hparams['pretrained_network'] = None  # 'Pretrained_models/finetuned_network.pt'
 cross_entropy_vae_hparams['quick_callback'] = True
 
-train(cross_entropy_vae_hparams,CrossEntropyVAEModule, ModelInstance)
+train(cross_entropy_vae_hparams, CrossEntropyVAEModule, ModelInstance)
