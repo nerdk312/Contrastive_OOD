@@ -10,6 +10,13 @@ from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.config.hsu
 from Contrastive_uncertainty.multi_PCL.config.multi_pcl_params import multi_pcl_hparams
 from Contrastive_uncertainty.unsup_con_memory.config.unsup_con_memory_params import unsup_con_memory_hparams
 
+
+from Contrastive_uncertainty.vae_models.vae.config.vae_params import vae_hparams
+from Contrastive_uncertainty.vae_models.cross_entropy_vae.config.cross_entropy_vae_params import cross_entropy_vae_hparams
+from Contrastive_uncertainty.vae_models.sup_con_vae.config.sup_con_vae_params import sup_con_vae_hparams
+from Contrastive_uncertainty.vae_models.moco_vae.config.moco_vae_params import moco_vae_hparams
+
+
 # Importing the different lightning modules for the baselines
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import CrossEntropyModule
 from Contrastive_uncertainty.moco.models.moco_module import MocoModule
@@ -21,6 +28,13 @@ from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_mo
 from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroidModule
 from Contrastive_uncertainty.multi_PCL.models.multi_pcl_module import MultiPCLModule
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_module import UnSupConMemoryModule
+
+
+from Contrastive_uncertainty.vae_models.vae.models.vae_module import VAEModule
+from Contrastive_uncertainty.vae_models.cross_entropy_vae.models.cross_entropy_vae_module import CrossEntropyVAEModule
+from Contrastive_uncertainty.vae_models.sup_con_vae.models.sup_con_vae_module import SupConVAEModule
+from Contrastive_uncertainty.vae_models.moco_vae.models.moco_vae_module import MocoVAEModule
+
 
 # Model instances for the different methods
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance import ModelInstance as CEModelInstance
@@ -35,6 +49,11 @@ from Contrastive_uncertainty.multi_PCL.models.multi_pcl_model_instance import Mo
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_model_instance import ModelInstance as UnSupConMemoryModelInstance
 
 
+from Contrastive_uncertainty.vae_models.vae.models.vae_model_instance import ModelInstance as VAEModelInstance
+from Contrastive_uncertainty.vae_models.cross_entropy_vae.models.cross_entropy_vae_model_instance import ModelInstance as CrossEntropyVAEModelInstance
+from Contrastive_uncertainty.vae_models.sup_con_vae.models.sup_con_vae_model_instance import ModelInstance as SupConVAEModelInstance
+from Contrastive_uncertainty.vae_models.moco_vae.models.moco_vae_model_instance import ModelInstance as MocoVAEModelInstance
+
 # Import training methods 
 from Contrastive_uncertainty.general.train.train_general import train as general_training
 from Contrastive_uncertainty.general_clustering.train.train_general_clustering import train as general_clustering_training
@@ -42,42 +61,11 @@ from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy imp
 
 def train(base_dict):    
     acceptable_single_models = ['Baselines','CE','Moco','SupCon',
-    'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU','HSupConBUCentroid','HSupConTD']
+    'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU','HSupConBUCentroid','HSupConTD',
+    'VAE','CEVAE','MocoVAE','SupConVAE']
 
     # Dict for the model name, parameters and specific training loop
-    '''
-    model_dict = {'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
-                    'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training},
-                    
-                    'HSupCon':{'params':hsup_con_hparams,'model_module':HSupConModule, 
-                    'model_instance':HSupConModelInstance,'train':general_hierarchy_training},
-                    
-                    'PCL':{'params':pcl_hparams,'model_module':PCLModule,
-                    'model_instance':PCLModelInstance,'train':general_clustering_training},
-        
-                    'Moco':{'params':contrastive_hparams,'model_module':ContrastiveModule, 
-                    'model_instance':ContrastiveModelInstance,'train':general_training},
-                    
-                    'SupCon':{'params':sup_con_hparams,'model_module':SupConModule, 
-                    'model_instance':SupConModelInstance,'train':general_training},
-
-                    'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyModule,
-                    'model_instance':CEModelInstance,'train':general_training},
-                    
-    }
-    '''
     
-    model_dict = {'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
-                    'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training},
-
-                '   HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
-                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
-
-                    'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDModule, 
-                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},          
-    }
-
-
     '''
     model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyModule,
                     'model_instance':CEModelInstance,'train':general_training},
@@ -96,9 +84,37 @@ def train(base_dict):
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDModule, 
                     'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},
+
+                    'CEVAE':{'params':cross_entropy_vae_hparams,'model_module':CrossEntropyVAEModule,
+                    'model_instance':CrossEntropyVAEModelInstance,'train':general_training},
+
+                    'MocoVAE':{'params':moco_vae_hparams,'model_module':MocoVAEModule,
+                    'model_instance':MocoVAEModelInstance,'train':general_training},
+
+                    'SupConVAE':{'params':sup_con_vae_hparams,'model_module':SupConVAEModule,
+                    'model_instance':SupConVAEModelInstance,'train':general_training},
+
+                    'VAE':{'params':vae_hparams,'model_module':VAEModule,
+                    'model_instance':VAEModelInstance,'train':general_training},
+
+
           
     }
     '''
+    model_dict = {'CEVAE':{'params':cross_entropy_vae_hparams,'model_module':CrossEntropyVAEModule,
+                    'model_instance':CrossEntropyVAEModelInstance,'train':general_training},
+
+                    'MocoVAE':{'params':moco_vae_hparams,'model_module':MocoVAEModule,
+                    'model_instance':MocoVAEModelInstance,'train':general_training},
+
+                    'SupConVAE':{'params':sup_con_vae_hparams,'model_module':SupConVAEModule,
+                    'model_instance':SupConVAEModelInstance,'train':general_training},
+
+                    'VAE':{'params':vae_hparams,'model_module':VAEModule,
+                    'model_instance':VAEModelInstance,'train':general_training},
+          
+    }
+    
     # Update the parameters of each model
 
     # iterate through all items of the state dict

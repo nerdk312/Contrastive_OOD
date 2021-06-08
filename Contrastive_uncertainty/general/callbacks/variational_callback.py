@@ -40,10 +40,10 @@ class Variational(pl.Callback): # General class for visualisation
 
         self.vector_level = vector_level
         self.label_level = label_level
-    
+    '''
     def on_validation_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer,pl_module)
-
+    '''
     def on_test_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer, pl_module) 
 
@@ -56,6 +56,7 @@ class Variational(pl.Callback): # General class for visualisation
         class_means = self.get_class_means(features_train,labels_train)
         class_means = torch.from_numpy(class_means).to(pl_module.device)
         reconstructed_class_means = pl_module.decode(class_means)
+        #print('variational callback runs')
         #import ipdb; ipdb.set_trace()
         #plt.imshow(reconstructed_class_means[0].cpu().numpy().squeeze())
         #plt.show()

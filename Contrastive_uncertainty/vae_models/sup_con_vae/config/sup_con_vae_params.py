@@ -45,7 +45,7 @@ callbacks = ['Variational'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
 
-model_type = 'VAE',
+model_type = 'SupConVAE',
 project = 'evaluation',# evaluation, Moco_training
 group = None,
 notes = None,

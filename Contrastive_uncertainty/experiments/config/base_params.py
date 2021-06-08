@@ -1,3 +1,6 @@
+from pytorch_lightning import callbacks
+
+
 base_hparams = dict(
 # Optimizer parameters in common
 optimizer = 'sgd',
@@ -7,10 +10,10 @@ weight_decay = 1e-4,
 
 # Training parameters in common
 emb_dim = 128,
-instance_encoder = 'resnet50',
+instance_encoder = 'resnet18',
 bsz = 256,
-dataset = 'CIFAR100',
-OOD_dataset = ['SVHN','CIFAR10'],
+dataset = 'MNIST',
+OOD_dataset = ['FashionMNIST'],
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -28,8 +31,17 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'OOD detection at different scales experiment',
-notes = 'Examining how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
+group = 'VAE experiments',
+notes = 'Examining information such as the reconstructed class means using the VAE decoder',  # Add notes to the specific models each time
+
+
+
+# VAE specific params
+kl_coeff = 0.1,
+first_conv = False,
+maxpool1 = False,
+enc_out_dim = 128,
+
 
 # Cross entropy Specific parameters
 label_smoothing = False,
@@ -38,6 +50,7 @@ label_smoothing = False,
 num_negatives = 4096,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
+
 
 
 # Supcon specific parameters
@@ -58,7 +71,8 @@ branch_weights = [1.0/3, 1.0/3, 1.0/3],
 # Either goes through all the models or goes through baselines
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
-callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
+callbacks = ['Variational'],
+#callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 #callbacks = ['Aggregated','Differing'],
 
 single_model = 'Baselines'
