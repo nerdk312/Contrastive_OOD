@@ -1,5 +1,5 @@
 vae_hparams = dict(
-
+emb_dim = 128,
 
 # optimizer args
 optimizer = 'sgd',
@@ -10,16 +10,6 @@ weight_decay = 1e-4,
 bsz = 256,
 dataset = 'MNIST',
 OOD_dataset = ['FashionMNIST'],
-
-
-# VAE specific params
-emb_dim = 128,
-instance_encoder = 'resnet18',
-kl_coeff = 0.1,
-first_conv = False,
-maxpool1 = False,
-enc_out_dim = 128,
-
 
 # Miscellaneous arguments
 seed = 42,
@@ -35,7 +25,7 @@ test_ratio = 1.0,
 val_check = 10,
 model_saving = 200, # Used to control how often the model is saved
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
-
+kl_coeff = 0.1,
 #vector_level = ['instance'],
 #label_level = ['fine'],
 callbacks = ['Variational'],

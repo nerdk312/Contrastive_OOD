@@ -1,4 +1,3 @@
-from Contrastive_uncertainty.vae_models.vae.models.components import resnet18_encoder, resnet50_decoder
 import wandb
 import pytorch_lightning as pl
 import torch
@@ -8,26 +7,21 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.vae_models.vae.models.components import resnet18_encoder,resnet18_decoder, resnet50_encoder, resnet50_decoder
+from Contrastive_uncertainty.vae_models.vae.models.basic_encoder_model import Backbone
 from Contrastive_uncertainty.general.utils.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k,mean
 
 
 class VAEModule(pl.LightningModule):
     def __init__(self,
-        instance_encoder:str ='resnet18',
-        first_conv:bool= False,
-        maxpool1: bool = False,
-        enc_out_dim: int = 512,
         emb_dim: int = 128,
-        kl_coeff: float = 0.1,
         optimizer:str = 'sgd',
         learning_rate: float = 0.03,
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
         pretrained_network:str = None,
-        
+        kl_coeff: float = 0.1,
         ):
 
         super().__init__()
@@ -37,32 +31,16 @@ class VAEModule(pl.LightningModule):
         self.datamodule = datamodule
         self.num_channels = datamodule.num_channels
         self.num_classes = datamodule.num_classes
-
-        self.kl_coeff = kl_coeff
-        self.enc_out_dim = enc_out_dim
-        self.emb_dim = emb_dim
-        self.input_height = datamodule.input_height
-        self.first_conv = first_conv
-        self.maxpool1 = maxpool1
-
-
-        valid_encoders = {
-            'resnet18': {
-                'enc': resnet18_encoder,
-                'dec': resnet18_decoder,
-            },
-            'resnet50': {
-                'enc': resnet50_encoder,
-                'dec': resnet50_decoder,
-            },
-        }
- 
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder, self.decoder = self.init_encoders()
-        self.fc_mu  = nn.Linear(self.enc_out_dim , self.emb_dim)
-        self.fc_var = nn.Linear(self.enc_out_dim , self.emb_dim)
-    
+        self.fc_mu  = nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim)
+        self.fc_var = nn.Linear(self.hparams.emb_dim, self.hparams.emb_dim)
+        '''
+        if self.hparams.pretrained_network is not None:
+            self.encoder_loading(self.hparams.pretrained_network)
+            print('loaded model')
+        '''
     @property
     def name(self):
         ''' return name of model'''
@@ -72,16 +50,11 @@ class VAEModule(pl.LightningModule):
         """
         Override to add your own encoders
         """
-        if self.hparams.instance_encoder == 'resnet18':
-            print('using resnet18')
-            encoder  = resnet18_encoder(self.num_channels,self.enc_out_dim, self.first_conv, self.maxpool1)
-            decoder = resnet18_decoder(self.num_channels, self.emb_dim, self.input_height, self.first_conv, self.maxpool1)
-        elif self.hparams.instance_encoder =='resnet50':
-            print('using resnet50')
-            encoder = resnet50_encoder(self.num_channels, self.enc_out_dim, self.first_conv, self.maxpool1)
-            decoder = resnet50_decoder(self.num_channels, self.emb_dim, self.input_height, self.first_conv, self.maxpool1)
-
+        encoder = Backbone(784,400, self.hparams.emb_dim)
+        decoder = Backbone(self.hparams.emb_dim, 400, 784)
+        
         return encoder, decoder
+
     
     def vae_forward(self, x):
         x = self.encoder(x)
@@ -103,7 +76,6 @@ class VAEModule(pl.LightningModule):
         x = self.encoder(x)
         # Added the normalisation myself
         x = nn.functional.normalize(x, dim=1)
-        #import ipdb; ipdb.set_trace()
         mu = self.fc_mu(x)
         log_var = self.fc_var(x)
         p, q, z = self.sample(mu, log_var)
@@ -117,7 +89,7 @@ class VAEModule(pl.LightningModule):
         Output:
             z: latent vector
         """
-        
+        x = x.view(-1, 784)
         z = self.encoder(x)
         z = nn.functional.normalize(z, dim=1)
         return z
@@ -143,15 +115,16 @@ class VAEModule(pl.LightningModule):
     # Pass in a latent representations and obtain reconstructed output
     def decode(self, z):
         x_hat = self.decoder(z)
+        x_hat = x_hat.view(-1, 1, 28, 28)
         return x_hat
 
     def loss_function(self, batch):
         metrics = {}
         (img_1, _), labels, indices = batch
-        
-
+        img_1 = img_1.view(-1, 784)
+    
         z, x_hat, p, q = self._run_step(img_1)
-        #import ipdb; ipdb.set_trace()
+
         recon_loss = F.mse_loss(x_hat, img_1, reduction='mean')
 
         log_qz = q.log_prob(z)

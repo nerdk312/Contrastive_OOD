@@ -100,6 +100,15 @@ class STL10DataModule(LightningDataModule):
             3
         """
         return 3
+    
+    @property
+    def input_height(self):
+        """
+        Return:
+            96
+        """
+        return 96
+        
 
     def prepare_data(self):
         """

@@ -125,6 +125,14 @@ class CIFAR100DataModule(LightningDataModule):
             mapping to coarse labels
         """
         return torch.tensor(CIFAR100_coarse_labels)
+    
+    @property
+    def input_height(self):
+        """
+        Return:
+            32
+        """
+        return 32
         
 
     def prepare_data(self):

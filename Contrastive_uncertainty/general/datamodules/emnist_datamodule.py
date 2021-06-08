@@ -98,6 +98,15 @@ class EMNISTDataModule(LightningDataModule):
             1
         """
         return 1
+    
+    @property
+    def input_height(self):
+        """
+        Return:
+            28
+        """
+        return 28
+        
 
     def prepare_data(self):
         """

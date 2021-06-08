@@ -107,6 +107,15 @@ class SVHNDataModule(LightningDataModule):
         """
         self.DATASET(self.data_dir, split ='train', download=True,transform=transform_lib.ToTensor())
         self.DATASET(self.data_dir, split ='test', download=True,transform=transform_lib.ToTensor(),)
+    
+    @property
+    def input_height(self):
+        """
+        Return:
+            32
+        """
+        return 32
+        
 
     def setup(self):
         ''' 

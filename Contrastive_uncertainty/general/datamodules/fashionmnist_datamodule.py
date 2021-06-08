@@ -123,6 +123,15 @@ class FashionMNISTDataModule(LightningDataModule):
             mapping to coarse labels
         """
         return torch.tensor(FashionMNIST_coarse_labels)
+    @property
+    def input_height(self):
+        """
+        Return:
+            28
+        """
+        return 28
+        
+
 
     def prepare_data(self):
         """

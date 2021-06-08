@@ -3,9 +3,7 @@ from Contrastive_uncertainty.vae_models.vae.config.vae_params import vae_hparams
 from Contrastive_uncertainty.vae_models.vae.models.vae_module import VAEModule
 from Contrastive_uncertainty.vae_models.vae.models.vae_model_instance import ModelInstance
 
-vae_hparams['bsz'] = 16
-#vae_hparams['emb_dim'] = 32
-#vae_hparams['enc_out_dim'] = 32
+vae_hparams['bsz'] = 64
 vae_hparams['epochs'] = 1
 vae_hparams['fast_run'] = True
 vae_hparams['training_ratio'] = 0.01

@@ -114,6 +114,15 @@ class KMNISTDataModule(LightningDataModule):
         return 1
     
     @property
+    def input_height(self):
+        """
+        Return:
+            28
+        """
+        return 28
+        
+    
+    @property
     def coarse_mapping(self):
         """
         Return:
