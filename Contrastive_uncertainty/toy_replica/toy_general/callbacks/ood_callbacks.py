@@ -365,6 +365,21 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
         
+        dtrain = [
+            np.sum(
+                (ftrain - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (ftrain - np.mean(x, axis=0, keepdims=True)).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid - done for all the different classes
+        ]
+
+
+
         din = [
             np.sum(
                 (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
@@ -399,11 +414,14 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             collated_indices_dood.append(indices_dood)
 
         # Calculate the indices corresponding to the values
+        indices_dtrain = np.argmin(dtrain,axis=0)
         indices_din = np.argmin(din,axis = 0)
+    
 
         din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
+        dtrain = np.min(dtrain,axis=0) # caclulates the min distance for the train dataset
 
-        return din, collated_dood, indices_din, collated_indices_dood
+        return dtrain, din, collated_dood, indices_dtrain, indices_din, collated_indices_dood
     
 
         
@@ -425,36 +443,47 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
 
         # Normalise each OOD features in the list sequentially
         dataset_names = []
-        dataset_names.append(self.Datamodule.name)
+        dataset_names.append(f'{self.Datamodule.name}-train')
+        dataset_names.append(f'{self.Datamodule.name}-test')
         for i in range(len(self.OOD_Datamodules)):
             food[i] /= np.linalg.norm(food[i], axis=-1, keepdims=True) + 1e-10
             food[i] = (food[i] - m) / (s + 1e-10)
             dataset_names.append(self.OOD_Datamodules[i].name)
 
             
+        # Stack the OOD scores to enable it to be changed to dataframe
+        # https://towardsdatascience.com/histograms-and-density-plots-in-python-f6bda88f5ac0
 
         # Nawid - obtain the scores for the test data and the OOD data
-        dtest, collated_dood, indices_dtest, collated_indices_dood = self.get_scores_multi_cluster(ftrain, ftest, food, labelstrain)
+        dtrain,dtest, collated_dood, indices_dtrain, indices_dtest, collated_indices_dood = self.get_scores_multi_cluster(ftrain, ftest, food, labelstrain)
         # Collate all the ood datasets together
         #import ipdb; ipdb.set_trace()
         dood = np.column_stack(collated_dood)  
         
-        data = np.concatenate((np.expand_dims(dtest,axis=1),dood),axis=1)
+        data = np.concatenate((np.expand_dims(dtrain,axis=1),np.expand_dims(dtest,axis=1),dood),axis=1)
         df = pd.DataFrame(data, columns=dataset_names)
-        sns.displot(data =df,multiple ='stack',stat ='density',common_norm=False,kde =True)
-        
+
+        sns.displot(data =df,multiple ='stack',stat ='density',common_norm=False)#,kde =True)
         plt.xlabel('Distances')
         plt.ylabel('Normalized frequency')
         plt.title('Dataset Mahalanobis Distances')
-        plt.show()
-        distances_filename = 'Images/Mahalanobis_distances.png'
-        plt.savefig(distances_filename)
-        wandb_distance = ' Dataset Mahalanobis Distance'
-        wandb.log({wandb_distance:wandb.Image(distances_filename)})
+        histogram_filename = 'Images/Mahalanobis_distances_histogram.png'
+        plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+        wandb_distance = ' Dataset Mahalanobis Histogram'
+        wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+
+        sns.displot(data =df,fill=True,common_norm=False,kind='kde')
+        plt.xlabel('Distances')
+        plt.ylabel('Normalized frequency')
+        plt.title('Dataset Mahalanobis Distances')
+        kde_filename = 'Images/Mahalanobis_distances_kde.png'
+        plt.savefig(kde_filename,bbox_inches='tight')
+        wandb_distance = ' Dataset Mahalanobis KDE'
+        wandb.log({wandb_distance:wandb.Image(kde_filename)})
+
+        
         
         '''
-        # Stack the OOD scores to enable it to be changed to dataframe
-        # https://towardsdatascience.com/histograms-and-density-plots-in-python-f6bda88f5ac0
         data = np.stack((dtest,dood),axis=-1)
         # Change to dataframe and assign colums
         
@@ -466,7 +495,6 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         plt.xlabel('Distances')
         plt.ylabel('Normalized frequency')
         plt.title('Dataset Mahalanobis Distances')
-        
         
         distances_filename = 'Images/Mahalanobis_distances.png'
         plt.savefig(distances_filename)
