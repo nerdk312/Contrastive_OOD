@@ -56,7 +56,7 @@ class Variational(pl.Callback): # General class for visualisation
         class_means = self.get_class_means(features_train,labels_train)
         class_means = torch.from_numpy(class_means).to(pl_module.device)
         reconstructed_class_means = pl_module.decode(class_means)
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         #plt.imshow(reconstructed_class_means[0].cpu().numpy().squeeze())
         #plt.show()
         #save_image(reconstructed_class_means.cpu(),'class_means.png')

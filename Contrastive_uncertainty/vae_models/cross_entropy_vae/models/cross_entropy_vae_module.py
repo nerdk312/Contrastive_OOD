@@ -8,12 +8,12 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.vae_models.vae.models.components import resnet18_encoder,resnet18_decoder, resnet50_encoder, resnet50_decoder
+from Contrastive_uncertainty.vae_models.cross_entropy_vae.models.components import resnet18_encoder, resnet18_decoder, resnet50_encoder, resnet50_decoder
 from Contrastive_uncertainty.general.utils.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k,mean
 
 
-class VAEModule(pl.LightningModule):
+class CrossEntropyVAEModule(pl.LightningModule):
     def __init__(self,
         instance_encoder:str ='resnet18',
         first_conv:bool= False,
@@ -27,6 +27,7 @@ class VAEModule(pl.LightningModule):
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
         pretrained_network:str = None,
+        label_smoothing:bool = False,
         
         ):
 
@@ -44,18 +45,6 @@ class VAEModule(pl.LightningModule):
         self.input_height = datamodule.input_height
         self.first_conv = first_conv
         self.maxpool1 = maxpool1
-
-
-        valid_encoders = {
-            'resnet18': {
-                'enc': resnet18_encoder,
-                'dec': resnet18_decoder,
-            },
-            'resnet50': {
-                'enc': resnet50_encoder,
-                'dec': resnet50_decoder,
-            },
-        }
  
         # create the encoders
         # num_classes is the output fc dimension
@@ -66,7 +55,7 @@ class VAEModule(pl.LightningModule):
     @property
     def name(self):
         ''' return name of model'''
-        return 'VAE'
+        return 'CrossEntropyVAE'
 
     def init_encoders(self):
         """
@@ -80,6 +69,8 @@ class VAEModule(pl.LightningModule):
             print('using resnet50')
             encoder = resnet50_encoder(self.num_channels, self.enc_out_dim, self.first_conv, self.maxpool1)
             decoder = resnet50_decoder(self.num_channels, self.emb_dim, self.input_height, self.first_conv, self.maxpool1)
+
+        encoder.class_fc2 = nn.Linear(self.enc_out_dim, self.num_classes) # additional layer for classification
 
         return encoder, decoder
     
@@ -134,7 +125,11 @@ class VAEModule(pl.LightningModule):
         z = self.callback_vector(x)
         return z
     
-    
+    def class_forward(self, x):
+        z = self.encoder(x)
+        z = nn.functional.normalize(z, dim=1)
+        logits = self.encoder.class_fc2(z)
+        return logits
 
     # Pass in a latent representations and obtain reconstructed output
     def decode(self, z):
@@ -142,12 +137,20 @@ class VAEModule(pl.LightningModule):
         return x_hat
 
     def loss_function(self, batch):
-        metrics = {}
         (img_1, _), labels, indices = batch
-        
+        logits = self.class_forward(img_1)
+        if self.hparams.label_smoothing:
+            CE_loss = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
+            CE_loss = torch.mean(CE_loss)
+        else:
+            #import ipdb; ipdb.set_trace()
+            CE_loss = F.cross_entropy(logits.float(), labels.long())
+
+        class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
+        metrics = {'Cross Entropy Loss': CE_loss, 'Class Accuracy @ 1': class_acc1, 'Class Accuracy @ 5': class_acc5}
 
         z, x_hat, p, q = self._run_step(img_1)
-        #import ipdb; ipdb.set_trace()
+
         recon_loss = F.mse_loss(x_hat, img_1, reduction='mean')
 
         log_qz = q.log_prob(z)
@@ -157,7 +160,7 @@ class VAEModule(pl.LightningModule):
         kl = kl.mean()
         kl *= self.hparams.kl_coeff
 
-        loss = kl + recon_loss
+        loss = kl + recon_loss + CE_loss
 
         logs = {
             "Reconstruction Loss": recon_loss,
