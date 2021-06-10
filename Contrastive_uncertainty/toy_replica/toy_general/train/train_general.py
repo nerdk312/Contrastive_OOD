@@ -28,21 +28,13 @@ def train(params,model_module,model_function):
     pl.seed_everything(config['seed'])
 
     datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
-    #OOD_datamodule = Datamodule_selection(dataset_dict,config['OOD_dataset'],config)
-    #channels = Channel_selection(dataset_dict,config['dataset'])
-
-    class_names_dict = datamodule.idx2class  # name of dict which contains class names
-    #import ipdb; ipdb.set_trace()
     callback_dict = callback_dictionary(datamodule, config)
     desired_callbacks = specific_callbacks(callback_dict, config['callbacks'])
-    #callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
     
                         
     # model_function takes in the model module and the config and uses it to instantiate the model
     model = model_function(model_module,config,datamodule)
-
-
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
 
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,

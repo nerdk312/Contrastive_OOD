@@ -46,16 +46,7 @@ class VAEModule(pl.LightningModule):
         self.maxpool1 = maxpool1
 
 
-        valid_encoders = {
-            'resnet18': {
-                'enc': resnet18_encoder,
-                'dec': resnet18_decoder,
-            },
-            'resnet50': {
-                'enc': resnet50_encoder,
-                'dec': resnet50_decoder,
-            },
-        }
+        
  
         # create the encoders
         # num_classes is the output fc dimension

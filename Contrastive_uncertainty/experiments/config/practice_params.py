@@ -69,7 +69,7 @@ num_cluster = [10],
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
-callbacks = ['Variational'],
+callbacks = ['Model_saving','Variational'],
 #callbacks = ['Aggregated','Differing'],
 
 # Either goes through all the models or goes through baselines

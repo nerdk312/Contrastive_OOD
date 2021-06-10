@@ -451,7 +451,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         wandb_distance = ' Dataset Mahalanobis Histogram'
         wandb.log({wandb_distance:wandb.Image(histogram_filename)})
 
-        sns.displot(data =df,fill=True,common_norm=False,kind='kde')
+        sns.displot(data =df,fill=False,common_norm=False,kind='kde')
         plt.xlabel('Distances')
         plt.ylabel('Normalized frequency')
         plt.title('Dataset Mahalanobis Distances')
