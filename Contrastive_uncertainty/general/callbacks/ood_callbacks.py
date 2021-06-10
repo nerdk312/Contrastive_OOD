@@ -9,6 +9,7 @@ import numpy as np
 import sklearn.datasets
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 import wandb
 import sklearn.metrics as skm
 import faiss
@@ -234,6 +235,256 @@ class Mahalanobis_OOD(pl.Callback):
         ood_data = [[s] for s in confidence_OOD]
         ood_table = wandb.Table(data=ood_data, columns=["scores"])
         wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
+
+
+
+# Calculate the Mahalanobis scores for all the dataset
+class Mahalanobis_OOD_Datasets(pl.Callback):
+    def __init__(self, Datamodule,OOD_Datamodules,
+        vector_level:str = 'instance',
+        label_level:str = 'fine',
+        quick_callback:bool = True):
+
+        super().__init__()
+        self.Datamodule = Datamodule
+        # Several different datamodules
+        self.OOD_Datamodules = OOD_Datamodules
+        for i in range(len(OOD_Datamodules)):
+            # use the setup for each datamodule
+            self.OOD_Datamodules[i].setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
+
+        
+        self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
+        
+        self.log_name = "Mahalanobis"
+        self.true_histogram = 'Mahalanobis_True_data_scores'
+        self.ood_histogram = 'Mahalanobis_OOD_data_scores'
+        
+        # Chooses what vector representation to use as well as which level of label hierarchy to use
+        self.vector_level = vector_level
+        self.label_level = label_level
+        
+        #self.OOD_dataname = self.OOD_Datamodule.name
+    
+    def on_validation_epoch_end(self, trainer, pl_module):
+        #import ipdb; ipdb.set_trace()
+        # Skip if fast testing as this can lead to issues with the code
+        self.forward_callback(trainer=trainer, pl_module=pl_module) 
+    
+    def on_test_epoch_end(self, trainer, pl_module):
+        #import ipdb; ipdb.set_trace()
+        self.forward_callback(trainer=trainer, pl_module=pl_module) 
+
+    # Performs all the computation in the callback
+    def forward_callback(self,trainer,pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}} 
+                
+        train_loader = self.Datamodule.train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        
+        
+        # Iterate through all the different OOD datamodules to get the labels of the OOD dataset
+        collated_features_ood = []
+        #labels_ood = []
+
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_features(pl_module, test_loader)
+        # Collate all the OOD features for the different OOD datamodules
+        for i in range(len(self.OOD_Datamodules)):
+            ood_loader = self.OOD_Datamodules[i].test_dataloader()
+            features_ood, _ = self.get_features(pl_module,ood_loader)
+            collated_features_ood.append(features_ood)
+
+        # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
+        num_classes = max(labels_train+1)
+        dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            collated_features_ood,
+            np.copy(labels_train),
+            num_classes)
+
+    def get_features(self, pl_module, dataloader, max_images=10**10, verbose=False):
+        features, labels = [], []
+        
+        total = 0
+        loader = quickloading(self.quick_callback, dataloader)
+        for index, (img, *label,indices) in enumerate(loader):
+            assert len(loader)>0, 'loader is empty'
+            if isinstance(img, tuple) or isinstance(img, list):
+                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
+
+            # Selects the correct label based on the desired label level
+            if len(label) > 1:
+                label_index = self.vector_dict['label_level'][self.label_level]
+                label = label[label_index]
+            else: # Used for the case of the OOD data
+                label = label[0]
+                
+            if total > max_images:
+                break
+            
+            img = img.to(pl_module.device)
+            
+            # Compute feature vector and place in list
+            feature_vector = self.vector_dict['vector_level'][self.vector_level](img) # Performs the callback for the desired level
+            
+            features += list(feature_vector.data.cpu().numpy())
+            labels += list(label.data.cpu().numpy())
+            
+            if verbose and not index % 50:
+                print(index)
+                
+            total += len(img)  
+        
+        return np.array(features), np.array(labels)   
+    
+    
+    def get_scores_multi_cluster(self,ftrain, ftest, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        
+        dtrain = [
+            np.sum(
+                (ftrain - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (ftrain - np.mean(x, axis=0, keepdims=True)).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid - done for all the different classes
+        ]
+
+
+
+        din = [
+            np.sum(
+                (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (ftest - np.mean(x, axis=0, keepdims=True)).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid - done for all the different classes
+        ]
+        collated_dood = []
+        collated_indices_dood = []
+        for i in range(len(self.OOD_Datamodules)):
+            dood = [
+                np.sum(
+                    (food[i] - np.mean(x, axis=0, keepdims=True))
+                    * (
+                        np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                            (food[i] - np.mean(x, axis=0, keepdims=True)).T
+                        )
+                    ).T,
+                    axis=-1,
+                )
+                for x in xc # Nawid- this calculates the score for all the OOD examples 
+            ]
+            indices_dood = np.argmin(dood, axis=0)
+            dood = np.min(dood, axis=0)
+            
+            collated_dood.append(dood)
+            collated_indices_dood.append(indices_dood)
+
+        # Calculate the indices corresponding to the values
+        indices_dtrain = np.argmin(dtrain,axis=0)
+        indices_din = np.argmin(din,axis = 0)
+    
+
+        din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
+        dtrain = np.min(dtrain,axis=0) # caclulates the min distance for the train dataset
+
+        return dtrain, din, collated_dood, indices_dtrain, indices_din, collated_indices_dood
+    
+
+        
+    def get_eval_results(self,ftrain, ftest, food, labelstrain, num_clusters):
+        """
+            None.
+        """
+        #import ipdb; ipdb.set_trace()
+        # Nawid -normalise the featues for the training, test and ood data
+        # standardize data
+        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
+        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
+        
+        # Nawid - calculate the mean and std of the traiing features
+        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
+        # Nawid - normalise data using the mean and std
+        ftrain = (ftrain - m) / (s + 1e-10)
+        ftest = (ftest - m) / (s + 1e-10)
+
+        # Normalise each OOD features in the list sequentially
+        dataset_names = []
+        dataset_names.append(f'{self.Datamodule.name}-train')
+        dataset_names.append(f'{self.Datamodule.name}-test')
+        for i in range(len(self.OOD_Datamodules)):
+            food[i] /= np.linalg.norm(food[i], axis=-1, keepdims=True) + 1e-10
+            food[i] = (food[i] - m) / (s + 1e-10)
+            dataset_names.append(self.OOD_Datamodules[i].name)
+
+            
+        # Stack the OOD scores to enable it to be changed to dataframe
+        # https://towardsdatascience.com/histograms-and-density-plots-in-python-f6bda88f5ac0
+
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtrain, dtest, collated_dood, indices_dtrain, indices_dtest, collated_indices_dood = self.get_scores_multi_cluster(ftrain, ftest, food, labelstrain)
+        # Collate all the ood datasets together
+        #import ipdb; ipdb.set_trace()
+        dood = np.column_stack(collated_dood)  
+        
+        data = np.concatenate((np.expand_dims(dtrain,axis=1),np.expand_dims(dtest,axis=1),dood),axis=1)
+        df = pd.DataFrame(data, columns=dataset_names)
+
+        sns.displot(data =df,multiple ='stack',stat ='density',common_norm=False)#,kde =True)
+        plt.xlabel('Distances')
+        plt.ylabel('Normalized frequency')
+        plt.title('Dataset Mahalanobis Distances')
+        histogram_filename = 'Images/Mahalanobis_distances_histogram.png'
+        plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+        wandb_distance = ' Dataset Mahalanobis Histogram'
+        wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+
+        sns.displot(data =df,fill=False,common_norm=False,kind='kde')
+        plt.xlabel('Distances')
+        plt.ylabel('Normalized frequency')
+        plt.title('Dataset Mahalanobis Distances')
+        kde_filename = 'Images/Mahalanobis_distances_kde.png'
+        plt.savefig(kde_filename,bbox_inches='tight')
+        wandb_distance = ' Dataset Mahalanobis KDE'
+        wandb.log({wandb_distance:wandb.Image(kde_filename)})
+
+        
+        
+        '''
+        data = np.stack((dtest,dood),axis=-1)
+        # Change to dataframe and assign colums
+        
+        df = pd.DataFrame(data, columns=['Test','OOD'])
+        sns.displot(data =df,multiple ='stack',stat ='density',common_norm=False,kde =True)
+        #names = ['test','ood']   
+        #sns.displot(data = (dtest,dood),multiple ='stack',stat ='density',common_norm=False,kde =True,label = names)  
+
+        plt.xlabel('Distances')
+        plt.ylabel('Normalized frequency')
+        plt.title('Dataset Mahalanobis Distances')
+        
+        distances_filename = 'Images/Mahalanobis_distances.png'
+        plt.savefig(distances_filename)
+        wandb_distance = ' Dataset Mahalanobis Distance'
+        wandb.log({wandb_distance:wandb.Image(distances_filename)})
+        '''
+
+        return dtest, collated_dood, indices_dtest, collated_indices_dood
+
 
 class Aggregated_Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,

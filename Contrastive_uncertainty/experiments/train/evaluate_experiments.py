@@ -1,21 +1,40 @@
 import wandb
 
+# Import parameters for different training methods
+from Contrastive_uncertainty.cross_entropy.config.cross_entropy_params import cross_entropy_hparams
+from Contrastive_uncertainty.moco.config.moco_params import moco_hparams
+from Contrastive_uncertainty.sup_con.config.sup_con_params import sup_con_hparams
+from Contrastive_uncertainty.PCL.config.pcl_params import pcl_hparams
+from Contrastive_uncertainty.hierarchical_models.HSupCon.config.hsup_con_params import hsup_con_hparams
+from Contrastive_uncertainty.hierarchical_models.HSupConBU.config.hsup_con_bu_params import hsup_con_bu_hparams
+from Contrastive_uncertainty.hierarchical_models.HSupConTD.config.hsup_con_td_params import hsup_con_td_hparams
+from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.config.hsup_con_bu_centroid_params import hsup_con_bu_centroid_hparams
+from Contrastive_uncertainty.multi_PCL.config.multi_pcl_params import multi_pcl_hparams
+from Contrastive_uncertainty.unsup_con_memory.config.unsup_con_memory_params import unsup_con_memory_hparams
+
+
 # Importing the different lightning modules for the baselines
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import CrossEntropyModule
-from Contrastive_uncertainty.Contrastive.models.contrastive_module import ContrastiveModule
+from Contrastive_uncertainty.moco.models.moco_module import MocoModule
 from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
 from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
 from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_module import HSupConModule
 from Contrastive_uncertainty.hierarchical_models.HSupConBU.models.hsup_con_bu_module import HSupConBUModule
 from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_module import HSupConTDModule
-from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroid
+from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroidModule
 from Contrastive_uncertainty.multi_PCL.models.multi_pcl_module import MultiPCLModule
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_module import UnSupConMemoryModule
 
 
+from Contrastive_uncertainty.vae_models.vae.models.vae_module import VAEModule
+from Contrastive_uncertainty.vae_models.cross_entropy_vae.models.cross_entropy_vae_module import CrossEntropyVAEModule
+from Contrastive_uncertainty.vae_models.sup_con_vae.models.sup_con_vae_module import SupConVAEModule
+from Contrastive_uncertainty.vae_models.moco_vae.models.moco_vae_module import MocoVAEModule
+
+
 # Model instances for the different methods
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance import ModelInstance as CEModelInstance
-from Contrastive_uncertainty.Contrastive.models.contrastive_model_instance import ModelInstance as ContrastiveModelInstance
+from Contrastive_uncertainty.moco.models.moco_model_instance import ModelInstance as MocoModelInstance
 from Contrastive_uncertainty.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
 from Contrastive_uncertainty.PCL.models.pcl_model_instance import ModelInstance as PCLModelInstance
 from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_model_instance import ModelInstance as HSupConModelInstance
@@ -25,32 +44,40 @@ from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_mo
 from Contrastive_uncertainty.multi_PCL.models.multi_pcl_model_instance import ModelInstance as MultiPCLModelInstance
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_model_instance import ModelInstance as UnSupConMemoryModelInstance
 
+
+from Contrastive_uncertainty.vae_models.vae.models.vae_model_instance import ModelInstance as VAEModelInstance
+from Contrastive_uncertainty.vae_models.cross_entropy_vae.models.cross_entropy_vae_model_instance import ModelInstance as CrossEntropyVAEModelInstance
+from Contrastive_uncertainty.vae_models.sup_con_vae.models.sup_con_vae_model_instance import ModelInstance as SupConVAEModelInstance
+from Contrastive_uncertainty.vae_models.moco_vae.models.moco_vae_model_instance import ModelInstance as MocoVAEModelInstance
+
 # Import evaluate
 from Contrastive_uncertainty.general.train.evaluate_general import evaluation as general_evaluation
 from Contrastive_uncertainty.general_clustering.train.evaluate_general_clustering import evaluation as general_clustering_evaluation
 from Contrastive_uncertainty.general_hierarchy.train.evaluate_general_hierarchy import evaluation as general_hierarchy_evaluation
 
 
-def evaluate(run_paths):    
-    acceptable_single_models = ['Baselines','CE','Moco','SupCon','PCL','UnSupConMemory','HSupCon']
+def evaluate(run_paths,update_dict):    
+    acceptable_single_models = ['Baselines',
+    'CE',
+    'Moco',
+    'SupCon',
+    # 'PCL',
+    # 'UnSupConMemory',
+    # 'HSupCon'
+    ]
 
     # Dict for the model name, parameters and specific training loop
     
-    model_dict = {'CE':{'model_module':CrossEntropyModule,
-                 'model_instance':CEModelInstance,'evaluate':general_evaluation},                
-                    
-                    'Moco':{'model_module':ContrastiveModule, 
-                    'model_instance':ContrastiveModelInstance,'evaluate':general_evaluation},
-                    
-                    'SupCon':{'model_module':SupConModule, 
-                    'model_instance':SupConModelInstance,'evaluate':general_evaluation},
-                    
-                    'PCL':{'model_module':PCLModule,
-                    'model_instance':PCLModelInstance,'evaluate':general_clustering_evaluation},
+    model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyModule, 
+                    'model_instance':CEModelInstance, 'evaluate':general_evaluation},
 
-                    'UnSupConMemory':{'model_module':UnSupConMemoryModule,
-                    'model_instance':UnSupConMemoryModelInstance,'evaluate':general_clustering_evaluation}
-                    }
+                    'Moco':{'params':moco_hparams,'model_module':MocoModule, 
+                    'model_instance':MocoModelInstance, 'evaluate':general_evaluation},
+
+                    'SupCon':{'params':sup_con_hparams,'model_module':SupConModule, 
+                    'model_instance':SupConModelInstance, 'evaluate':general_evaluation},
+    }
+    
 
     # Iterate through the run paths
     for run_path in run_paths:
@@ -63,4 +90,4 @@ def evaluate(run_paths):
         evaluate_method = model_dict[model_type]['evaluate']
         model_module = model_dict[model_type]['model_module'] 
         model_instance_method = model_dict[model_type]['model_instance']
-        evaluate_method(run_path,model_module,model_instance_method)
+        evaluate_method(run_path, update_dict, model_module, model_instance_method)

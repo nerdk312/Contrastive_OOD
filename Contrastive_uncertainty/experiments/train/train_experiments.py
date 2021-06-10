@@ -60,13 +60,26 @@ from Contrastive_uncertainty.general_clustering.train.train_general_clustering i
 from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
 
 def train(base_dict):    
-    acceptable_single_models = ['Baselines','CE','Moco','SupCon',
-    'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU','HSupConBUCentroid','HSupConTD',
-    'VAE','CEVAE','MocoVAE','SupConVAE']
+    acceptable_single_models = ['Baselines',
+    'CE',
+    'Moco',
+    'SupCon',
+    # 'PCL',
+    # 'MultiPCL',
+    # 'UnSupConMemory',
+    # 'HSupCon',
+    # 'HSupConBU',
+    # 'HSupConBUCentroid',
+    # 'HSupConTD',
+    # 'VAE',
+    # 'CEVAE',
+    # 'MocoVAE',
+    # 'SupConVAE'
+    ]
 
     # Dict for the model name, parameters and specific training loop
     
-    '''
+    
     model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyModule,
                     'model_instance':CEModelInstance,'train':general_training},
         
@@ -96,23 +109,7 @@ def train(base_dict):
 
                     'VAE':{'params':vae_hparams,'model_module':VAEModule,
                     'model_instance':VAEModelInstance,'train':general_training},
-
-
-          
-    }
-    '''
-    model_dict = {'CEVAE':{'params':cross_entropy_vae_hparams,'model_module':CrossEntropyVAEModule,
-                    'model_instance':CrossEntropyVAEModelInstance,'train':general_training},
-
-                    'MocoVAE':{'params':moco_vae_hparams,'model_module':MocoVAEModule,
-                    'model_instance':MocoVAEModelInstance,'train':general_training},
-
-                    'SupConVAE':{'params':sup_con_vae_hparams,'model_module':SupConVAEModule,
-                    'model_instance':SupConVAEModelInstance,'train':general_training},
-
-                    'VAE':{'params':vae_hparams,'model_module':VAEModule,
-                    'model_instance':VAEModelInstance,'train':general_training},
-          
+     
     }
     
     # Update the parameters of each model
@@ -129,10 +126,7 @@ def train(base_dict):
 
     # Checks whether base_dict single model is present in the list
     assert base_dict['single_model'] in acceptable_single_models, 'single model response not in list of acceptable responses'
-    '''
-    datasets = ['FashionMNIST','MNIST','KMNIST','CIFAR10']
-    ood_datasets = ['MNIST','FashionMNIST','MNIST','SVHN']
-    '''
+    
     datasets = ['MNIST','CIFAR10', 'CIFAR100']
     ood_datasets = ['FashionMNIST','SVHN','SVHN']
     
@@ -140,13 +134,14 @@ def train(base_dict):
     # Go through all the models in the current dataset and current OOD dataset
     if base_dict['single_model']== 'Baselines':
         for model_k, model_v in model_dict.items():
-            params = model_dict[model_k]['params']
-            train_method = model_dict[model_k]['train']
-            model_module = model_dict[model_k]['model_module'] 
-            model_instance_method = model_dict[model_k]['model_instance']
-            # Try statement to allow the code to continue even if a single run fails
-            train_method(params, model_module, model_instance_method)
-
+            # Checks if model is present in the acceptable single models
+            if model_k in acceptable_single_models:
+                params = model_dict[model_k]['params']
+                train_method = model_dict[model_k]['train']
+                model_module = model_dict[model_k]['model_module'] 
+                model_instance_method = model_dict[model_k]['model_instance']
+                # Try statement to allow the code to continue even if a single run fails
+                train_method(params, model_module, model_instance_method)
 
     ## SINGLE MODEL
     # Go through a single model on all different datasets

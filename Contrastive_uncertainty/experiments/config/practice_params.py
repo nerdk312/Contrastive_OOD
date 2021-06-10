@@ -53,8 +53,6 @@ softmax_temperature = 0.07,
 # Supcon specific parameters
 contrast_mode ='one',
 
-
-
 # PCL specific parameters
 num_multi_cluster = [100,500],
 num_cluster_negatives = 4096,
@@ -69,7 +67,7 @@ num_cluster = [10],
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
-callbacks = ['Model_saving','Variational'],
+callbacks = ['Model_saving'],
 #callbacks = ['Aggregated','Differing'],
 
 # Either goes through all the models or goes through baselines

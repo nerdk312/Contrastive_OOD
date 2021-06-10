@@ -29,9 +29,20 @@ from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroi
 from Contrastive_uncertainty.toy_replica.toy_general.train.train_general import train as general_training
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
 
-def train(base_dict):    
-    acceptable_single_models = ['Baselines','CE','Moco','SupCon',
-    'PCL','MultiPCL','UnSupConMemory','HSupCon','HSupConBU','HSupConBUCentroid','HSupConTD']
+def train(base_dict):   
+    # Actively choose which modeles to choose in the acceptable models 
+    acceptable_single_models = ['Baselines',
+    'CE',
+    'Moco',
+    'SupCon',
+    # 'PCL',
+    # 'MultiPCL',
+    # 'UnSupConMemory',
+    # 'HSupCon',
+    # 'HSupConBU',
+    # 'HSupConBUCentroid',
+    # 'HSupConTD'
+    ]
 
     # Dict for the model name, parameters and specific training loop
     model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyToy, 
@@ -43,9 +54,6 @@ def train(base_dict):
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConToy, 
                     'model_instance':SupConModelInstance, 'train':general_training},
 
-
-    }
-    '''
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidToy, 
                     'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
                 
@@ -61,7 +69,7 @@ def train(base_dict):
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDToy, 
                     'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},         
     }
-    '''
+    
 
     
     # Update the parameters of each model
@@ -85,13 +93,16 @@ def train(base_dict):
     # BASELINES
     # Go through all the models in the current dataset and current OOD dataset
     if base_dict['single_model']== 'Baselines':
+        # Go through all the models present    
         for model_k, model_v in model_dict.items():
-            params = model_dict[model_k]['params']
-            train_method = model_dict[model_k]['train']
-            model_module = model_dict[model_k]['model_module'] 
-            model_instance_method = model_dict[model_k]['model_instance']
-            # Try statement to allow the code to continue even if a single run fails
-            train_method(params, model_module, model_instance_method)
+            # Checks if model is present in the acceptable single models
+            if model_k in acceptable_single_models:
+                params = model_dict[model_k]['params']
+                train_method = model_dict[model_k]['train']
+                model_module = model_dict[model_k]['model_module'] 
+                model_instance_method = model_dict[model_k]['model_instance']
+                # Try statement to allow the code to continue even if a single run fails
+                train_method(params, model_module, model_instance_method)
 
 
     ## SINGLE MODEL

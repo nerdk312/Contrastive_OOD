@@ -1,10 +1,10 @@
 # Import general params
 from Contrastive_uncertainty.experiments.train.evaluate_experiments import evaluate
+from Contrastive_uncertainty.experiments.config.trainer_params import trainer_hparams
 
-run_paths = ['nerdk312/practice/2vdhnpef',
-            'nerdk312/practice/fdfezneo',
-            'nerdk312/practice/30xr80ee',
-            'nerdk312/practice/eh6f51ek',
-            'nerdk312/practice/3ki677vi']
+run_paths = ['nerdk312/practice/2287a5ve',
+            'nerdk312/practice/3kia1igc',
+            'nerdk312/practice/32lz34l2'
+            ]
 
-evaluate(run_paths)
+evaluate(run_paths,trainer_hparams)
