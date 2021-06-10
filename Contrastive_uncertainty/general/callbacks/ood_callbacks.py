@@ -251,6 +251,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         self.OOD_Datamodules = OOD_Datamodules
         for i in range(len(OOD_Datamodules)):
             # use the setup for each datamodule
+            self.OOD_Datamodules[i].test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
             self.OOD_Datamodules[i].setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
 
         
@@ -298,15 +299,13 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             collated_features_ood.append(features_ood)
 
         # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
-        num_classes = max(labels_train+1)
         dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
             collated_features_ood,
-            np.copy(labels_train),
-            num_classes)
+            np.copy(labels_train))
 
-    def get_features(self, pl_module, dataloader, max_images=10**10, verbose=False):
+    def get_features(self, pl_module, dataloader):
         features, labels = [], []
         
         total = 0
@@ -323,8 +322,6 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             else: # Used for the case of the OOD data
                 label = label[0]
                 
-            if total > max_images:
-                break
             
             img = img.to(pl_module.device)
             
@@ -334,11 +331,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             features += list(feature_vector.data.cpu().numpy())
             labels += list(label.data.cpu().numpy())
             
-            if verbose and not index % 50:
-                print(index)
-                
-            total += len(img)  
-        
+            
         return np.array(features), np.array(labels)   
     
     
@@ -358,8 +351,6 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             )
             for x in xc # Nawid - done for all the different classes
         ]
-
-
 
         din = [
             np.sum(
@@ -406,10 +397,11 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
     
 
         
-    def get_eval_results(self,ftrain, ftest, food, labelstrain, num_clusters):
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
         """
             None.
         """
+        
         #import ipdb; ipdb.set_trace()
         # Nawid -normalise the featues for the training, test and ood data
         # standardize data
@@ -436,15 +428,15 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         # https://towardsdatascience.com/histograms-and-density-plots-in-python-f6bda88f5ac0
 
         # Nawid - obtain the scores for the test data and the OOD data
-        dtrain, dtest, collated_dood, indices_dtrain, indices_dtest, collated_indices_dood = self.get_scores_multi_cluster(ftrain, ftest, food, labelstrain)
-        # Collate all the ood datasets together
-        #import ipdb; ipdb.set_trace()
-        dood = np.column_stack(collated_dood)  
+        dtrain,dtest, collated_dood, indices_dtrain, indices_dtest, collated_indices_dood = self.get_scores_multi_cluster(ftrain, ftest, food, labelstrain)
+        # Make a new list for all the different distances
+        collated_data = [dtrain] +[dtest] + collated_dood
+        # Make a dictionary which contains the names and the mappings which I pass into the sns function
+        collated_dict = {}
+        for i in range(len(collated_data)):
+            collated_dict.update({dataset_names[i]:collated_data[i]})
         
-        data = np.concatenate((np.expand_dims(dtrain,axis=1),np.expand_dims(dtest,axis=1),dood),axis=1)
-        df = pd.DataFrame(data, columns=dataset_names)
-
-        sns.displot(data =df,multiple ='stack',stat ='density',common_norm=False)#,kde =True)
+        sns.displot(data = collated_dict,multiple ='stack',stat ='probability',common_norm=False, bins=50)#,kde =True)
         plt.xlabel('Distances')
         plt.ylabel('Normalized frequency')
         plt.title('Dataset Mahalanobis Distances')
@@ -452,39 +444,17 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
         wandb_distance = ' Dataset Mahalanobis Histogram'
         wandb.log({wandb_distance:wandb.Image(histogram_filename)})
-
-        sns.displot(data =df,fill=False,common_norm=False,kind='kde')
+        
+        sns.displot(data =collated_dict,fill=False,common_norm=False,kind='kde')
         plt.xlabel('Distances')
-        plt.ylabel('Normalized frequency')
+        plt.ylabel('Normalized Density')
         plt.title('Dataset Mahalanobis Distances')
         kde_filename = 'Images/Mahalanobis_distances_kde.png'
         plt.savefig(kde_filename,bbox_inches='tight')
         wandb_distance = ' Dataset Mahalanobis KDE'
         wandb.log({wandb_distance:wandb.Image(kde_filename)})
-
-        
-        
-        '''
-        data = np.stack((dtest,dood),axis=-1)
-        # Change to dataframe and assign colums
-        
-        df = pd.DataFrame(data, columns=['Test','OOD'])
-        sns.displot(data =df,multiple ='stack',stat ='density',common_norm=False,kde =True)
-        #names = ['test','ood']   
-        #sns.displot(data = (dtest,dood),multiple ='stack',stat ='density',common_norm=False,kde =True,label = names)  
-
-        plt.xlabel('Distances')
-        plt.ylabel('Normalized frequency')
-        plt.title('Dataset Mahalanobis Distances')
-        
-        distances_filename = 'Images/Mahalanobis_distances.png'
-        plt.savefig(distances_filename)
-        wandb_distance = ' Dataset Mahalanobis Distance'
-        wandb.log({wandb_distance:wandb.Image(distances_filename)})
-        '''
-
+           
         return dtest, collated_dood, indices_dtest, collated_indices_dood
-
 
 class Aggregated_Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,

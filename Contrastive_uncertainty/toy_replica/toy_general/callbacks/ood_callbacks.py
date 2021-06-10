@@ -1,3 +1,5 @@
+from sys import set_asyncgen_hooks
+from numpy.core.shape_base import stack
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -249,14 +251,13 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         self.OOD_Datamodules = OOD_Datamodules
         for i in range(len(OOD_Datamodules)):
             # use the setup for each datamodule
+            self.OOD_Datamodules[i].test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
             self.OOD_Datamodules[i].setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
 
         
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
+        #import ipdb; ipdb.set_trace()
         
-        self.log_name = "Mahalanobis"
-        self.true_histogram = 'Mahalanobis_True_data_scores'
-        self.ood_histogram = 'Mahalanobis_OOD_data_scores'
         
         # Chooses what vector representation to use as well as which level of label hierarchy to use
         self.vector_level = vector_level
@@ -294,21 +295,20 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             ood_loader = self.OOD_Datamodules[i].test_dataloader()
             features_ood, _ = self.get_features(pl_module,ood_loader)
             collated_features_ood.append(features_ood)
-
+        #import ipdb; ipdb.set_trace()
         # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
-        num_classes = max(labels_train+1)
         dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
             collated_features_ood,
-            np.copy(labels_train),
-            num_classes)
+            np.copy(labels_train))
 
-    def get_features(self, pl_module, dataloader, max_images=10**10, verbose=False):
+    def get_features(self, pl_module, dataloader):
         features, labels = [], []
         
         total = 0
         loader = quickloading(self.quick_callback, dataloader)
+        #import ipdb; ipdb.set_trace()
         for index, (img, *label,indices) in enumerate(loader):
             assert len(loader)>0, 'loader is empty'
             if isinstance(img, tuple) or isinstance(img, list):
@@ -321,8 +321,6 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             else: # Used for the case of the OOD data
                 label = label[0]
                 
-            if total > max_images:
-                break
             
             img = img.to(pl_module.device)
             
@@ -332,18 +330,14 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             features += list(feature_vector.data.cpu().numpy())
             labels += list(label.data.cpu().numpy())
             
-            if verbose and not index % 50:
-                print(index)
-                
-            total += len(img)  
-        
+            
         return np.array(features), np.array(labels)   
     
     
     def get_scores_multi_cluster(self,ftrain, ftest, food, ypred):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
-        
+        #import ipdb; ipdb.set_trace()
         dtrain = [
             np.sum(
                 (ftrain - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
@@ -356,9 +350,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             )
             for x in xc # Nawid - done for all the different classes
         ]
-
-
-
+        #import ipdb; ipdb.set_trace()
         din = [
             np.sum(
                 (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
@@ -371,6 +363,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             )
             for x in xc # Nawid - done for all the different classes
         ]
+        #import ipdb; ipdb.set_trace()
         collated_dood = []
         collated_indices_dood = []
         for i in range(len(self.OOD_Datamodules)):
@@ -386,6 +379,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
                 )
                 for x in xc # Nawid- this calculates the score for all the OOD examples 
             ]
+            #import ipdb; ipdb.set_trace()
             indices_dood = np.argmin(dood, axis=0)
             dood = np.min(dood, axis=0)
             
@@ -404,7 +398,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
     
 
         
-    def get_eval_results(self,ftrain, ftest, food, labelstrain, num_clusters):
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
         """
             None.
         """
@@ -435,14 +429,15 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
 
         # Nawid - obtain the scores for the test data and the OOD data
         dtrain,dtest, collated_dood, indices_dtrain, indices_dtest, collated_indices_dood = self.get_scores_multi_cluster(ftrain, ftest, food, labelstrain)
-        # Collate all the ood datasets together
-        #import ipdb; ipdb.set_trace()
-        dood = np.column_stack(collated_dood)  
+        # Make a new list for all the different distances
+        collated_data = [dtrain] +[dtest] + collated_dood
+        # Make a dictionary which contains the names and the mappings which I pass into the sns function
+        collated_dict = {}
+        for i in range(len(collated_data)):
+            collated_dict.update({dataset_names[i]:collated_data[i]})
         
-        data = np.concatenate((np.expand_dims(dtrain,axis=1),np.expand_dims(dtest,axis=1),dood),axis=1)
-        df = pd.DataFrame(data, columns=dataset_names)
-
-        sns.displot(data =df,multiple ='stack',stat ='density',common_norm=False)#,kde =True)
+       
+        sns.displot(data = collated_dict,multiple ='stack',stat ='probability',common_norm=False, bins=50)#,kde =True)
         plt.xlabel('Distances')
         plt.ylabel('Normalized frequency')
         plt.title('Dataset Mahalanobis Distances')
@@ -450,6 +445,32 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
         wandb_distance = ' Dataset Mahalanobis Histogram'
         wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+        
+        sns.displot(data =collated_dict,fill=False,common_norm=False,kind='kde')
+        plt.xlabel('Distances')
+        plt.ylabel('Normalized Density')
+        plt.title('Dataset Mahalanobis Distances')
+        kde_filename = 'Images/Mahalanobis_distances_kde.png'
+        plt.savefig(kde_filename,bbox_inches='tight')
+        wandb_distance = ' Dataset Mahalanobis KDE'
+        wandb.log({wandb_distance:wandb.Image(kde_filename)})
+       
+        '''
+        dood = np.column_stack(collated_dood)  
+        data = np.concatenate((np.expand_dims(dtrain,axis=1),np.expand_dims(dtest,axis=1),dood),axis=1)
+        df = pd.DataFrame(data, columns=dataset_names)
+        #import ipdb; ipdb.set_trace()
+        sns.displot(data =df,multiple ='stack',stat ='probability',common_norm=False, bins=50)#,kde =True)
+        #import ipdb; ipdb.set_trace()
+        plt.xlabel('Distances')
+        plt.ylabel('Normalized frequency')
+        plt.title('Dataset Mahalanobis Distances')
+        histogram_filename = 'Images/Mahalanobis_distances_histogram.png'
+        #import ipdb; ipdb.set_trace()
+        plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+        wandb_distance = ' Dataset Mahalanobis Histogram'
+        wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+        #import ipdb; ipdb.set_trace()
 
         sns.displot(data =df,fill=False,common_norm=False,kind='kde')
         plt.xlabel('Distances')
@@ -459,28 +480,9 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         plt.savefig(kde_filename,bbox_inches='tight')
         wandb_distance = ' Dataset Mahalanobis KDE'
         wandb.log({wandb_distance:wandb.Image(kde_filename)})
-
-        
-        
+        #import ipdb; ipdb.set_trace()
         '''
-        data = np.stack((dtest,dood),axis=-1)
-        # Change to dataframe and assign colums
         
-        df = pd.DataFrame(data, columns=['Test','OOD'])
-        sns.displot(data =df,multiple ='stack',stat ='density',common_norm=False,kde =True)
-        #names = ['test','ood']   
-        #sns.displot(data = (dtest,dood),multiple ='stack',stat ='density',common_norm=False,kde =True,label = names)  
-
-        plt.xlabel('Distances')
-        plt.ylabel('Normalized frequency')
-        plt.title('Dataset Mahalanobis Distances')
-        
-        distances_filename = 'Images/Mahalanobis_distances.png'
-        plt.savefig(distances_filename)
-        wandb_distance = ' Dataset Mahalanobis Distance'
-        wandb.log({wandb_distance:wandb.Image(distances_filename)})
-        '''
-
         return dtest, collated_dood, indices_dtest, collated_indices_dood
     
 
