@@ -436,7 +436,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         for i in range(len(collated_data)):
             collated_dict.update({dataset_names[i]:collated_data[i]})
         
-        sns.displot(data = collated_dict,multiple ='stack',stat ='probability',common_norm=False, bins=50)#,kde =True)
+        sns.displot(data = collated_dict,multiple ='stack',stat ='probability',common_norm=False)#, bins=50)#,kde =True)
         plt.xlabel('Distances')
         plt.ylabel('Normalized frequency')
         plt.title('Dataset Mahalanobis Distances')
