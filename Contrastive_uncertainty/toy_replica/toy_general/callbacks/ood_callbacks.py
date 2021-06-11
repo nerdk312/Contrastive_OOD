@@ -437,9 +437,97 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             collated_dict.update({dataset_names[i]:collated_data[i]})
         
        
+        # Plots the counts in each bin 
+        sns.displot(data = collated_dict,multiple ='stack',stat ='count',common_norm=False, bins=50)#,kde =True)
+        plt.xlabel('Distances')
+        plt.ylabel('Counts')
+        # Used to fix the x limit
+        plt.xlim([0, 500])
+        plt.title('Dataset Mahalanobis Distances Counts')
+        histogram_filename = 'Images/Mahalanobis_distances_counts.png'
+        plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+        wandb_distance = 'Dataset Mahalanobis Histogram Counts'
+        wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+
+        
+        # Plots the probability of each bin
         sns.displot(data = collated_dict,multiple ='stack',stat ='probability',common_norm=False, bins=50)#,kde =True)
         plt.xlabel('Distances')
         plt.ylabel('Normalized frequency')
+        # Used to fix the x limit
+        plt.xlim([0, 500])
+        plt.title('Dataset Mahalanobis Distances')
+        histogram_filename = 'Images/Mahalanobis_distances_histogram.png'
+        plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+        wandb_distance = 'Dataset Mahalanobis Histogram'
+        wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+        
+        sns.displot(data =collated_dict,fill=False,common_norm=False,kind='kde')
+        plt.xlabel('Distances')
+        plt.ylabel('Normalized Density')
+        plt.title('Dataset Mahalanobis Distances')
+        kde_filename = 'Images/Mahalanobis_distances_kde.png'
+        plt.savefig(kde_filename,bbox_inches='tight')
+        wandb_distance = 'Dataset Mahalanobis KDE'
+        wandb.log({wandb_distance:wandb.Image(kde_filename)})
+
+
+        
+
+
+
+
+
+        
+        for i in range(len(collated_data)-1):
+            pairwise_dict = {}
+            # Update the for base case 
+            pairwise_dict.update({dataset_names[0]:collated_data[0]})
+            pairwise_dict.update({dataset_names[i+1]:collated_data[i+1]})
+            data_label = dataset_names[i+1]  
+            # Plots the counts in each bin 
+            sns.displot(data = pairwise_dict,multiple ='stack',stat ='count',common_norm=False, bins=50)#,kde =True)
+            plt.xlabel('Distances')
+            plt.ylabel('Counts')
+            # Used to fix the x limit
+            plt.xlim([0, 500])
+            plt.title(f'Dataset Mahalanobis Distances {data_label}')
+            histogram_filename = f'Images/Mahalanobis_distances_counts_{data_label}.png'
+            plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+            wandb_distance = f'Dataset Mahalanobis Histogram Counts {data_label}'
+            wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+            
+
+            # Plots the probability of each bin
+            sns.displot(data = pairwise_dict,multiple ='stack',stat ='probability',common_norm=False, bins=50)#,kde =True)
+            plt.xlabel('Distances')
+            plt.ylabel('Normalized frequency')
+            # Used to fix the x limit
+            plt.xlim([0, 500])
+            plt.title(f'Dataset Mahalanobis Distances {data_label}')
+            histogram_filename = f'Images/Mahalanobis_distances_histogram_{data_label}.png'
+            plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+            wandb_distance = f'Dataset Mahalanobis Histogram {data_label}'
+            wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+            
+
+            sns.displot(data =pairwise_dict,fill=False,common_norm=False,kind='kde')
+            plt.xlabel('Distances')
+            plt.ylabel('Normalized Density')
+            plt.title(f'Dataset Mahalanobis Distances {data_label}')
+            kde_filename = f'Images/Mahalanobis_distances_kde_{data_label}.png'
+            plt.savefig(kde_filename,bbox_inches='tight')
+            wandb_distance = f'Dataset Mahalanobis KDE {data_label}'
+            wandb.log({wandb_distance:wandb.Image(kde_filename)})
+            plt.close()
+
+        '''
+        # Plots the probability of each bin
+        sns.displot(data = collated_dict,multiple ='stack',stat ='probability',common_norm=False, bins=50)#,kde =True)
+        plt.xlabel('Distances')
+        plt.ylabel('Normalized frequency')
+        # Used to fix the x limit
+        plt.xlim([0, 500])
         plt.title('Dataset Mahalanobis Distances')
         histogram_filename = 'Images/Mahalanobis_distances_histogram.png'
         plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
@@ -454,7 +542,11 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         plt.savefig(kde_filename,bbox_inches='tight')
         wandb_distance = ' Dataset Mahalanobis KDE'
         wandb.log({wandb_distance:wandb.Image(kde_filename)})
-       
+        '''
+
+
+
+
         '''
         dood = np.column_stack(collated_dood)  
         data = np.concatenate((np.expand_dims(dtrain,axis=1),np.expand_dims(dtest,axis=1),dood),axis=1)
