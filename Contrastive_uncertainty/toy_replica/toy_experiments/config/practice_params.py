@@ -1,3 +1,5 @@
+from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import OOD_dict
+
 practice_hparams = dict(
 # Optimizer parameters in common
 optimizer = 'sgd',
@@ -66,3 +68,9 @@ callbacks = ['OOD_Dataset'],
 
 single_model = 'Baselines'
 )  # evaluation
+
+# Updates OOD dataset if not manually specified
+if 'OOD_dataset' in practice_hparams:
+    pass    
+else:
+    practice_hparams['OOD_dataset'] = OOD_dict[practice_hparams['dataset']]

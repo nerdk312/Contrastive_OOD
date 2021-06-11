@@ -15,3 +15,10 @@ dataset_dict = {'TwoMoons':{'module':TwoMoonsDataModule,'train_transform':ToyTra
                 'Diagonal':{'module':DiagonalLinesDataModule,'train_transform':ToyTrainDiagonalLinesTransforms(),'val_transform':ToyEvalDiagonalLinesTransforms(),'test_transform':ToyEvalDiagonalLinesTransforms()}}
 #'StraightLines': {'module':StraightLinesDataModule,'train_transform':ToyTrainDiagonalLinesTransforms(),'val_transform':ToyEvalDiagonalLinesTransforms(),'test_transform':ToyEvalDiagonalLinesTransforms()}
 #'TwoMoonsHierarchy':{'module':TwoMoonsHierarchyDataModule,'train_transform':ToyTrainTwoMoonsTransforms(),'val_transform':ToyEvalTwoMoonsTransforms(),'test_transform':ToyEvalTwoMoonsTransforms()},
+
+
+
+
+OOD_dict = {'TwoMoons':['Blobs','Diagonal'],
+            'Blobs':['TwoMoons','Diagonal'],
+            'Diagonal':['Blobs','TwoMoons']}

@@ -1,3 +1,6 @@
+from pytorch_lightning import callbacks
+from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import OOD_dict
+
 base_hparams = dict(
 # Optimizer parameters in common
 optimizer = 'sgd',
@@ -10,7 +13,7 @@ emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
 dataset = 'Blobs',
-OOD_dataset = ['TwoMoons','Diagonal'],
+# OOD_dataset = ['TwoMoons'],
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -56,10 +59,16 @@ branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
-callbacks = ['distances'],
-
+#callbacks = ['distances'],
+callbacks = ['Model_saving'],
 
 # Either goes through all the models or goes through baselines
 
 single_model = 'Baselines'
 )  # evaluation
+
+# Updates OOD dataset if not manually specified
+if 'OOD_dataset' in base_hparams:
+    pass    
+else:
+    base_hparams['OOD_dataset'] = OOD_dict[base_hparams['dataset']]

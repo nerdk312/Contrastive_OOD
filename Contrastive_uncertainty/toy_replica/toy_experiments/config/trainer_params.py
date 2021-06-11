@@ -12,6 +12,6 @@ test_ratio = 1.0,
 val_check = 1,  # evaluation, Moco_training
 
 # Updating for the test run
-OOD_dataset = ['TwoMoons','Diagonal'],
+#OOD_dataset = ['TwoMoons','Diagonal'],
 callbacks = ['Dataset_distances'],
 )

@@ -10,7 +10,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 
 from Contrastive_uncertainty.toy_replica.toy_general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary, specific_callbacks 
-from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict, OOD_dict
 from Contrastive_uncertainty.toy_replica.toy_general.utils.hybrid_utils import previous_model_directory
 
 def evaluation(run_path, update_dict, model_module, model_function):
@@ -41,6 +41,14 @@ def evaluation(run_path, update_dict, model_module, model_function):
     model_dir = previous_model_directory(model_dir, run_path) # Used to preload the model
 
     # Update the trainer and the callbacks for a specific test
+    
+    # Updates OOD dataset if not manually specified in the update dict
+    if 'OOD_dataset' in update_dict:
+        pass
+    else:
+        update_dict['OOD_dataset'] = OOD_dict[config['dataset']]
+
+    # Updates config with information from update dict
     for update_k, update_v in update_dict.items():
         if update_k in config:
             config[update_k] = update_v
