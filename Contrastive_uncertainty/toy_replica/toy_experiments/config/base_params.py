@@ -31,8 +31,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'Toy_evaluation',
-group = 'Testing experiments',
-notes = 'Examining the behaviour of how to automate network training',  # Add notes to the specific models each time
+group = 'Toy Group practice',
+notes = 'Examining how to automate selection of runs',  # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
 label_smoothing = False,
