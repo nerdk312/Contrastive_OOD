@@ -41,3 +41,12 @@ dataset_dict = {'MNIST':{'module':MNISTDataModule,'train_transform':Moco2TrainMN
                 
                 }
 
+
+OOD_dict = {'MNIST':['FashionMNIST','KMNIST','EMNIST'],
+            'FashionMNIST':['MNIST','KMNIST','EMNIST'],
+            'KMNIST':['MNIST','FashionMNIST','EMNIST'],
+            'EMNIST':['MNIST','FashionMNIST','KMNIST'],
+
+            'CIFAR10':['CIFAR100','SVHN'],
+            'CIFAR100':['CIFAR10','SVHN'],
+            'SVHN':['CIFAR10','CIFAR100']}

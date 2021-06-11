@@ -1,5 +1,5 @@
 from pytorch_lightning import callbacks
-
+from Contrastive_uncertainty.general.datamodules.datamodule_dict import OOD_dict
 
 base_hparams = dict(
 # Optimizer parameters in common
@@ -13,7 +13,7 @@ emb_dim = 128,
 instance_encoder = 'resnet18',
 bsz = 256,
 dataset = 'CIFAR10',
-OOD_dataset = ['SVHN'],
+#OOD_dataset = ['SVHN'],
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -78,3 +78,8 @@ callbacks = ['Model_saving','Variational'],
 single_model = 'Baselines'
 )  # evaluation
 
+# Updates OOD dataset if not manually specified
+if 'OOD_dataset' in base_hparams:
+    pass    
+else:
+    base_hparams['OOD_dataset'] = OOD_dict[base_hparams['dataset']]

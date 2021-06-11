@@ -1,3 +1,6 @@
+from Contrastive_uncertainty.general.datamodules.datamodule_dict import OOD_dict
+
+
 practice_hparams = dict(
 # Optimizer parameters in common
 optimizer = 'sgd',
@@ -10,7 +13,7 @@ emb_dim = 128,
 instance_encoder = 'resnet18',
 bsz = 32,
 dataset = 'MNIST',
-OOD_dataset = ['FashionMNIST'],
+#OOD_dataset = ['FashionMNIST'],
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -67,10 +70,17 @@ num_cluster = [10],
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
-callbacks = ['Model_saving','OOD_Dataset_distances'],
+#callbacks = ['Model_saving','OOD_Dataset_distances'],
+callbacks = ['Model_saving'],
 #callbacks = ['Aggregated','Differing'],
 
 # Either goes through all the models or goes through baselines
 
 single_model = 'Baselines'
 )  # evaluation
+
+
+if 'OOD_dataset' in practice_hparams:
+    pass    
+else:
+    practice_hparams['OOD_dataset'] = OOD_dict[practice_hparams['dataset']]
