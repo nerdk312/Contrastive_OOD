@@ -25,8 +25,8 @@ from Contrastive_uncertainty.toy_replica.toy_general.utils.hybrid_utils import O
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.general_callbacks import quickloading
 from Contrastive_uncertainty.toy_replica.toy_general.utils.pl_metrics import precision_at_k, mean
 
-
-from Contrastive_uncertainty.toy_replica.toy_general.callbacks.statistics import Histogram
+from Contrastive_uncertainty.toy_replica.toy_general.callbacks.compare_distributions import ks_statistic, ks_statistic_kde, js_metric, kl_divergence
+#from Contrastive_uncertainty.toy_replica.toy_general.callbacks.statistics import Histogram
 
 class Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
@@ -470,6 +470,11 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             prob_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+1]],range=(0,500), bins = 50,density= True)
             prob_absolute_deviation  = np.sum(np.absolute(prob_hist1 - prob_hist2))
 
+            kl_div = kl_divergence(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]])
+            js_div = js_metric(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]])
+            print(kl_div)
+            print(js_div)
+            
         return dtest, collated_dood, indices_dtest, collated_indices_dood
     
 
