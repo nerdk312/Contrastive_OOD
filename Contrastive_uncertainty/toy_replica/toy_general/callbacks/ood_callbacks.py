@@ -16,6 +16,7 @@ import pandas as pd
 import wandb
 import sklearn.metrics as skm
 import faiss
+import statistics 
 
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
@@ -445,7 +446,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         count_histogram(collated_dict,num_bins,data_label)
         probability_histogram(collated_dict,num_bins,data_label)
         kde_plot(collated_dict,data_label)
-
+        table_data = {'Dataset':[],'KL (Nats)':[], 'JS (Nats)':[]}
         # Calculates the values in a pairwise 
         for i in range(len(collated_data)-1):
             pairwise_dict = {}
@@ -470,11 +471,63 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             prob_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+1]],range=(0,500), bins = 50,density= True)
             prob_absolute_deviation  = np.sum(np.absolute(prob_hist1 - prob_hist2))
 
-            kl_div = kl_divergence(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]])
-            js_div = js_metric(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]])
-            print(kl_div)
-            print(js_div)
+            kl_div = round(kl_divergence(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
+            import ipdb; ipdb.set_trace()
+            js_div = round(js_metric(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
             
+            table_data['Dataset'].append(data_label)
+            table_data['KL (Nats)'].append(kl_div)
+            table_data['JS (Nats)'].append(js_div)
+
+        
+        KL_mean = round(statistics.mean(table_data['KL (Nats)']),3)
+        KL_std = round(statistics.stdev(table_data['KL (Nats)']),3)
+        JS_mean = round(statistics.mean(table_data['JS (Nats)']),3)
+        JS_std = round(statistics.stdev(table_data['JS (Nats)']),3)
+
+        table_data['Dataset'].append('Mean')
+        table_data['KL (Nats)'].append(KL_mean)
+        table_data['JS (Nats)'].append(JS_mean)
+
+        table_data['Dataset'].append('Std')
+        table_data['KL (Nats)'].append(KL_std)
+        table_data['JS (Nats)'].append(JS_std)
+        table_df = pd.DataFrame(table_data)
+        
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({"Distance statistics": table})
+        
+        fig, ax = plt.subplots()
+
+        # hide axes
+        fig.patch.set_visible(False)
+        ax.axis('off')
+        ax.axis('tight')
+
+
+        ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+
+        fig.tight_layout()
+        dist_statistics_filename = 'Images/distance_statistics.png'
+        plt.savefig(dist_statistics_filename,bbox_inches='tight')
+        wandb_distance_statistics = f'Mahalanobis Distance Statistics'
+        wandb.log({wandb_distance_statistics:wandb.Image(dist_statistics_filename)})
+        plt.close()
+
+        
+        
+        #pd.plotting.table(table_df)
+        #plt.savefig('distance_statistics_table.png')
+
+        '''
+        import ipdb; ipdb.set_trace()
+            #print(kl_div)
+            #print(js_div)
+        
+
+        data = [["I love my phone", "1", "1"],["My phone sucks", "0", "-1"]]
+        wandb.log({"examples": wandb.Table(data=data, columns=["Text", "Predicted Label", "True Label"])})
+        '''
         return dtest, collated_dood, indices_dtest, collated_indices_dood
     
 
