@@ -61,9 +61,9 @@ from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy imp
 
 def train(base_dict):    
     acceptable_single_models = ['Baselines',
-    'CE',
-    'Moco',
-    'SupCon',
+    #'CE',
+    #'Moco',
+    #'SupCon',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -71,10 +71,10 @@ def train(base_dict):
     # 'HSupConBU',
     # 'HSupConBUCentroid',
     # 'HSupConTD',
-    # 'VAE',
-    # 'CEVAE',
-    # 'MocoVAE',
-    # 'SupConVAE'
+     'VAE',
+     'CEVAE',
+     'MocoVAE',
+     'SupConVAE'
     ]
 
     # Dict for the model name, parameters and specific training loop

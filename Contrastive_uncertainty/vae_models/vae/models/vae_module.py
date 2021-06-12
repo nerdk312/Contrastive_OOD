@@ -19,7 +19,7 @@ class VAEModule(pl.LightningModule):
         first_conv:bool= False,
         maxpool1: bool = False,
         enc_out_dim: int = 512,
-        emb_dim: int = 128,
+        emb_dim: int = 256,
         kl_coeff: float = 0.1,
         optimizer:str = 'sgd',
         learning_rate: float = 0.03,
@@ -51,8 +51,8 @@ class VAEModule(pl.LightningModule):
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder, self.decoder = self.init_encoders()
-        self.fc_mu  = nn.Linear(self.enc_out_dim , self.emb_dim)
-        self.fc_var = nn.Linear(self.enc_out_dim , self.emb_dim)
+        self.fc_mu  = nn.Linear(self.enc_out_dim, self.emb_dim)
+        self.fc_var = nn.Linear(self.enc_out_dim, self.emb_dim)
     
     @property
     def name(self):
@@ -156,6 +156,7 @@ class VAEModule(pl.LightningModule):
             "Loss": loss,
         }
         metrics.update(logs)
+        #print('Loss',loss)
         return metrics
 
     def training_step(self, batch, batch_idx):

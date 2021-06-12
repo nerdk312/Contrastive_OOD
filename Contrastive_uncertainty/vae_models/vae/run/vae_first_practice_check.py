@@ -6,8 +6,8 @@ from Contrastive_uncertainty.vae_models.vae.models.vae_model_instance import Mod
 vae_hparams['bsz'] = 16
 #vae_hparams['emb_dim'] = 32
 #vae_hparams['enc_out_dim'] = 32
-vae_hparams['epochs'] = 1
-vae_hparams['fast_run'] = True
+vae_hparams['epochs'] = 2
+vae_hparams['fast_run'] = False
 vae_hparams['training_ratio'] = 0.01
 vae_hparams['validation_ratio'] = 0.2
 vae_hparams['test_ratio'] = 0.2

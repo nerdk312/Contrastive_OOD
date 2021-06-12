@@ -250,6 +250,7 @@ class MocoVAEModule(pl.LightningModule):
             "KL": kl,
             "Loss": loss,
         }
+        #print('Loss',loss)
         metrics.update(logs)
         return metrics
 

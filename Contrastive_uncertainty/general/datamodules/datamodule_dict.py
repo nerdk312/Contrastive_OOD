@@ -16,6 +16,7 @@ Moco2TrainSTL10Transforms, Moco2EvalSTL10Transforms, Moco2TrainEMNISTTransforms,
 
 
 # Nested dict to hold the name of the dataset aswell as the different transforms for the dataset : https://www.programiz.com/python-programming/nested-dictionary
+
 dataset_dict = {'MNIST':{'module':MNISTDataModule,'train_transform':Moco2TrainMNISTTransforms(),'val_transform':Moco2EvalMNISTTransforms(),'test_transform':Moco2EvalMNISTTransforms()},
                 
                 'KMNIST':{'module':KMNISTDataModule,'train_transform':Moco2TrainKMNISTTransforms(),
@@ -40,6 +41,7 @@ dataset_dict = {'MNIST':{'module':MNISTDataModule,'train_transform':Moco2TrainMN
                 'val_transform':Moco2EvalSVHNTransforms(),'test_transform':Moco2EvalSVHNTransforms()}
                 
                 }
+
 
 
 OOD_dict = {'MNIST':['FashionMNIST','KMNIST','EMNIST'],

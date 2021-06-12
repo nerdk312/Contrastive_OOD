@@ -2,8 +2,8 @@ vae_hparams = dict(
 
 
 # optimizer args
-optimizer = 'sgd',
-learning_rate= 0.03,#3e-4,
+optimizer = 'adam',
+learning_rate= 3e-4,
 momentum= 0.9,
 weight_decay = 1e-4,
 
@@ -24,6 +24,7 @@ enc_out_dim = 128,
 # Miscellaneous arguments
 seed = 42,
 epochs = 300,
+#epochs = 2,
 
 
 # Trainer configurations
@@ -38,6 +39,7 @@ pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
 #vector_level = ['instance'],
 #label_level = ['fine'],
+#callbacks = [],
 callbacks = ['Variational'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
