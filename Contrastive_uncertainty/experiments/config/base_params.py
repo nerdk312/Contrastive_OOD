@@ -3,12 +3,8 @@ from Contrastive_uncertainty.general.datamodules.datamodule_dict import OOD_dict
 
 base_hparams = dict(
 # Optimizer parameters in common
-'''
-optimizer = 'sgd',
-learning_rate= 0.03,#3e-4,
-'''
-optimizer = 'adam',
-learning_rate= 3e-4,
+optimizer = 'sgd', #'adam',
+learning_rate= 3e-2, #3e-4,
 
 momentum= 0.9,
 weight_decay = 1e-4,
@@ -17,7 +13,7 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet18',
 bsz = 256,
-dataset = 'MNIST',
+dataset = 'CIFAR100',
 #OOD_dataset = ['SVHN'],
 pretrained_network = None,
 

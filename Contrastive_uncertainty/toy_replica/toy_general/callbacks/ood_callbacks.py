@@ -446,7 +446,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         count_histogram(collated_dict,num_bins,data_label)
         probability_histogram(collated_dict,num_bins,data_label)
         kde_plot(collated_dict,data_label)
-        table_data = {'Dataset':[],'KL (Nats)':[], 'JS (Nats)':[]}
+        table_data = {'Dataset':[],'Count Absolute Deviation':[],'Prob Absolute Deviation':[],'KL (Nats)':[], 'JS (Nats)':[],'KS':[]}
         # Calculates the values in a pairwise 
         for i in range(len(collated_data)-1):
             pairwise_dict = {}
@@ -465,33 +465,55 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             count_hist1, _ = np.histogram(pairwise_dict[dataset_names[0]],range=(0,500), bins = 50)
             count_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+1]],range=(0,500), bins = 50)
             count_absolute_deviation  = np.sum(np.absolute(count_hist1 - count_hist2))
-            
+
+            #print('count_absolute deviation',count_absolute_deviation)
             # Using density =  True is the same as making it so that you normalise each term by the sum of the counts
             prob_hist1, _ = np.histogram(pairwise_dict[dataset_names[0]],range=(0,500), bins = 50,density = True)
             prob_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+1]],range=(0,500), bins = 50,density= True)
-            prob_absolute_deviation  = np.sum(np.absolute(prob_hist1 - prob_hist2))
+            prob_absolute_deviation  = round(np.sum(np.absolute(prob_hist1 - prob_hist2)),3)
 
             kl_div = round(kl_divergence(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
-            import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
             js_div = round(js_metric(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
+            ks_stat = round(ks_statistic_kde(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
             
             table_data['Dataset'].append(data_label)
+            table_data['Count Absolute Deviation'].append(count_absolute_deviation)
+            table_data['Prob Absolute Deviation'].append(prob_absolute_deviation)
             table_data['KL (Nats)'].append(kl_div)
             table_data['JS (Nats)'].append(js_div)
+            table_data['KS'].append(ks_stat)
 
         
         KL_mean = round(statistics.mean(table_data['KL (Nats)']),3)
         KL_std = round(statistics.stdev(table_data['KL (Nats)']),3)
         JS_mean = round(statistics.mean(table_data['JS (Nats)']),3)
         JS_std = round(statistics.stdev(table_data['JS (Nats)']),3)
+        KS_mean = round(statistics.mean(table_data['KS']),3)
+        KS_std = round(statistics.stdev(table_data['KS']),3)
+        Count_dev_mean = round(statistics.mean(table_data['Count Absolute Deviation']),3)
+        Count_dev_std = round(statistics.stdev(table_data['Count Absolute Deviation']),3)
+        Prob_dev_mean = round(statistics.mean(table_data['Prob Absolute Deviation']),3)
+        Prob_dev_std = round(statistics.stdev(table_data['Prob Absolute Deviation']),3)
+        
+
+
 
         table_data['Dataset'].append('Mean')
         table_data['KL (Nats)'].append(KL_mean)
         table_data['JS (Nats)'].append(JS_mean)
+        table_data['KS'].append(KS_mean)
+        table_data['Count Absolute Deviation'].append(Count_dev_mean)
+        table_data['Prob Absolute Deviation'].append(Prob_dev_mean)
 
         table_data['Dataset'].append('Std')
         table_data['KL (Nats)'].append(KL_std)
         table_data['JS (Nats)'].append(JS_std)
+        table_data['KS'].append(KS_std)
+        table_data['Count Absolute Deviation'].append(Count_dev_std)
+        table_data['Prob Absolute Deviation'].append(Prob_dev_std)
+
+
         table_df = pd.DataFrame(table_data)
         
         table = wandb.Table(dataframe=table_df)
@@ -503,31 +525,22 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         fig.patch.set_visible(False)
         ax.axis('off')
         ax.axis('tight')
+        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
+        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+        data_table.set_fontsize(20)
+        data_table.scale(1.5, 1.5)  # may help
 
 
-        ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
-
-        fig.tight_layout()
+        #fig.tight_layout()
         dist_statistics_filename = 'Images/distance_statistics.png'
         plt.savefig(dist_statistics_filename,bbox_inches='tight')
         wandb_distance_statistics = f'Mahalanobis Distance Statistics'
         wandb.log({wandb_distance_statistics:wandb.Image(dist_statistics_filename)})
         plt.close()
 
-        
-        
         #pd.plotting.table(table_df)
         #plt.savefig('distance_statistics_table.png')
 
-        '''
-        import ipdb; ipdb.set_trace()
-            #print(kl_div)
-            #print(js_div)
-        
-
-        data = [["I love my phone", "1", "1"],["My phone sucks", "0", "-1"]]
-        wandb.log({"examples": wandb.Table(data=data, columns=["Text", "Predicted Label", "True Label"])})
-        '''
         return dtest, collated_dood, indices_dtest, collated_indices_dood
     
 

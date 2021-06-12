@@ -23,6 +23,8 @@ from Contrastive_uncertainty.general.utils.hybrid_utils import OOD_conf_matrix
 from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloading
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
 
+from Contrastive_uncertainty.general.callbacks.compare_distributions import ks_statistic, ks_statistic_kde, js_metric, kl_divergence
+
 
 
 
@@ -237,7 +239,6 @@ class Mahalanobis_OOD(pl.Callback):
         wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
 
 
-
 # Calculate the Mahalanobis scores for all the dataset
 class Mahalanobis_OOD_Datasets(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodules,
@@ -256,10 +257,8 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
 
         
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
+        #import ipdb; ipdb.set_trace()
         
-        self.log_name = "Mahalanobis"
-        self.true_histogram = 'Mahalanobis_True_data_scores'
-        self.ood_histogram = 'Mahalanobis_OOD_data_scores'
         
         # Chooses what vector representation to use as well as which level of label hierarchy to use
         self.vector_level = vector_level
@@ -297,7 +296,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             ood_loader = self.OOD_Datamodules[i].test_dataloader()
             features_ood, _ = self.get_features(pl_module,ood_loader)
             collated_features_ood.append(features_ood)
-
+        #import ipdb; ipdb.set_trace()
         # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
         dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
             np.copy(features_train),
@@ -310,6 +309,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         
         total = 0
         loader = quickloading(self.quick_callback, dataloader)
+        #import ipdb; ipdb.set_trace()
         for index, (img, *label,indices) in enumerate(loader):
             assert len(loader)>0, 'loader is empty'
             if isinstance(img, tuple) or isinstance(img, list):
@@ -338,7 +338,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
     def get_scores_multi_cluster(self,ftrain, ftest, food, ypred):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
-        
+        #import ipdb; ipdb.set_trace()
         dtrain = [
             np.sum(
                 (ftrain - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
@@ -351,7 +351,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             )
             for x in xc # Nawid - done for all the different classes
         ]
-
+        #import ipdb; ipdb.set_trace()
         din = [
             np.sum(
                 (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
@@ -364,6 +364,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             )
             for x in xc # Nawid - done for all the different classes
         ]
+        #import ipdb; ipdb.set_trace()
         collated_dood = []
         collated_indices_dood = []
         for i in range(len(self.OOD_Datamodules)):
@@ -379,6 +380,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
                 )
                 for x in xc # Nawid- this calculates the score for all the OOD examples 
             ]
+            #import ipdb; ipdb.set_trace()
             indices_dood = np.argmin(dood, axis=0)
             dood = np.min(dood, axis=0)
             
@@ -401,7 +403,6 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         """
             None.
         """
-        
         #import ipdb; ipdb.set_trace()
         # Nawid -normalise the featues for the training, test and ood data
         # standardize data
@@ -433,28 +434,112 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         collated_data = [dtrain] +[dtest] + collated_dood
         # Make a dictionary which contains the names and the mappings which I pass into the sns function
         collated_dict = {}
+        num_bins = 50
         for i in range(len(collated_data)):
             collated_dict.update({dataset_names[i]:collated_data[i]})
+        data_label = 'Datasets'
         
-        sns.displot(data = collated_dict,multiple ='stack',stat ='probability',common_norm=False)#, bins=50)#,kde =True)
-        plt.xlabel('Distances')
-        plt.ylabel('Normalized frequency')
-        plt.title('Dataset Mahalanobis Distances')
-        histogram_filename = 'Images/Mahalanobis_distances_histogram.png'
-        plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
-        wandb_distance = ' Dataset Mahalanobis Histogram'
-        wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+        # Plots the counts, probabilities as well as the kde
+        count_histogram(collated_dict,num_bins,data_label)
+        probability_histogram(collated_dict,num_bins,data_label)
+        kde_plot(collated_dict,data_label)
+        table_data = {'Dataset':[],'Count Absolute Deviation':[],'Prob Absolute Deviation':[],'KL (Nats)':[], 'JS (Nats)':[],'KS':[]}
+        # Calculates the values in a pairwise 
+        for i in range(len(collated_data)-1):
+            pairwise_dict = {}
+            # Update the for base case 
+            pairwise_dict.update({dataset_names[0]:collated_data[0]})
+            pairwise_dict.update({dataset_names[i+1]:collated_data[i+1]})
+            data_label = dataset_names[i+1]  
+            
+            # Plots the counts, probabilities as well as the kde for pairwise
+            count_histogram(pairwise_dict,num_bins,data_label)
+            probability_histogram(pairwise_dict,num_bins,data_label)
+            kde_plot(pairwise_dict,data_label)
+                        
+            # https://www.kite.com/python/answers/how-to-plot-a-histogram-given-its-bins-in-python 
+            # Plots the histogram of the pairwise distance
+            count_hist1, _ = np.histogram(pairwise_dict[dataset_names[0]],range=(0,500), bins = 50)
+            count_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+1]],range=(0,500), bins = 50)
+            count_absolute_deviation  = np.sum(np.absolute(count_hist1 - count_hist2))
+
+            #print('count_absolute deviation',count_absolute_deviation)
+            # Using density =  True is the same as making it so that you normalise each term by the sum of the counts
+            prob_hist1, _ = np.histogram(pairwise_dict[dataset_names[0]],range=(0,500), bins = 50,density = True)
+            prob_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+1]],range=(0,500), bins = 50,density= True)
+            prob_absolute_deviation  = round(np.sum(np.absolute(prob_hist1 - prob_hist2)),3)
+
+            kl_div = round(kl_divergence(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
+            # import ipdb; ipdb.set_trace()
+            js_div = round(js_metric(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
+            ks_stat = round(ks_statistic_kde(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
+            
+            table_data['Dataset'].append(data_label)
+            table_data['Count Absolute Deviation'].append(count_absolute_deviation)
+            table_data['Prob Absolute Deviation'].append(prob_absolute_deviation)
+            table_data['KL (Nats)'].append(kl_div)
+            table_data['JS (Nats)'].append(js_div)
+            table_data['KS'].append(ks_stat)
+
         
-        sns.displot(data =collated_dict,fill=False,common_norm=False,kind='kde')
-        plt.xlabel('Distances')
-        plt.ylabel('Normalized Density')
-        plt.title('Dataset Mahalanobis Distances')
-        kde_filename = 'Images/Mahalanobis_distances_kde.png'
-        plt.savefig(kde_filename,bbox_inches='tight')
-        wandb_distance = ' Dataset Mahalanobis KDE'
-        wandb.log({wandb_distance:wandb.Image(kde_filename)})
-           
+        KL_mean = round(statistics.mean(table_data['KL (Nats)']),3)
+        KL_std = round(statistics.stdev(table_data['KL (Nats)']),3)
+        JS_mean = round(statistics.mean(table_data['JS (Nats)']),3)
+        JS_std = round(statistics.stdev(table_data['JS (Nats)']),3)
+        KS_mean = round(statistics.mean(table_data['KS']),3)
+        KS_std = round(statistics.stdev(table_data['KS']),3)
+        Count_dev_mean = round(statistics.mean(table_data['Count Absolute Deviation']),3)
+        Count_dev_std = round(statistics.stdev(table_data['Count Absolute Deviation']),3)
+        Prob_dev_mean = round(statistics.mean(table_data['Prob Absolute Deviation']),3)
+        Prob_dev_std = round(statistics.stdev(table_data['Prob Absolute Deviation']),3)
+        
+
+
+
+        table_data['Dataset'].append('Mean')
+        table_data['KL (Nats)'].append(KL_mean)
+        table_data['JS (Nats)'].append(JS_mean)
+        table_data['KS'].append(KS_mean)
+        table_data['Count Absolute Deviation'].append(Count_dev_mean)
+        table_data['Prob Absolute Deviation'].append(Prob_dev_mean)
+
+        table_data['Dataset'].append('Std')
+        table_data['KL (Nats)'].append(KL_std)
+        table_data['JS (Nats)'].append(JS_std)
+        table_data['KS'].append(KS_std)
+        table_data['Count Absolute Deviation'].append(Count_dev_std)
+        table_data['Prob Absolute Deviation'].append(Prob_dev_std)
+
+
+        table_df = pd.DataFrame(table_data)
+        
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({"Distance statistics": table})
+        
+        fig, ax = plt.subplots()
+
+        # hide axes
+        fig.patch.set_visible(False)
+        ax.axis('off')
+        ax.axis('tight')
+        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
+        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+        data_table.set_fontsize(20)
+        data_table.scale(1.5, 1.5)  # may help
+
+
+        #fig.tight_layout()
+        dist_statistics_filename = 'Images/distance_statistics.png'
+        plt.savefig(dist_statistics_filename,bbox_inches='tight')
+        wandb_distance_statistics = f'Mahalanobis Distance Statistics'
+        wandb.log({wandb_distance_statistics:wandb.Image(dist_statistics_filename)})
+        plt.close()
+
+        #pd.plotting.table(table_df)
+        #plt.savefig('distance_statistics_table.png')
+
         return dtest, collated_dood, indices_dtest, collated_indices_dood
+    
 
 class Aggregated_Mahalanobis_OOD(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
@@ -1013,4 +1098,43 @@ def get_roc_plot(xin, xood,OOD_name):
     wandb.log({f'ROC_{OOD_name}': wandb.plot.roc_curve(anomaly_targets, outputs,#scores,
                         labels=None, classes_to_plot=None)})
     '''
-    
+
+
+def count_histogram(input_data,num_bins,name):
+    sns.displot(data = input_data,multiple ='stack',stat ='count',common_norm=False, bins=num_bins)#,kde =True)
+    plt.xlabel('Distance')
+    plt.ylabel('Counts')
+    # Used to fix the x limit
+    plt.xlim([0, 500])
+    plt.title(f'Mahalanobis Distance Counts {name}')
+    histogram_filename = f'Images/Mahalanobis_distance_counts_{name}.png'
+    plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+    wandb_distance = f'Mahalanobis Distance Counts {name}'
+    wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+    plt.close()
+
+def probability_histogram(input_data,num_bins,name):
+    sns.displot(data = input_data,multiple ='stack',stat ='probability',common_norm=False, bins=num_bins)#,kde =True)
+    plt.xlabel('Distance')
+    plt.ylabel('Probability')
+    # Used to fix the x limit
+    plt.xlim([0, 500])
+    plt.ylim([0, 1])
+    plt.title(f'Mahalanobis Distance Probabilities {name}')
+    histogram_filename = f'Images/Mahalanobis_distances_probabilities_{name}.png'
+    plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+    wandb_distance = f'Mahalanobis Distance Probabilities {name}'
+    wandb.log({wandb_distance:wandb.Image(histogram_filename)})
+    plt.close()
+
+
+def kde_plot(input_data,name):
+    sns.displot(data =input_data,fill=False,common_norm=False,kind='kde')
+    plt.xlabel('Distance')
+    plt.ylabel('Normalized Density')
+    plt.title(f'Mahalanobis Distances {name}')
+    kde_filename = 'Images/Mahalanobis_distances_kde_{name}.png'
+    plt.savefig(kde_filename,bbox_inches='tight')
+    wandb_distance = f'Mahalanobis Distance KDE {name}'
+    wandb.log({wandb_distance:wandb.Image(kde_filename)})
+    plt.close()
