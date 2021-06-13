@@ -43,8 +43,9 @@ def evaluation(run_path, update_dict, model_module, model_function):
     # Updates OOD dataset if not manually specified in the update dict
     if 'OOD_dataset' in update_dict:
         pass
-    else:
-        update_dict['OOD_dataset'] = OOD_dict[config['dataset']]
+    else: #  Cannot update the Update dict directly as this will carry on for other simulations
+        config['OOD_dataset'] = OOD_dict[config['dataset']]
+        #update_dict['OOD_dataset'] = OOD_dict[config['dataset']]
         #print('updated dict')
 
     # Update the trainer and the callbacks for a specific test

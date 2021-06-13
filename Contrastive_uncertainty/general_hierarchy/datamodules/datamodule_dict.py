@@ -1,3 +1,6 @@
+from Contrastive_uncertainty.general.datamodules.datamodule_dict import OOD_dict
+
+
 from Contrastive_uncertainty.general_hierarchy.datamodules.cifar10_datamodule import CIFAR10DataModule
 from Contrastive_uncertainty.general_hierarchy.datamodules.cifar100_datamodule import CIFAR100DataModule
 from Contrastive_uncertainty.general_hierarchy.datamodules.fashionmnist_datamodule import FashionMNISTDataModule
@@ -40,4 +43,3 @@ dataset_dict = {'MNIST':{'module':MNISTDataModule,'train_transform':Moco2TrainMN
                 'val_transform':Moco2EvalSVHNTransforms(),'test_transform':Moco2EvalSVHNTransforms()}
                 
                 }
-

@@ -76,7 +76,16 @@ def evaluate(run_paths,update_dict):
 
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConModule, 
                     'model_instance':SupConModelInstance, 'evaluate':general_evaluation},
-    }
+
+                    'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
+                    'model_instance':HSupConBUCentroidModelInstance, 'evaluate':general_hierarchy_evaluation},
+                    
+                    'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
+                    'model_instance':HSupConBUModelInstance,'evaluate':general_hierarchy_evaluation},
+
+                    'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDModule, 
+                    'model_instance':HSupConTDModelInstance,'evaluate':general_hierarchy_evaluation},
+    }   
     
 
     # Iterate through the run paths

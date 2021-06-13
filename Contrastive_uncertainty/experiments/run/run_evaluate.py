@@ -16,8 +16,19 @@ for i in range(len(runs)):
     run_path = '/'.join(runs[i].path)
     run_paths.append(run_path)
 
+
 '''
-run_paths = ['nerdk312/practice/r6ttdhm3'
+run_paths = ['nerdk312/evaluation/29ck9osj',
+            'nerdk312/evaluation/325cu61i',
+            'nerdk312/evaluation/110m7bbi',
+            'nerdk312/evaluation/qc68v26a',
+            'nerdk312/evaluation/1gyve5kb',
+            'nerdk312/evaluation/3loivf31',
+            'nerdk312/evaluation/1bzi7svu',
+            'nerdk312/evaluation/cuyvogrh',
+            'nerdk312/evaluation/14x27zqn',
+            'nerdk312/evaluation/30qrthyh',
+            'nerdk312/evaluation/1dth3ial'
             ]
 '''
 evaluate(run_paths, trainer_hparams)

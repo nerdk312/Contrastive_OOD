@@ -63,7 +63,7 @@ def train(base_dict):
     acceptable_single_models = ['Baselines',
     #'CE',
     #'Moco',
-    #'SupCon',
+    'SupCon',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -71,10 +71,10 @@ def train(base_dict):
     # 'HSupConBU',
     # 'HSupConBUCentroid',
     # 'HSupConTD',
-     'VAE',
-     'CEVAE',
-     'MocoVAE',
-     'SupConVAE'
+    # 'VAE',
+    # 'CEVAE',
+    # 'MocoVAE',
+    # 'SupConVAE'
     ]
 
     # Dict for the model name, parameters and specific training loop

@@ -527,8 +527,8 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         ax.axis('tight')
         #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
         data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
-        data_table.set_fontsize(20)
-        data_table.scale(1.5, 1.5)  # may help
+        data_table.set_fontsize(24)
+        data_table.scale(2.0, 2.0)  # may help
 
 
         #fig.tight_layout()

@@ -56,6 +56,9 @@ def evaluate(run_paths,update_dict):
 
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConToy, 
                     'model_instance':SupConModelInstance, 'evaluate':general_evaluation},
+
+                    'HSupConBU':{'params':hsup_con_bu_hparams,'model_module': HSupConBUToy, 
+                    'model_instance':HSupConBUModelInstance,'evaluate':general_hierarchy_evaluation},
     }
     
     

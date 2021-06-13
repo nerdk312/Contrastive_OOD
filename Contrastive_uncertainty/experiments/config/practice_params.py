@@ -11,9 +11,9 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet18',
-bsz = 32,
-dataset = 'MNIST',
-#OOD_dataset = ['FashionMNIST'],
+bsz = 16,
+dataset = 'CIFAR100',
+OOD_dataset = ['SVHN','CIFAR10'],
 pretrained_network = None,
 
 # Miscellaneous arguments in common
@@ -70,8 +70,8 @@ num_cluster = [10],
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
-#callbacks = ['Model_saving','OOD_Dataset_distances'],
-callbacks = ['Model_saving'],
+callbacks = ['Model_saving','OOD_Dataset_distances'],
+#callbacks = ['Model_saving'],
 #callbacks = ['Aggregated','Differing'],
 
 # Either goes through all the models or goes through baselines

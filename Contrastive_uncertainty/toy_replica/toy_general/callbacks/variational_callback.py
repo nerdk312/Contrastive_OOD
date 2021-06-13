@@ -59,12 +59,19 @@ class Variational(pl.Callback): # General class for visualisation
         train_loader = self.datamodule.train_dataloader()
         features_train, labels_train = self.get_features(pl_module, train_loader)
         class_means = self.get_class_means(features_train,labels_train)
-        class_means = torch.from_numpy(class_means).to(pl_module.device)
+        class_means, class_examples = torch.from_numpy(class_means).to(pl_module.device)
         reconstructed_class_means = pl_module.decode(class_means)
+        reconstructed_class_examples = pl_module.decode(class_examples)
         print('variational callback runs')
         trainer.logger.experiment.log({
-                'images': [wandb.Image(x)
+                'Mean images': [wandb.Image(x)
                                 for x in reconstructed_class_means],
+                "global_step": trainer.global_step #pl_module.current_epoch
+                })
+        
+        trainer.logger.experiment.log({
+                'class example images': [wandb.Image(x)
+                                for x in reconstructed_class_examples],
                 "global_step": trainer.global_step #pl_module.current_epoch
                 })
         
@@ -99,12 +106,13 @@ class Variational(pl.Callback): # General class for visualisation
         return np.array(features), np.array(labels)
     
     def get_class_means(self, ftrain, ypred):
+        #import ipdb; ipdb.set_trace()
         # Nawid - get all the features which belong to each of the different classes
         # Get all the datapoints for the particular case
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
         # Find the mean of all the data points in a particular class to get the class means
-
+        class_examples = [x[0:4] for x in xc]
         class_means = [np.mean(x, axis=0) for x in xc]
-        
+
         # Obtain the class means of the data
-        return np.array(class_means)
+        return np.array(class_means), np.vstack(class_examples) # obtain 4 examples from the class for the purpose of evaluating

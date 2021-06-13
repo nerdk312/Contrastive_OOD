@@ -8,11 +8,12 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from Contrastive_uncertainty.general_hierarchy.run.general_hierarchy_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary
-from Contrastive_uncertainty.general_hierarchy.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.general_hierarchy.run.general_hierarchy_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary, specific_callbacks
+from Contrastive_uncertainty.general_hierarchy.datamodules.datamodule_dict import dataset_dict, OOD_dict
 from Contrastive_uncertainty.general_hierarchy.utils.hybrid_utils import previous_model_directory
 
-def evaluation(run_path, model_module, model_function):
+
+def evaluation(run_path, update_dict, model_module, model_function):
     api = wandb.Api()
     previous_run = api.run(path=run_path)
     previous_config = previous_run.config
@@ -28,30 +29,37 @@ def evaluation(run_path, model_module, model_function):
 
     pl.seed_everything(config['seed'])
 
-    datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
-    OOD_datamodule = Datamodule_selection(dataset_dict,config['OOD_dataset'],config)
-    #channels = Channel_selection(dataset_dict,config['dataset'])
-
-    class_names_dict = datamodule.idx2class  # name of dict which contains class names
-    callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
-
-    desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 
-                        callback_dict['MMD'],callback_dict['Visualisation'],callback_dict['Uniformity']]
-
+    datamodule = Datamodule_selection(dataset_dict, config['dataset'],config)
+    
     # CHANGE SECTION
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function
     # model = model_module.load_from_checkpoint(model_dir)
     model = model_function(model_module, config, datamodule)
 
+    
     # Obtain checkpoint for the model        
     model_dir = 'Models'
     model_dir = previous_model_directory(model_dir, run_path) # Used to preload the model
 
-    wandb.config.update(config, allow_val_change=True) # Updates the config (particularly used to increase the number of epochs present)
-    
-    wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
+    # Update the trainer and the callbacks for a specific test
+    # Updates OOD dataset if not manually specified in the update dict
+    #import ipdb; ipdb.set_trace()
+    if 'OOD_dataset' in update_dict:
+        pass
+    else: #  Cannot update the Update dict directly as this will carry on for other simulations
+        config['OOD_dataset'] = OOD_dict[config['dataset']]
+        #update_dict['OOD_dataset'] = OOD_dict[config['dataset']]
+        #print('updated dict')
 
-    
+    # Updates config with information from update dict
+    for update_k, update_v in update_dict.items():
+        if update_k in config:
+            config[update_k] = update_v
+
+    callback_dict = callback_dictionary(datamodule, config)
+    desired_callbacks = specific_callbacks(callback_dict, config['callbacks'])
+    #wandb.config.update(config, allow_val_change=True) # Updates the config (particularly used to increase the number of epochs present)
+    wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
     trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
@@ -62,4 +70,3 @@ def evaluation(run_path, model_module, model_function):
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
      
     run.finish()
-    

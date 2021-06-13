@@ -13,10 +13,13 @@ import pandas as pd
 import wandb
 import sklearn.metrics as skm
 import faiss
+import statistics 
+
 
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
+
 
 from Contrastive_uncertainty.general.utils.hybrid_utils import OOD_conf_matrix
 #from Contrastive_uncertainty.Contrastive.models.loss_functions import class_discrimination
@@ -435,6 +438,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         # Make a dictionary which contains the names and the mappings which I pass into the sns function
         collated_dict = {}
         num_bins = 50
+        
         for i in range(len(collated_data)):
             collated_dict.update({dataset_names[i]:collated_data[i]})
         data_label = 'Datasets'
@@ -524,8 +528,8 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         ax.axis('tight')
         #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
         data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
-        data_table.set_fontsize(20)
-        data_table.scale(1.5, 1.5)  # may help
+        data_table.set_fontsize(24)
+        data_table.scale(2.0, 2.0)  # may help
 
 
         #fig.tight_layout()
@@ -537,7 +541,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
 
         #pd.plotting.table(table_df)
         #plt.savefig('distance_statistics_table.png')
-
+        
         return dtest, collated_dood, indices_dtest, collated_indices_dood
     
 

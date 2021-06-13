@@ -1,3 +1,5 @@
+from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import OOD_dict
+
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.two_moons_datamodule import TwoMoonsDataModule
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.blobs_datamodule import BlobsDataModule
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.diagonal_lines_datamodule import DiagonalLinesDataModule

@@ -1,4 +1,5 @@
-import os 
+import os
+from torch._C import import_ir_module 
 import wandb
 import pytorch_lightning as pl
 import torch
@@ -46,7 +47,8 @@ def evaluation(run_path, update_dict, model_module, model_function):
     if 'OOD_dataset' in update_dict:
         pass
     else:
-        update_dict['OOD_dataset'] = OOD_dict[config['dataset']]
+        config['OOD_dataset'] = OOD_dict[config['dataset']]
+        #update_dict['OOD_dataset'] = OOD_dict[config['dataset']]
 
     # Updates config with information from update dict
     for update_k, update_v in update_dict.items():
