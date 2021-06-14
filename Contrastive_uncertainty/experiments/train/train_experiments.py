@@ -63,7 +63,7 @@ def train(base_dict):
     acceptable_single_models = ['Baselines',
     #'CE',
     #'Moco',
-    'SupCon',
+    #'SupCon',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -71,7 +71,7 @@ def train(base_dict):
     # 'HSupConBU',
     # 'HSupConBUCentroid',
     # 'HSupConTD',
-    # 'VAE',
+     'VAE',
     # 'CEVAE',
     # 'MocoVAE',
     # 'SupConVAE'
@@ -127,8 +127,8 @@ def train(base_dict):
     # Checks whether base_dict single model is present in the list
     assert base_dict['single_model'] in acceptable_single_models, 'single model response not in list of acceptable responses'
     
-    datasets = ['MNIST','CIFAR10', 'CIFAR100']
-    ood_datasets = ['FashionMNIST','SVHN','SVHN']
+    datasets = ['MNIST','FashionMNIST','CIFAR10', 'CIFAR100']
+    ood_datasets = [['FashionMNIST'],['MNIST'],['SVHN'],['SVHN']]
     
     # BASELINES
     # Go through all the models in the current dataset and current OOD dataset

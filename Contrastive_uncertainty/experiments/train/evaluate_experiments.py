@@ -12,6 +12,11 @@ from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.config.hsu
 from Contrastive_uncertainty.multi_PCL.config.multi_pcl_params import multi_pcl_hparams
 from Contrastive_uncertainty.unsup_con_memory.config.unsup_con_memory_params import unsup_con_memory_hparams
 
+from Contrastive_uncertainty.vae_models.vae.config.vae_params import vae_hparams
+from Contrastive_uncertainty.vae_models.cross_entropy_vae.config.cross_entropy_vae_params import cross_entropy_vae_hparams
+from Contrastive_uncertainty.vae_models.sup_con_vae.config.sup_con_vae_params import sup_con_vae_hparams
+from Contrastive_uncertainty.vae_models.moco_vae.config.moco_vae_params import moco_vae_hparams
+
 
 # Importing the different lightning modules for the baselines
 from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import CrossEntropyModule
@@ -57,14 +62,7 @@ from Contrastive_uncertainty.general_hierarchy.train.evaluate_general_hierarchy 
 
 
 def evaluate(run_paths,update_dict):    
-    acceptable_single_models = ['Baselines',
-    'CE',
-    'Moco',
-    'SupCon',
-    # 'PCL',
-    # 'UnSupConMemory',
-    # 'HSupCon'
-    ]
+    
 
     # Dict for the model name, parameters and specific training loop
     
@@ -85,6 +83,18 @@ def evaluate(run_paths,update_dict):
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDModule, 
                     'model_instance':HSupConTDModelInstance,'evaluate':general_hierarchy_evaluation},
+    
+                    'CEVAE':{'params':cross_entropy_vae_hparams,'model_module':CrossEntropyVAEModule,
+                    'model_instance':CrossEntropyVAEModelInstance,'evaluate':general_evaluation},
+
+                    'MocoVAE':{'params':moco_vae_hparams,'model_module':MocoVAEModule,
+                    'model_instance':MocoVAEModelInstance,'evaluate':general_evaluation},
+
+                    'SupConVAE':{'params':sup_con_vae_hparams,'model_module':SupConVAEModule,
+                    'model_instance':SupConVAEModelInstance,'evaluate':general_evaluation},
+
+                    'VAE':{'params':vae_hparams,'model_module':VAEModule,
+                    'model_instance':VAEModelInstance,'evaluate':general_evaluation},
     }   
     
 

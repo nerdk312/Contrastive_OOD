@@ -31,4 +31,10 @@ run_paths = ['nerdk312/evaluation/29ck9osj',
             'nerdk312/evaluation/1dth3ial'
             ]
 '''
+
+'''
+run_paths = ['nerdk312/evaluation/1dth3ial'
+]
+'''
+
 evaluate(run_paths, trainer_hparams)

@@ -2,7 +2,7 @@ trainer_hparams = dict(
 
 # Miscellaneous arguments
 seed = 26,
-epochs = 2,
+epochs = 1,
 # Trainer configurations
 fast_run = False,
 quick_callback = True,
@@ -13,5 +13,6 @@ val_check = 1,  # evaluation, Moco_training
 
 # Updating for the test run
 #OOD_dataset = ['TwoMoons','Diagonal'],
-callbacks = ['Dataset_distances'],
+callbacks =['Mahalanobis'],
+#callbacks = ['Dataset_distances'],
 )

@@ -18,7 +18,7 @@ pretrained_network = None,
 
 # Miscellaneous arguments in common
 seed = 26,
-epochs = 2,
+epochs = 10,
 
 # Trainer configurations in common
 fast_run = False,
@@ -26,8 +26,8 @@ quick_callback = False,
 training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
-val_check = 20,
-model_saving = 200, # Used to control how often the model is saved
+val_check = 1,
+model_saving = 1, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'Toy_evaluation',
@@ -59,8 +59,8 @@ branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
-callbacks = ['distances'],
-#callbacks = ['Model_saving'],
+#callbacks = ['distances'],
+callbacks = ['Model_saving','Mahalanobis'],
 
 # Either goes through all the models or goes through baselines
 

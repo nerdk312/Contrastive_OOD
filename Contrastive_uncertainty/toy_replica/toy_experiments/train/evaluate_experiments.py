@@ -33,19 +33,6 @@ from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.train.evaluate_ge
 
 def evaluate(run_paths,update_dict):    
     
-    acceptable_single_models = ['Baselines',
-    'CE',
-    'Moco',
-    'SupCon',
-    'PCL',
-    'MultiPCL',
-    'UnSupConMemory',
-    'HSupCon',
-    'HSupConBU',
-    'HSupConBUCentroid',
-    'HSupConTD'
-    ]
-
     # Dict for the model name, parameters and specific training loop
     
     model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyToy, 
@@ -61,18 +48,6 @@ def evaluate(run_paths,update_dict):
                     'model_instance':HSupConBUModelInstance,'evaluate':general_hierarchy_evaluation},
     }
     
-    
-    '''
-    model_dict = {'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module': HSupConBUCentroidToy, 
-                    'model_instance':HSupConBUCentroidModelInstance, 'evaluate':general_hierarchy_evaluation},
-                    
-                    'HSupConBU':{'params':hsup_con_bu_hparams,'model_module': HSupConBUToy, 
-                    'model_instance':HSupConBUModelInstance,'evaluate':general_hierarchy_evaluation},
-
-                    'HSupConTD':{'params':hsup_con_td_hparams,'model_module': HSupConTDToy, 
-                    'model_instance':HSupConTDModelInstance,'evaluate':general_hierarchy_evaluation},
-    }
-    '''
 
     # Iterate through the run paths
     for run_path in run_paths:

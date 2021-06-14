@@ -28,6 +28,8 @@ from scipy.spatial.distance import cdist # Required for TwoMoons visualisation i
 from PIL import Image
 from torchvision.utils import save_image
 
+
+
 class Variational(pl.Callback): # General class for visualisation
     def __init__(self, datamodule, 
         vector_level:str = 'instance',
@@ -40,10 +42,11 @@ class Variational(pl.Callback): # General class for visualisation
 
         self.vector_level = vector_level
         self.label_level = label_level
-    '''
+    
     def on_validation_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer,pl_module)
-    '''
+
+
     def on_test_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer, pl_module) 
 
@@ -53,8 +56,8 @@ class Variational(pl.Callback): # General class for visualisation
 
         train_loader = self.datamodule.train_dataloader()
         features_train, labels_train = self.get_features(pl_module, train_loader)
-        class_means = self.get_class_means(features_train,labels_train)
-        class_means, class_examples = torch.from_numpy(class_means).to(pl_module.device)
+        class_means, class_examples = self.get_class_means(features_train,labels_train)
+        class_means, class_examples = torch.from_numpy(class_means).to(pl_module.device),torch.from_numpy(class_examples).to(pl_module.device)
         reconstructed_class_means = pl_module.decode(class_means)
         reconstructed_class_examples = pl_module.decode(class_examples)
         print('variational callback runs')
@@ -69,9 +72,9 @@ class Variational(pl.Callback): # General class for visualisation
                                 for x in reconstructed_class_examples],
                 "global_step": trainer.global_step #pl_module.current_epoch
                 })
-        
         #import ipdb; ipdb.set_trace()
-    
+
+            
     # Obtain the representations for the data
     def get_features(self, pl_module, dataloader):
         features, labels = [], []
@@ -112,7 +115,6 @@ class Variational(pl.Callback): # General class for visualisation
         # Obtain the class means of the data
         return np.array(class_means), np.vstack(class_examples) # obtain 4 examples from the class for the purpose of evaluating
 
-    
 
 '''
 def save_image(filename, data):

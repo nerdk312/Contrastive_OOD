@@ -49,9 +49,18 @@ def evaluation(run_path, update_dict, model_module, model_function):
         #print('updated dict')
 
     # Update the trainer and the callbacks for a specific test
+    
+    '''
     for update_k, update_v in update_dict.items():
         if update_k in config:
             config[update_k] = update_v
+    '''
+    for update_k, update_v in update_dict.items():
+        if update_k in config:
+            if update_k =='epochs':
+                config[update_k] = config[update_k] + update_v
+            else:
+                config[update_k] = update_v
 
     callback_dict = callback_dictionary(datamodule, config)
     desired_callbacks = specific_callbacks(callback_dict, config['callbacks'])
@@ -64,7 +73,8 @@ def evaluation(run_path, update_dict, model_module, model_function):
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks,
                         resume_from_checkpoint=model_dir)#,auto_lr_find = True)
-   
+    trainer.fit(model)
+    
     trainer.test(model,datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
      

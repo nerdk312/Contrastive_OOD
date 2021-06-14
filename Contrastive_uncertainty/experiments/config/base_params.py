@@ -3,8 +3,11 @@ from Contrastive_uncertainty.general.datamodules.datamodule_dict import OOD_dict
 
 base_hparams = dict(
 # Optimizer parameters in common
-optimizer = 'sgd', #'adam',
-learning_rate= 3e-2, #3e-4,
+optimizer = 'adam', #'adam',
+learning_rate= 3e-4, #3e-4,
+
+#optimizer = 'sgd', #'adam',
+#learning_rate= 3e-2, #3e-4,
 
 momentum= 0.9,
 weight_decay = 1e-4,
@@ -13,7 +16,7 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet18',
 bsz = 256,
-dataset = 'CIFAR100',
+dataset = 'MNIST',
 #OOD_dataset = ['SVHN'],
 pretrained_network = None,
 
@@ -35,8 +38,6 @@ project = 'evaluation',
 group = 'VAE experiments',
 notes = 'Examining information such as the reconstructed class means using the VAE decoder',  # Add notes to the specific models each time
 
-
-
 # VAE specific params
 kl_coeff = 0.1,
 first_conv = False,
@@ -51,7 +52,6 @@ label_smoothing = False,
 num_negatives = 4096,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
-
 
 
 # Supcon specific parameters
@@ -76,7 +76,7 @@ callbacks = ['Model_saving','Variational'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 #callbacks = ['Aggregated','Differing'],
 
-single_model = 'Baselines'
+single_model = 'VAE'
 )  # evaluation
 
 # Updates OOD dataset if not manually specified

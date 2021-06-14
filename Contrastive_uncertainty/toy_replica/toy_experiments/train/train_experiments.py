@@ -33,7 +33,7 @@ def train(base_dict):
     # Actively choose which modeles to choose in the acceptable models 
     acceptable_single_models = ['Baselines',
     'CE',
-    'Moco',
+    #'Moco',
     #'SupCon',
     # 'PCL',
     # 'MultiPCL',

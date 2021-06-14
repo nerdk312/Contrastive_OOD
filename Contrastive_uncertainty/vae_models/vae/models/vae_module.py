@@ -26,8 +26,7 @@ class VAEModule(pl.LightningModule):
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        pretrained_network:str = None,
-        
+        pretrained_network:str = None,        
         ):
 
         super().__init__()
@@ -46,8 +45,6 @@ class VAEModule(pl.LightningModule):
         self.maxpool1 = maxpool1
 
 
-        
- 
         # create the encoders
         # num_classes is the output fc dimension
         self.encoder, self.decoder = self.init_encoders()
@@ -77,7 +74,7 @@ class VAEModule(pl.LightningModule):
     def vae_forward(self, x):
         x = self.encoder(x)
         # Added the normalisation myself
-        x = nn.functional.normalize(x, dim=1)
+        #x = nn.functional.normalize(x, dim=1)
         mu = self.fc_mu(x)
         log_var = self.fc_var(x)
         p, q, z = self.sample(mu, log_var)
@@ -93,7 +90,7 @@ class VAEModule(pl.LightningModule):
     def _run_step(self, x):
         x = self.encoder(x)
         # Added the normalisation myself
-        x = nn.functional.normalize(x, dim=1)
+        #x = nn.functional.normalize(x, dim=1)
         #import ipdb; ipdb.set_trace()
         mu = self.fc_mu(x)
         log_var = self.fc_var(x)
@@ -110,7 +107,7 @@ class VAEModule(pl.LightningModule):
         """
         
         z = self.encoder(x)
-        z = nn.functional.normalize(z, dim=1)
+        #z = nn.functional.normalize(z, dim=1)
         return z
     
     def instance_vector(self, x):
