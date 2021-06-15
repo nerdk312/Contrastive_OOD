@@ -1,4 +1,5 @@
 import ipdb
+from numpy.lib.function_base import quantile
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -171,11 +172,28 @@ class Typicality(pl.Callback):
             
             thresholds.append(class_thresholds)
         
-        import ipdb; ipdb.set_trace()
-            
-                
-                
+        # Calculating the CDF
+        final_threshold = [np.quantile(np.array(class_threshold_values),0.99) for class_threshold_values in thresholds]
 
+
+            
+        N = 100
+        Z = np.random.normal(size = N)
+        # method 1
+        H,X1 = np.histogram( Z, bins = 10, normed = True )
+        dx = X1[1] - X1[0]
+        F1 = np.cumsum(H)*dx
+        #method 2
+        X2 = np.sort(Z)
+        F2 = np.array(range(N))/float(N)
+
+        #plt.plot(X1[1:], F1)
+        plt.plot(X2, F2)
+        plt.show()
+
+
+
+        import ipdb; ipdb.set_trace()
 
         din = [
             np.sum(
