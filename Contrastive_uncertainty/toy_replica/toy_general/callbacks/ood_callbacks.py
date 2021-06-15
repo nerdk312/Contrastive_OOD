@@ -446,184 +446,10 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         count_histogram(collated_dict,num_bins,data_label)
         probability_histogram(collated_dict,num_bins,data_label)
         kde_plot(collated_dict,data_label)
-        table_data = {'Dataset':[],'Count Absolute Deviation':[],'Prob Absolute Deviation':[],'KL (Nats)':[], 'JS (Nats)':[],'KS':[]}
-        # Calculates the values in a pairwise 
-        for i in range(len(collated_data)-1):
-            pairwise_dict = {}
-            # Update the for base case 
-            pairwise_dict.update({dataset_names[0]:collated_data[0]})
-            pairwise_dict.update({dataset_names[i+1]:collated_data[i+1]})
-            data_label = dataset_names[i+1]  
-            
-            # Plots the counts, probabilities as well as the kde for pairwise
-            count_histogram(pairwise_dict,num_bins,data_label)
-            probability_histogram(pairwise_dict,num_bins,data_label)
-            kde_plot(pairwise_dict,data_label)
-                        
-            # https://www.kite.com/python/answers/how-to-plot-a-histogram-given-its-bins-in-python 
-            # Plots the histogram of the pairwise distance
-            count_hist1, _ = np.histogram(pairwise_dict[dataset_names[0]],range=(0,500), bins = 50)
-            count_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+1]],range=(0,500), bins = 50)
-            count_absolute_deviation  = np.sum(np.absolute(count_hist1 - count_hist2))
-
-            #print('count_absolute deviation',count_absolute_deviation)
-            # Using density =  True is the same as making it so that you normalise each term by the sum of the counts
-            prob_hist1, _ = np.histogram(pairwise_dict[dataset_names[0]],range=(0,500), bins = 50,density = True)
-            prob_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+1]],range=(0,500), bins = 50,density= True)
-            prob_absolute_deviation  = round(np.sum(np.absolute(prob_hist1 - prob_hist2)),3)
-
-            kl_div = round(kl_divergence(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
-            # import ipdb; ipdb.set_trace()
-            js_div = round(js_metric(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
-            ks_stat = round(ks_statistic_kde(pairwise_dict[dataset_names[0]], pairwise_dict[dataset_names[i+1]]),3)
-            
-            table_data['Dataset'].append(data_label)
-            table_data['Count Absolute Deviation'].append(count_absolute_deviation)
-            table_data['Prob Absolute Deviation'].append(prob_absolute_deviation)
-            table_data['KL (Nats)'].append(kl_div)
-            table_data['JS (Nats)'].append(js_div)
-            table_data['KS'].append(ks_stat)
-
         
-        KL_mean = round(statistics.mean(table_data['KL (Nats)']),3)
-        KL_std = round(statistics.stdev(table_data['KL (Nats)']),3)
-        JS_mean = round(statistics.mean(table_data['JS (Nats)']),3)
-        JS_std = round(statistics.stdev(table_data['JS (Nats)']),3)
-        KS_mean = round(statistics.mean(table_data['KS']),3)
-        KS_std = round(statistics.stdev(table_data['KS']),3)
-        Count_dev_mean = round(statistics.mean(table_data['Count Absolute Deviation']),3)
-        Count_dev_std = round(statistics.stdev(table_data['Count Absolute Deviation']),3)
-        Prob_dev_mean = round(statistics.mean(table_data['Prob Absolute Deviation']),3)
-        Prob_dev_std = round(statistics.stdev(table_data['Prob Absolute Deviation']),3)
-        
-        table_data['Dataset'].append('Mean')
-        table_data['KL (Nats)'].append(KL_mean)
-        table_data['JS (Nats)'].append(JS_mean)
-        table_data['KS'].append(KS_mean)
-        table_data['Count Absolute Deviation'].append(Count_dev_mean)
-        table_data['Prob Absolute Deviation'].append(Prob_dev_mean)
-
-        table_data['Dataset'].append('Std')
-        table_data['KL (Nats)'].append(KL_std)
-        table_data['JS (Nats)'].append(JS_std)
-        table_data['KS'].append(KS_std)
-        table_data['Count Absolute Deviation'].append(Count_dev_std)
-        table_data['Prob Absolute Deviation'].append(Prob_dev_std)
-
-
-        table_df = pd.DataFrame(table_data)
-        
-        table = wandb.Table(dataframe=table_df)
-        wandb.log({"Distance statistics": table})
-        
-        fig, ax = plt.subplots()
-
-        # hide axes
-        fig.patch.set_visible(False)
-        ax.axis('off')
-        ax.axis('tight')
-        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
-        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
-        data_table.set_fontsize(24)
-        data_table.scale(2.0, 2.0)  # may help
-
-
-        #fig.tight_layout()
-        dist_statistics_filename = 'Images/distance_statistics.png'
-        plt.savefig(dist_statistics_filename,bbox_inches='tight')
-        wandb_distance_statistics = f'Mahalanobis Distance Statistics'
-        wandb.log({wandb_distance_statistics:wandb.Image(dist_statistics_filename)})
-        plt.close()
-
-        test_table_data = {'Dataset':[],'Count Absolute Deviation':[],'Prob Absolute Deviation':[],'KL (Nats)':[], 'JS (Nats)':[],'KS':[]}
-        for i in range(len(collated_data)-2):
-            pairwise_dict = {}
-            # Update the for base case 
-            pairwise_dict.update({dataset_names[1]:collated_data[1]})
-            pairwise_dict.update({dataset_names[i+2]:collated_data[i+2]})
-            data_label = f'Test Reference - {dataset_names[i+2]}' 
-            
-            # Plots the counts, probabilities as well as the kde for pairwise
-            count_histogram(pairwise_dict,num_bins,data_label)
-            probability_histogram(pairwise_dict,num_bins,data_label)
-            kde_plot(pairwise_dict,data_label)
-                        
-            # https://www.kite.com/python/answers/how-to-plot-a-histogram-given-its-bins-in-python 
-            # Plots the histogram of the pairwise distance
-            count_hist1, _ = np.histogram(pairwise_dict[dataset_names[1]],range=(0,500), bins = 50)
-            count_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+2]],range=(0,500), bins = 50)
-            count_absolute_deviation  = np.sum(np.absolute(count_hist1 - count_hist2))
-
-            #print('count_absolute deviation',count_absolute_deviation)
-            # Using density =  True is the same as making it so that you normalise each term by the sum of the counts
-            prob_hist1, _ = np.histogram(pairwise_dict[dataset_names[1]],range=(0,500), bins = 50,density = True)
-            prob_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[i+2]],range=(0,500), bins = 50,density= True)
-            prob_absolute_deviation  = round(np.sum(np.absolute(prob_hist1 - prob_hist2)),3)
-
-            kl_div = round(kl_divergence(pairwise_dict[dataset_names[1]], pairwise_dict[dataset_names[i+2]]),3)
-            # import ipdb; ipdb.set_trace()
-            js_div = round(js_metric(pairwise_dict[dataset_names[1]], pairwise_dict[dataset_names[i+2]]),3)
-            ks_stat = round(ks_statistic_kde(pairwise_dict[dataset_names[1]], pairwise_dict[dataset_names[i+2]]),3)
-            
-            test_table_data['Dataset'].append(data_label)
-            test_table_data['Count Absolute Deviation'].append(count_absolute_deviation)
-            test_table_data['Prob Absolute Deviation'].append(prob_absolute_deviation)
-            test_table_data['KL (Nats)'].append(kl_div)
-            test_table_data['JS (Nats)'].append(js_div)
-            test_table_data['KS'].append(ks_stat)
-
-        
-        KL_mean = round(statistics.mean(test_table_data['KL (Nats)']),3)
-        KL_std = round(statistics.stdev(test_table_data['KL (Nats)']),3)
-        JS_mean = round(statistics.mean(test_table_data['JS (Nats)']),3)
-        JS_std = round(statistics.stdev(test_table_data['JS (Nats)']),3)
-        KS_mean = round(statistics.mean(test_table_data['KS']),3)
-        KS_std = round(statistics.stdev(test_table_data['KS']),3)
-        Count_dev_mean = round(statistics.mean(test_table_data['Count Absolute Deviation']),3)
-        Count_dev_std = round(statistics.stdev(test_table_data['Count Absolute Deviation']),3)
-        Prob_dev_mean = round(statistics.mean(test_table_data['Prob Absolute Deviation']),3)
-        Prob_dev_std = round(statistics.stdev(test_table_data['Prob Absolute Deviation']),3)
-        
-
-        test_table_data['Dataset'].append('Mean')
-        test_table_data['KL (Nats)'].append(KL_mean)
-        test_table_data['JS (Nats)'].append(JS_mean)
-        test_table_data['KS'].append(KS_mean)
-        test_table_data['Count Absolute Deviation'].append(Count_dev_mean)
-        test_table_data['Prob Absolute Deviation'].append(Prob_dev_mean)
-
-        test_table_data['Dataset'].append('Std')
-        test_table_data['KL (Nats)'].append(KL_std)
-        test_table_data['JS (Nats)'].append(JS_std)
-        test_table_data['KS'].append(KS_std)
-        test_table_data['Count Absolute Deviation'].append(Count_dev_std)
-        test_table_data['Prob Absolute Deviation'].append(Prob_dev_std)
-
-        test_table_df = pd.DataFrame(test_table_data)
-        
-        test_table = wandb.Table(dataframe=test_table_df)
-        wandb.log({"Test Distance statistics": test_table})
-        
-        fig, ax = plt.subplots()
-
-        # hide axes
-        fig.patch.set_visible(False)
-        ax.axis('off')
-        ax.axis('tight')
-        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
-        test_data_table = ax.table(cellText=test_table_df.values, colLabels=test_table_df.columns, loc='center')
-        test_data_table.set_fontsize(24)
-        test_data_table.scale(2.0, 2.0)  # may help
-
-        #fig.tight_layout()
-        test_dist_statistics_filename = 'Images/test_distance_statistics.png'
-        plt.savefig(test_dist_statistics_filename,bbox_inches='tight')
-        wandb_test_distance_statistics = f'Test Mahalanobis Distance Statistics'
-        wandb.log({wandb_test_distance_statistics:wandb.Image(test_dist_statistics_filename)})
-        plt.close()
-
-        #pd.plotting.table(table_df)
-        #plt.savefig('distance_statistics_table.png')
+        # Used to save the pairwise dicts for the different datasets
+        pairwise_saving(collated_data,dataset_names,num_bins=num_bins,ref_index=0)
+        pairwise_saving(collated_data,dataset_names,num_bins=num_bins,ref_index=1)
 
         return dtest, collated_dood, indices_dtest, collated_indices_dood
     
@@ -1227,4 +1053,72 @@ def kde_plot(input_data,name):
     plt.savefig(kde_filename,bbox_inches='tight')
     wandb_distance = f'Mahalanobis Distance KDE {name}'
     wandb.log({wandb_distance:wandb.Image(kde_filename)})
+    plt.close()
+
+
+
+def pairwise_saving(collated_data,dataset_names,num_bins,ref_index):
+    table_data = {'Dataset':[],'Count Absolute Deviation':[],'Prob Absolute Deviation':[],'KL (Nats)':[], 'JS (Nats)':[],'KS':[]}
+    # Calculates the values in a pairwise 
+    # Calculate the name of the data based on the ref index
+    assert ref_index ==0 or ref_index ==1,"ref index only can be 0 or 1 currently" 
+    if ref_index == 0:
+        ref = 'Train'
+    else:
+        ref = 'Test'
+    
+    for i in range(len(collated_data)-(1+ref_index)):
+        pairwise_dict = {}
+        # Update the for base case 
+        index_val = 1 +ref_index
+        #import ipdb; ipdb.set_trace()
+        pairwise_dict.update({dataset_names[ref_index]:collated_data[ref_index]})
+        pairwise_dict.update({dataset_names[index_val]:collated_data[index_val]})
+        data_label = f'{ref} Reference - {dataset_names[i+index_val]}' 
+        
+        # Plots the counts, probabilities as well as the kde for pairwise
+        count_histogram(pairwise_dict,num_bins,data_label)
+        probability_histogram(pairwise_dict,num_bins,data_label)
+        kde_plot(pairwise_dict,data_label)
+                    
+        # https://www.kite.com/python/answers/how-to-plot-a-histogram-given-its-bins-in-python 
+        # Plots the histogram of the pairwise distance
+        count_hist1, _ = np.histogram(pairwise_dict[dataset_names[ref_index]],range=(0,500), bins = num_bins)
+        count_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[index_val]],range=(0,500), bins = num_bins)
+        count_absolute_deviation  = np.sum(np.absolute(count_hist1 - count_hist2))
+
+        # Using density =  True is the same as making it so that you normalise each term by the sum of the counts
+        prob_hist1, _ = np.histogram(pairwise_dict[dataset_names[ref_index]],range=(0,500), bins = num_bins,density = True)
+        prob_hist2, bin_edges = np.histogram(pairwise_dict[dataset_names[index_val]],range=(0,500), bins = num_bins,density= True)
+        prob_absolute_deviation  = round(np.sum(np.absolute(prob_hist1 - prob_hist2)),3)
+        kl_div = round(kl_divergence(pairwise_dict[dataset_names[ref_index]], pairwise_dict[dataset_names[index_val]]),3)
+        js_div = round(js_metric(pairwise_dict[dataset_names[ref_index]], pairwise_dict[dataset_names[index_val]]),3)
+        ks_stat = round(ks_statistic_kde(pairwise_dict[dataset_names[ref_index]], pairwise_dict[dataset_names[index_val]]),3)
+        
+        table_data['Dataset'].append(data_label)
+        table_data['Count Absolute Deviation'].append(count_absolute_deviation)
+        table_data['Prob Absolute Deviation'].append(prob_absolute_deviation)
+        table_data['KL (Nats)'].append(kl_div)
+        table_data['JS (Nats)'].append(js_div)
+        table_data['KS'].append(ks_stat)
+    
+    table_df = pd.DataFrame(table_data)
+    
+    table = wandb.Table(dataframe=table_df)
+    wandb.log({f"{ref} Distance statistics": table})
+    
+    fig, ax = plt.subplots()
+    # hide axes
+    fig.patch.set_visible(False)
+    ax.axis('off')
+    ax.axis('tight')
+    #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
+    data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+    data_table.set_fontsize(24)
+    data_table.scale(2.0, 2.0)  # may help
+    #fig.tight_layout()
+    dist_statistics_filename = f'Images/{ref}_distance_statistics.png'
+    plt.savefig(dist_statistics_filename,bbox_inches='tight')
+    wandb_distance_statistics = f'Mahalanobis Distance {ref} Statistics'
+    wandb.log({wandb_distance_statistics:wandb.Image(dist_statistics_filename)})
     plt.close()

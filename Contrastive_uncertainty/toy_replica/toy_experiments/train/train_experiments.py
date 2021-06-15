@@ -39,9 +39,9 @@ def train(base_dict):
     # 'MultiPCL',
     # 'UnSupConMemory',
     # 'HSupCon',
-    # 'HSupConBU',
+    #'HSupConBU',
     # 'HSupConBUCentroid',
-    # 'HSupConTD'
+    #'HSupConTD'
     ]
 
     # Dict for the model name, parameters and specific training loop

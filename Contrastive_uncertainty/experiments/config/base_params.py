@@ -3,20 +3,20 @@ from Contrastive_uncertainty.general.datamodules.datamodule_dict import OOD_dict
 
 base_hparams = dict(
 # Optimizer parameters in common
-optimizer = 'adam', #'adam',
-learning_rate= 3e-4, #3e-4,
+#optimizer = 'adam', #'adam',
+#learning_rate= 3e-4, #3e-4,
 
-#optimizer = 'sgd', #'adam',
-#learning_rate= 3e-2, #3e-4,
+optimizer = 'sgd', #'adam',
+learning_rate= 3e-2, #3e-4,
 
 momentum= 0.9,
 weight_decay = 1e-4,
 
 # Training parameters in common
 emb_dim = 128,
-instance_encoder = 'resnet18',
+instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'MNIST',
+dataset = 'CIFAR10',
 #OOD_dataset = ['SVHN'],
 pretrained_network = None,
 
@@ -35,8 +35,8 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'VAE experiments',
-notes = 'Examining information such as the reconstructed class means using the VAE decoder',  # Add notes to the specific models each time
+group = 'OOD detection at different scales experiment',
+notes = 'Examining how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
 
 # VAE specific params
 kl_coeff = 0.1,
@@ -72,11 +72,11 @@ branch_weights = [1.0/3, 1.0/3, 1.0/3],
 # Either goes through all the models or goes through baselines
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
-callbacks = ['Model_saving','Variational'],
-#callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
+#callbacks = ['Model_saving','Variational'],
+callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Aggregated','Differing'],
 
-single_model = 'VAE'
+single_model = 'Baselines'
 )  # evaluation
 
 # Updates OOD dataset if not manually specified
