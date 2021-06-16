@@ -151,23 +151,51 @@ class Hierarchical_Mahalanobis(pl.Callback):
         ]
         #import ipdb; ipdb.set_trace()
         
-        if ptest_index is not None:
-           coarse_test_mapping =  self.Datamodule.coarse_mapping
-           din = np.stack(din,axis=1) # stacks the array to make a (batch,num_classes) array
-           #import ipdb; ipdb.set_trace()
-           for i,sample in enumerate(din):
-               print(sample)
-               import ipdb; ipdb.set_trace()
-               
+        if ptest_index is not None: # index of the previous test values
+            coarse_test_mapping =  self.Datamodule.coarse_mapping.numpy()
+            din = np.stack(din,axis=1) # stacks the array to make a (batch,num_classes) array
+            collated_din = []
+            collated_indices = []
+            for i,sample_distance in enumerate(din):
+                # coarse_test_mapping==ptest_index[i]] corresponds to a boolean mask placed on sample to get only the values of interest
+                conditioned_distance = sample_distance[coarse_test_mapping==ptest_index[i]]
+                # Obtain the smallest value for the conditioned distances
+                min_conditioned_distance = np.min(conditioned_distance)
+                sample_index = np.where(sample_distance == min_conditioned_distance)[0][0]
 
+                collated_din.append(min_conditioned_distance)
+                collated_indices.append(sample_index)
 
-        # Calculate the indices corresponding to the values
-        indices_din = np.argmin(din,axis = 0)
-        indices_dood = np.argmin(dood, axis=0)
+            din = np.array(collated_din)
+            indices_din = np.array(collated_indices)
+        
+        else:    
+            din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
+            indices_din = np.argmin(din,axis = 0)       
+                
+        if pood_index is not None: # index of the previous test values
+            coarse_test_mapping =  self.Datamodule.coarse_mapping.numpy()
+            dood = np.stack(dood,axis=1) # stacks the array to make a (batch,num_classes) array
+            collated_dood = []
+            collated_indices = []
+            for i,sample_distance in enumerate(dood):
+                # coarse_test_mapping==ptest_index[i]] corresponds to a boolean mask placed on sample to get only the values of interest
+                conditioned_distance = sample_distance[coarse_test_mapping==pood_index[i]]
+                # Obtain the smallest value for the conditioned distances
+                min_conditioned_distance = np.min(conditioned_distance)
+                sample_index = np.where(sample_distance == min_conditioned_distance)[0][0]
 
-        din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
-        dood = np.min(dood, axis=0)
+                collated_din.append(min_conditioned_distance)
+                collated_indices.append(sample_index)
 
+            dood = np.array(collated_dood)
+            indices_dood = np.array(collated_indices)
+        
+        else:            
+            dood = np.min(dood, axis=0) # Nawid - calculate the minimum distance 
+            indices_dood = np.argmin(dood,axis = 0)   
+
+    
         return din, dood, indices_din, indices_dood
     
 
