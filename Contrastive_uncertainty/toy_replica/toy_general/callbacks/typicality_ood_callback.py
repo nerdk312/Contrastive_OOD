@@ -78,7 +78,8 @@ class Typicality(pl.Callback):
             np.copy(features_test),
             np.copy(features_ood),
             np.copy(labels_train),
-            np.copy(labels_val))
+            np.copy(labels_val),
+            np.copy(labels_test))
 
         
         return fpr95,auroc,aupr
@@ -111,7 +112,7 @@ class Typicality(pl.Callback):
         return np.array(features), np.array(labels)
 
     
-    def get_scores(self, ftrain, fval, ftest, food, ypred, yval):
+    def get_offline_thresholds(self, ftrain, fval, ypred, yval,bootstrap_num,batch_size):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
         # Calculate the means of the data
@@ -147,8 +148,8 @@ class Typicality(pl.Callback):
             xval_class = xval_c[class_num] 
             indices = np.arange(len(xval_c[class_num]))
             class_thresholds = [] #  List of class threshold values
-            for k in range(50):
-                vals = np.random.choice(indices, size=25, replace=True)
+            for k in range(bootstrap_num):
+                vals = np.random.choice(indices, size=batch_size, replace=True)
                 bootstrap_data = xval_class[vals]
                 #import ipdb; ipdb.set_trace()
                 # Calculates the mahalanobis distance
@@ -166,7 +167,8 @@ class Typicality(pl.Callback):
                 
                 # calculate negative log likelihood
                 nll = - np.mean(0.5*(dval**2))
-                threshold_k = np.abs(np.mean(dval)- entropy[class_num])
+                threshold_k = np.abs(nll- entropy[class_num])
+                #threshold_k = np.abs(np.mean(dval)- entropy[class_num])
                 #threshold_k = np.abs(loglikelihood- entropy[class_num])
                 class_thresholds.append(threshold_k)
             
@@ -174,64 +176,85 @@ class Typicality(pl.Callback):
         
         # Calculating the CDF
         final_threshold = [np.quantile(np.array(class_threshold_values),0.99) for class_threshold_values in thresholds]
+        return means, cov, entropy, final_threshold
 
 
-            
-        N = 100
-        Z = np.random.normal(size = N)
-        # method 1
-        H,X1 = np.histogram( Z, bins = 10, normed = True )
-        dx = X1[1] - X1[0]
-        F1 = np.cumsum(H)*dx
-        #method 2
-        X2 = np.sort(Z)
-        F2 = np.array(range(N))/float(N)
-
-        #plt.plot(X1[1:], F1)
-        plt.plot(X2, F2)
-        plt.show()
-
-
-
-        import ipdb; ipdb.set_trace()
-
-        din = [
-            np.sum(
-                (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
+    def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
+        test_thresholds = [] # List of all threshold values
+        # All the data for the different classes of the test features
+        xtest_c = [ftest[ytest == i] for i in np.unique(ytest)]
+        # Iterate through the classes
+        for class_num in range(len(np.unique(ytest))):
+            # get the number of indices for the class
+            xtest_class = xtest_c[class_num] 
+            #indices = np.arange(len(xtest_c[class_num]))
+            class_test_thresholds = [] #  List of class threshold values
+            # obtain the num batches
+            num_batches = len(xtest_class)//batch_size 
+            for i in range(num_batches-1):
+                ftestbatch = xtest_class[(i*batch_size):((i+1)*batch_size)]
+                dtest = np.sum(
+                (ftestbatch - means[class_num]) # Nawid - distance between the data point and the mean
                 * (
-                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
-                        (ftest - np.mean(x, axis=0, keepdims=True)).T
+                    np.linalg.pinv(cov[class_num]).dot(
+                        (ftestbatch - means[class_num]).T
                     ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
                 ).T,
-                axis=-1,
-            )
-            for x in xc # Nawid - done for all the different classes
-        ]
+                axis=-1)
+
+                nll = - np.mean(0.5*(dtest**2))
+                #threshold_k = np.abs(np.mean(dtest)- entropy[class_num])
+                threshold_k = np.abs(nll- entropy[class_num])
+                class_test_thresholds.append(threshold_k)
+
+            test_thresholds.append(class_test_thresholds)
         
-        dood = [
-            np.sum(
-                (food - np.mean(x, axis=0, keepdims=True))
+
+
+
+        # Treating other classes as OOD dataset for a particular class
+        test_ood_thresholds = [] # List of all threshold values
+        # All the data for the different classes of the test features
+        xtest_c = [ftest[ytest == i] for i in np.unique(ytest)]
+
+
+        # Iterate through the classes
+        for class_num in range(len(np.unique(ytest))):
+            # Remove a subarray related to a particular class
+            import ipdb; ipdb.set_trace()
+            xtest_ood = np.delete(ftest,xtest_c[class_num])
+            # get the number of indices for the class
+            #indices = np.arange(len(xtest_c[class_num]))
+            class_test_ood_thresholds = [] #  List of class threshold values
+            # obtain the num batches
+            num_batches = len(xtest_ood)//batch_size 
+            for i in range(num_batches-1):
+                ftest_ood_batch = xtest_class[(i*batch_size):((i+1)*batch_size)]
+                dtest_ood = np.sum(
+                (ftest_ood_batch - means[class_num]) # Nawid - distance between the data point and the mean
                 * (
-                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
-                        (food - np.mean(x, axis=0, keepdims=True)).T
-                    )
+                    np.linalg.pinv(cov[class_num]).dot(
+                        (ftest_ood_batch - means[class_num]).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
                 ).T,
-                axis=-1,
-            )
-            for x in xc # Nawid- this calculates the score for all the OOD examples 
-        ]
-        # Calculate the indices corresponding to the values
-        indices_din = np.argmin(din,axis = 0)
-        indices_dood = np.argmin(dood, axis=0)
+                axis=-1)
 
-        din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
-        dood = np.min(dood, axis=0)
+                nll = - np.mean(0.5*(dtest_ood**2))
+                threshold_k = np.abs(nll- entropy[class_num])
+                class_test_ood_thresholds.append(threshold_k)
 
-        return din, dood, indices_din, indices_dood
+            test_ood_thresholds.append(class_test_ood_thresholds)
+
+
+
+        return test_thresholds, test_ood_thresholds
+
+            
+        
     
 
         
-    def get_eval_results(self, ftrain,fval, ftest, food, labelstrain, labelsval):
+    def get_eval_results(self, ftrain,fval, ftest, food, labelstrain, labelsval,labels_test):
         """
             None.
         """
@@ -248,7 +271,11 @@ class Typicality(pl.Callback):
         ftest = (ftest - m) / (s + 1e-10)
         food = (food - m) / (s + 1e-10)
         # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain,fval, ftest, food, labelstrain,labelsval)
+        
+        class_means, class_cov,class_entropy, class_quantile_thresholds = self.get_offline_thresholds(ftrain, fval,labelstrain,labelsval,50,25)
+        #def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
+        #import ipdb; ipdb.set_trace()
+        self.get_online_test_thresholds(class_means,class_cov,class_entropy,ftest,labels_test, 25)
 
     
     
