@@ -267,12 +267,12 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         self.label_level = label_level
         
         #self.OOD_dataname = self.OOD_Datamodule.name
-    
+    '''
     def on_validation_epoch_end(self, trainer, pl_module):
         #import ipdb; ipdb.set_trace()
         # Skip if fast testing as this can lead to issues with the code
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
-    
+    '''
     def on_test_epoch_end(self, trainer, pl_module):
         #import ipdb; ipdb.set_trace()
         self.forward_callback(trainer=trainer, pl_module=pl_module) 

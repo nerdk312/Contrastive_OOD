@@ -35,8 +35,12 @@ model_saving = 200, # Used to control how often the model is saved
 
 # Wandb parameters in common
 project = 'evaluation',
-group = 'OOD detection at different scales experiment',
-notes = 'Examining how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
+#group = 'OOD detection at different scales experiment',
+#notes = 'Examining how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
+
+
+group = 'OOD hierarchy baselines',
+notes = 'Baselines for the OOD detection for the ID and OOD data',  # Add notes to the specific models each time
 
 # VAE specific params
 kl_coeff = 0.1,

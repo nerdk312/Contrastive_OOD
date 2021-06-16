@@ -61,6 +61,7 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Typicality'],
 callbacks = ['Hierarchical'],
+#callbacks = [],
 # Either goes through all the models or goes through baselines
 
 single_model = 'Baselines'
