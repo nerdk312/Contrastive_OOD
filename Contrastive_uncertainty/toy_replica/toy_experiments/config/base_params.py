@@ -18,7 +18,7 @@ pretrained_network = None,
 
 # Miscellaneous arguments in common
 seed = 26,
-epochs = 10,
+epochs = 1,
 
 # Trainer configurations in common
 fast_run = False,
