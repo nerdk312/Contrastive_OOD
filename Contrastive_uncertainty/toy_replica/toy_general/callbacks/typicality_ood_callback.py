@@ -154,8 +154,6 @@ class Typicality(pl.Callback):
                 #import ipdb; ipdb.set_trace()
                 # Calculates the mahalanobis distance
 
-
-
                 dval = np.sum(
                 (bootstrap_data - means[class_num]) # Nawid - distance between the data point and the mean
                 * (
@@ -179,6 +177,38 @@ class Typicality(pl.Callback):
         return means, cov, entropy, final_threshold
 
 
+    def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
+        test_thresholds = [] # List of all threshold values
+        # All the data for the different classes of the test features
+        #import ipdb; ipdb.set_trace()
+        xtest_c = [ftest[ytest == i] for i in np.unique(ytest)]
+        # Iterate through the classes
+        for class_num in range(len(np.unique(ytest))):
+            xtest_class = xtest_c[class_num] 
+            class_test_thresholds = self.get_class_thresholds(xtest_class,batch_size,means[class_num], cov[class_num],entropy[class_num])
+            test_thresholds.append(class_test_thresholds)
+
+        return test_thresholds
+    
+    def get_online_test_ood_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
+        test_ood_thresholds = []
+        # All the data for the different classes of the test features
+        #import ipdb; ipdb.set_trace()
+        xtest_c = [ftest[ytest == i] for i in np.unique(ytest)]
+        # Iterate through the classes
+        for class_num in range(len(np.unique(ytest))):
+            # Remove a subarray related to a particular class (Based on https://stackoverflow.com/questions/11903083/find-the-set-difference-between-two-large-arrays-matrices-in-python)
+            a1_rows = ftest.view([('', ftest.dtype)] * ftest.shape[1])
+            a2_rows = xtest_c[class_num].view([('', xtest_c[class_num].dtype)] * xtest_c[class_num].shape[1])
+            # Get all the data points excluding the data point of a particular class
+            xtest_ood =  np.setdiff1d(a1_rows, a2_rows).view(ftest.dtype).reshape(-1, ftest.shape[1])
+
+
+            class_test_ood_thresholds = self.get_class_thresholds(xtest_ood,batch_size,means[class_num], cov[class_num],entropy[class_num])
+            test_ood_thresholds.append(class_test_ood_thresholds)
+
+        return test_ood_thresholds
+    '''
     def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
         test_thresholds = [] # List of all threshold values
         # All the data for the different classes of the test features
@@ -247,16 +277,23 @@ class Typicality(pl.Callback):
             test_ood_thresholds.append(class_test_ood_thresholds)
 
         return test_thresholds, test_ood_thresholds
+    '''
 
 
     def get_online_ood_thresholds(self, means, cov, entropy, food, batch_size):
-        
         # Treating other classes as OOD dataset for a particular class
         ood_thresholds = [] # List of all threshold values
         # All the data for the different classes of the test features
 
         # Iterate through the classes
         for class_num in range(len(means)):
+            class_ood_thresholds = self.get_class_thresholds(food,batch_size,means[class_num], cov[class_num],entropy[class_num])
+            ood_thresholds.append(class_ood_thresholds)
+        
+        return ood_thresholds
+
+
+        '''
             class_ood_thresholds = [] #  List of class threshold values
             # obtain the num batches
             num_batches = len(food)//batch_size 
@@ -277,8 +314,30 @@ class Typicality(pl.Callback):
 
             ood_thresholds.append(class_ood_thresholds)
 
-        import ipdb; ipdb.set_trace()
         return ood_thresholds
+        '''
+
+    # General function to ge the thresholds
+    def get_class_thresholds(self,fdata,batch_size,class_means,class_cov,class_entropy):
+        class_thresholds = [] #  List of class threshold values
+        # obtain the num batches
+        num_batches = len(fdata)//batch_size 
+        for i in range(num_batches):
+            fdata_batch = fdata[(i*batch_size):((i+1)*batch_size)]
+            ddata = np.sum(
+            (fdata_batch - class_means) # Nawid - distance between the data point and the mean
+            * (
+                np.linalg.pinv(class_cov).dot(
+                    (fdata_batch - class_means).T
+                ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+            ).T,
+            axis=-1)
+
+            nll = - np.mean(0.5*(ddata**2))
+            threshold_k = np.abs(nll- class_entropy)
+            class_thresholds.append(threshold_k)
+        
+        return class_thresholds
 
             
         
@@ -307,6 +366,7 @@ class Typicality(pl.Callback):
         #def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
         #import ipdb; ipdb.set_trace()
         self.get_online_test_thresholds(class_means,class_cov,class_entropy,ftest,labels_test, 25)
+        self.get_online_test_ood_thresholds(class_means,class_cov,class_entropy,ftest,labels_test, 25)
         self.get_online_ood_thresholds(class_means, class_cov,class_entropy, food, 25)
 
     
