@@ -182,6 +182,7 @@ class Typicality(pl.Callback):
     def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
         test_thresholds = [] # List of all threshold values
         # All the data for the different classes of the test features
+        #import ipdb; ipdb.set_trace()
         xtest_c = [ftest[ytest == i] for i in np.unique(ytest)]
         # Iterate through the classes
         for class_num in range(len(np.unique(ytest))):
@@ -191,7 +192,8 @@ class Typicality(pl.Callback):
             class_test_thresholds = [] #  List of class threshold values
             # obtain the num batches
             num_batches = len(xtest_class)//batch_size 
-            for i in range(num_batches-1):
+            print(f'class num {class_num}',f' num batches {num_batches}')
+            for i in range(num_batches):
                 ftestbatch = xtest_class[(i*batch_size):((i+1)*batch_size)]
                 dtest = np.sum(
                 (ftestbatch - means[class_num]) # Nawid - distance between the data point and the mean
@@ -206,7 +208,7 @@ class Typicality(pl.Callback):
                 #threshold_k = np.abs(np.mean(dtest)- entropy[class_num])
                 threshold_k = np.abs(nll- entropy[class_num])
                 class_test_thresholds.append(threshold_k)
-
+                print(f'class num {class_num}',f' i {i}')
             test_thresholds.append(class_test_thresholds)
         
 
@@ -220,16 +222,20 @@ class Typicality(pl.Callback):
 
         # Iterate through the classes
         for class_num in range(len(np.unique(ytest))):
-            # Remove a subarray related to a particular class
-            import ipdb; ipdb.set_trace()
-            xtest_ood = np.delete(ftest,xtest_c[class_num])
+            # Remove a subarray related to a particular class (Based on https://stackoverflow.com/questions/11903083/find-the-set-difference-between-two-large-arrays-matrices-in-python)
+            a1_rows = ftest.view([('', ftest.dtype)] * ftest.shape[1])
+            a2_rows = xtest_c[class_num].view([('', xtest_c[class_num].dtype)] * xtest_c[class_num].shape[1])
+            # Get all the data points excluding the data point of a particular class
+            xtest_ood =  np.setdiff1d(a1_rows, a2_rows).view(ftest.dtype).reshape(-1, ftest.shape[1])
+
+            #xtest_ood = np.delete(ftest,xtest_c[class_num])
             # get the number of indices for the class
             #indices = np.arange(len(xtest_c[class_num]))
             class_test_ood_thresholds = [] #  List of class threshold values
             # obtain the num batches
             num_batches = len(xtest_ood)//batch_size 
-            for i in range(num_batches-1):
-                ftest_ood_batch = xtest_class[(i*batch_size):((i+1)*batch_size)]
+            for i in range(num_batches):
+                ftest_ood_batch = xtest_ood[(i*batch_size):((i+1)*batch_size)]
                 dtest_ood = np.sum(
                 (ftest_ood_batch - means[class_num]) # Nawid - distance between the data point and the mean
                 * (
@@ -246,7 +252,7 @@ class Typicality(pl.Callback):
             test_ood_thresholds.append(class_test_ood_thresholds)
 
 
-
+        
         return test_thresholds, test_ood_thresholds
 
             

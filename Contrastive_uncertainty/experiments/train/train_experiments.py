@@ -61,7 +61,7 @@ from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy imp
 
 def train(base_dict):    
     acceptable_single_models = ['Baselines',
-    #'CE',
+    'CE',
     'Moco',
     'SupCon'
     # 'PCL',

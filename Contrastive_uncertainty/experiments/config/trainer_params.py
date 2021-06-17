@@ -12,6 +12,8 @@ val_check = 1,  # evaluation, Moco_training
 
 
 #OOD_dataset = ['MNIST','KMNIST','EMNIST'],
-callbacks = ['Mahalanobis','Dataset_distances'],
+#callbacks = ['Mahalanobis','Dataset_distances'],
+callbacks = ['Hierarchical'],
+
 #callbacks =['Variational'],
 )

@@ -1,3 +1,4 @@
+from pytorch_lightning import callbacks
 from Contrastive_uncertainty.general.datamodules.datamodule_dict import OOD_dict
 
 
@@ -11,7 +12,7 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet18',
-bsz = 16,
+bsz = 64,
 dataset = 'FashionMNIST',
 #OOD_dataset = ['SVHN','CIFAR10'],
 pretrained_network = None,
@@ -73,8 +74,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['OOD_Dataset_distances'],
 #callbacks = ['Model_saving','Variational'],
 #callbacks = ['Aggregated','Differing'],
-callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
-
+#callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
+callbacks = ['Hierarchical'],
 
 # Either goes through all the models or goes through baselines
 
