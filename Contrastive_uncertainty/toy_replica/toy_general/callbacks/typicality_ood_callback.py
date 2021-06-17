@@ -192,7 +192,6 @@ class Typicality(pl.Callback):
             class_test_thresholds = [] #  List of class threshold values
             # obtain the num batches
             num_batches = len(xtest_class)//batch_size 
-            print(f'class num {class_num}',f' num batches {num_batches}')
             for i in range(num_batches):
                 ftestbatch = xtest_class[(i*batch_size):((i+1)*batch_size)]
                 dtest = np.sum(
@@ -208,12 +207,8 @@ class Typicality(pl.Callback):
                 #threshold_k = np.abs(np.mean(dtest)- entropy[class_num])
                 threshold_k = np.abs(nll- entropy[class_num])
                 class_test_thresholds.append(threshold_k)
-                print(f'class num {class_num}',f' i {i}')
             test_thresholds.append(class_test_thresholds)
         
-
-
-
         # Treating other classes as OOD dataset for a particular class
         test_ood_thresholds = [] # List of all threshold values
         # All the data for the different classes of the test features
@@ -251,9 +246,39 @@ class Typicality(pl.Callback):
 
             test_ood_thresholds.append(class_test_ood_thresholds)
 
-
-        
         return test_thresholds, test_ood_thresholds
+
+
+    def get_online_ood_thresholds(self, means, cov, entropy, food, batch_size):
+        
+        # Treating other classes as OOD dataset for a particular class
+        ood_thresholds = [] # List of all threshold values
+        # All the data for the different classes of the test features
+
+        # Iterate through the classes
+        for class_num in range(len(means)):
+            class_ood_thresholds = [] #  List of class threshold values
+            # obtain the num batches
+            num_batches = len(food)//batch_size 
+            for i in range(num_batches):
+                food_batch = food[(i*batch_size):((i+1)*batch_size)]
+                dood = np.sum(
+                (food_batch - means[class_num]) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(cov[class_num]).dot(
+                        (food_batch - means[class_num]).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1)
+
+                nll = - np.mean(0.5*(dood**2))
+                threshold_k = np.abs(nll- entropy[class_num])
+                class_ood_thresholds.append(threshold_k)
+
+            ood_thresholds.append(class_ood_thresholds)
+
+        import ipdb; ipdb.set_trace()
+        return ood_thresholds
 
             
         
@@ -282,6 +307,7 @@ class Typicality(pl.Callback):
         #def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
         #import ipdb; ipdb.set_trace()
         self.get_online_test_thresholds(class_means,class_cov,class_entropy,ftest,labels_test, 25)
+        self.get_online_ood_thresholds(class_means, class_cov,class_entropy, food, 25)
 
     
     

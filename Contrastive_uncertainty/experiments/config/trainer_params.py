@@ -10,7 +10,6 @@ validation_ratio = 1.0,
 test_ratio = 1.0,
 val_check = 1,  # evaluation, Moco_training
 
-
 #OOD_dataset = ['MNIST','KMNIST','EMNIST'],
 #callbacks = ['Mahalanobis','Dataset_distances'],
 callbacks = ['Hierarchical'],
