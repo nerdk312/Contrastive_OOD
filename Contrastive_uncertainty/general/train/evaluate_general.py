@@ -56,6 +56,9 @@ def evaluation(run_path, update_dict, model_module, model_function):
             config[update_k] = update_v
     '''
     for update_k, update_v in update_dict.items():
+        if update_k =='callbacks':
+            config[update_k] = update_v
+            
         if update_k in config:
             if update_k =='epochs':
                 config[update_k] = config[update_k] + update_v
@@ -68,7 +71,7 @@ def evaluation(run_path, update_dict, model_module, model_function):
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
 
     
-    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
+    trainer = pl.Trainer(precision =16,fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks,

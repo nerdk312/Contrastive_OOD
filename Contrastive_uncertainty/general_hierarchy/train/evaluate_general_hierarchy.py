@@ -53,19 +53,27 @@ def evaluation(run_path, update_dict, model_module, model_function):
 
     # Updates config with information from update dict
     for update_k, update_v in update_dict.items():
-        if update_k in config:
+        # Special case where I did not save callbacks in the past, need to override
+        if update_k =='callbacks':
             config[update_k] = update_v
+
+        if update_k in config:
+            if update_k =='epochs':
+                config[update_k] = config[update_k] + update_v
+            else:
+                config[update_k] = update_v
 
     callback_dict = callback_dictionary(datamodule, config)
     desired_callbacks = specific_callbacks(callback_dict, config['callbacks'])
     #wandb.config.update(config, allow_val_change=True) # Updates the config (particularly used to increase the number of epochs present)
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
-    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
+    trainer = pl.Trainer(precision =16,fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks,
                         resume_from_checkpoint=model_dir)#,auto_lr_find = True)
-   
+    trainer.fit(model)
+
     trainer.test(model,datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
      

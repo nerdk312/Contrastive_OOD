@@ -58,6 +58,9 @@ def evaluation(run_path, update_dict, model_module, model_function):
             config[update_k] = update_v
     '''
     for update_k, update_v in update_dict.items():
+        if update_k =='callbacks':
+            config[update_k] = update_v
+            
         if update_k in config:
             if update_k =='epochs':
                 config[update_k] = config[update_k] + update_v
