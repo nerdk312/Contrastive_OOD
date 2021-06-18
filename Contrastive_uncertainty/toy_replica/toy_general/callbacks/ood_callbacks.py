@@ -647,14 +647,18 @@ class Mahalanobis_OvO(pl.Callback):
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
         
-        table_data = {'Class vs Class': [],'Accuracy': []}
-
+        #table_data = {'Class vs Class': [],'Accuracy': []}
+        #import ipdb; ipdb.set_trace()
+        column_names = [f'{i}' for i in range(len(np.unique(labels_test)))]
+        '''
+        table_data = {i :[] for i in column_names}
         for i in range(len(np.unique(labels_test))):
             for j in range(len(np.unique(labels_test))):
                 if i == j: 
                     pass
+                    test_accuracy = torch.tensor(100.0) 
                 else:
-                    table_data['Class vs Class'].append(f'{i} vs {j}')
+                    #table_data['Class vs Class'].append(f'{i} vs {j}')
                     train_mask = np.logical_or(labels_train == i, labels_train == j)
                     ovo_labels_train = labels_train[train_mask]
                     max_val = np.amax(ovo_labels_train)
@@ -676,12 +680,90 @@ class Mahalanobis_OvO(pl.Callback):
                     np.copy(ovo_labels_train))
 
                     test_accuracy = self.mahalanobis_classification(indices_dtest, ovo_labels_test)
-                    table_data['Accuracy'].append(test_accuracy)
+                
+                table_data[f'{i}'].append(test_accuracy)
+                #table_data['Accuracy'].append(test_accuracy)
         
         table_df = pd.DataFrame(table_data)
+        df = table_df[1:] #take the data less the header row
+        import ipdb; ipdb.set_trace()
+        sns.heatmap(df)
+        plt.xlabel('Actual')
+        plt.ylabel('Predicted')
+        plt.title('One vs One Confusion Matrix')
+        plt.show()
         table = wandb.Table(dataframe=table_df)
-        wandb.log({"One Vs One": table})
 
+        wandb.log({"One Vs One": table})
+        '''
+        
+
+        column_names = [f'{i}' for i in range(len(np.unique(labels_test)))]
+        index_names = [f'{i}' for i in range(len(np.unique(labels_test)))]
+        data = np.zeros((len(index_names),len(column_names)))
+
+        table_data = {i :[] for i in column_names}
+        for i in range(len(np.unique(labels_test))):
+            for j in range(len(np.unique(labels_test))):
+                if i == j: 
+                    #pass
+                    test_accuracy = torch.tensor(100.0) 
+                else:
+                    #table_data['Class vs Class'].append(f'{i} vs {j}')
+                    train_mask = np.logical_or(labels_train == i, labels_train == j)
+                    ovo_labels_train = labels_train[train_mask]
+                    max_val = np.amax(ovo_labels_train)
+                    ovo_labels_train = ovo_labels_train == max_val # Change to boolean matrix (true and false / 1 and 0s)
+                    ovo_features_train =  features_train[train_mask]
+
+
+                    test_mask = np.logical_or(labels_test ==i, labels_test ==j)
+                    ovo_labels_test = labels_test[test_mask]
+                    ovo_labels_test = ovo_labels_test == max_val
+                    ovo_features_test = features_test[test_mask]
+                    ovo_features_ood = features_ood[0:32] # shorten the data of OOD as this is not actually important for the ovo classifier
+
+
+                    fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
+                    np.copy(ovo_features_train),
+                    np.copy(ovo_features_test),
+                    np.copy(ovo_features_ood),
+                    np.copy(ovo_labels_train))
+
+                    test_accuracy = self.mahalanobis_classification(indices_dtest, ovo_labels_test)
+                
+                data[i,j] = test_accuracy
+                #table_data[f'{i}'].append(test_accuracy)
+                #table_data['Accuracy'].append(test_accuracy)
+        
+        #table_df = pd.DataFrame(table_data)
+        table_df = pd.DataFrame(data, index = index_names, columns=column_names)
+        #import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
+        # plot heat with annotations of the value as well as formating to 2 decimal places
+
+          
+        sns.heatmap(table_df,annot=True,fmt=".2f")
+        plt.xlabel('Actual')
+        plt.ylabel('Predicted')
+        plt.title('One vs One Confusion Matrix')
+        plt.show()
+        ovo_filename = f'ovo_conf_matrix.png'
+        plt.savefig(ovo_filename,bbox_inches='tight')
+        wandb_ovo = f'One vs One Matrix'    
+        wandb.log({wandb_ovo:wandb.Image(ovo_filename)})
+        # Update the data table to selectively remove different tables of the data
+        row_values = [j for j in range(len(np.unique(labels_test)))]
+        #import ipdb; ipdb.set_trace()
+        updated_data = np.insert(data,0,values = row_values, axis=1)
+        column_names.insert(0,'Class') # Inplace operation
+        updated_table_df = pd.DataFrame(updated_data, columns=column_names)
+
+
+        table = wandb.Table(dataframe=updated_table_df)
+
+        wandb.log({"One Vs One": table})
+        
         return fpr95,auroc,aupr 
     
     def mahalanobis_classification(self,predictions, labels):
