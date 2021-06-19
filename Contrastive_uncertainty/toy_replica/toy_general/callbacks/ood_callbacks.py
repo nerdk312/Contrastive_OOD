@@ -83,7 +83,9 @@ class Mahalanobis_OOD(pl.Callback):
             np.copy(labels_train),
             num_classes)
 
-        self.mahalanobis_classification(indices_dtest, labels_test,f'Mahalanobis Classification: {self.vector_level}: {self.label_level}')
+        # Obtain score and plot the score
+        mahalanobis_test_accuracy = self.mahalanobis_classification(indices_dtest, labels_test)
+        wandb.log({f'Mahalanobis Classification: {self.vector_level}: {self.label_level}': mahalanobis_test_accuracy})
 
         # Calculates the mahalanobis distance using unsupervised approach
         # Plots the curve if during testing phase
@@ -92,12 +94,11 @@ class Mahalanobis_OOD(pl.Callback):
         return fpr95,auroc,aupr
 
     # Calaculates the accuracy of a data point based on the closest distance to a centroid
-    def mahalanobis_classification(self,predictions, labels, name):
+    def mahalanobis_classification(self,predictions, labels):
         predictions = torch.tensor(predictions,dtype = torch.long)
         labels = torch.tensor(labels,dtype = torch.long)
         mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
-        #import ipdb; ipdb.set_trace()       
-        wandb.log({name: mahalanobis_test_accuracy})
+        return mahalanobis_test_accuracy
 
     def get_features(self, pl_module, dataloader):
         features, labels = [], []
@@ -172,20 +173,10 @@ class Mahalanobis_OOD(pl.Callback):
         """
             None.
         """
-        #import ipdb; ipdb.set_trace()
-        # Nawid -normalise the featues for the training, test and ood data
-        # standardize data
-        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
-        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
-        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
-        # Nawid - calculate the mean and std of the traiing features
-        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
-        # Nawid - normalise data using the mean and std
-        ftrain = (ftrain - m) / (s + 1e-10)
-        ftest = (ftest - m) / (s + 1e-10)
-        food = (food - m) / (s + 1e-10)
+        ftrain_norm,ftest_norm,food_norm = self.normalise(ftrain,ftest,food)
         # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain)
+        
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
         self.log_confidence_scores(dtest,dood,num_clusters)
 
         # Nawid- get false postive rate and asweel as AUROC and aupr
@@ -198,6 +189,21 @@ class Mahalanobis_OOD(pl.Callback):
         
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
     
+    def normalise(self,ftrain,ftest,food):
+        # Nawid -normalise the featues for the training, test and ood data
+        # standardize data
+        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
+        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
+        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
+        # Nawid - calculate the mean and std of the traiing features
+        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
+        # Nawid - normalise data using the mean and std
+        ftrain = (ftrain - m) / (s + 1e-10)
+        ftest = (ftest - m) / (s + 1e-10)
+        food = (food - m) / (s + 1e-10)
+        
+        return ftrain, ftest,food
+
     # Changes OOD scores to confidence scores 
     def log_confidence_scores(self,Dtest,DOOD,num_clusters):  
         confidence_test = Dtest
@@ -287,7 +293,6 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
     def get_features(self, pl_module, dataloader):
         features, labels = [], []
         
-        total = 0
         loader = quickloading(self.quick_callback, dataloader)
         #import ipdb; ipdb.set_trace()
         for index, (img, *label,indices) in enumerate(loader):
@@ -431,24 +436,13 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         return dtest, collated_dood, indices_dtest, collated_indices_dood
 
 # One vs Rest mahalanobis
-class Mahalanobis_OvR(pl.Callback):
+class Mahalanobis_OvR(Mahalanobis_OOD):
     def __init__(self, Datamodule,OOD_Datamodule,
         vector_level:str = 'instance',
         label_level:str = 'fine',
         quick_callback:bool = True):
     
-        super().__init__()
-        self.Datamodule = Datamodule
-        self.OOD_Datamodule = OOD_Datamodule
-        self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
-        self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
-        self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
-        
-        # Chooses what vector representation to use as well as which level of label hierarchy to use
-        self.vector_level = vector_level
-        self.label_level = label_level
-        
-        self.OOD_dataname = self.OOD_Datamodule.name
+        super().__init__(Datamodule,OOD_Datamodule,vector_level,label_level,quick_callback)
 
     def on_validation_epoch_end(self, trainer, pl_module):
         pass
@@ -477,7 +471,6 @@ class Mahalanobis_OvR(pl.Callback):
             np.copy(features_ood),
             np.copy(labels_train))
         
-        
         table_data = {'Class vs Rest': [],'Accuracy': []}
 
         for i in range(len(np.unique(labels_test))):
@@ -499,105 +492,18 @@ class Mahalanobis_OvR(pl.Callback):
         table_df = pd.DataFrame(table_data)
     
         table = wandb.Table(dataframe=table_df)
-        wandb.log({"OVR": table})
+        wandb.log({"One Vs Rest": table})
         #import ipdb; ipdb.set_trace()
 
         return fpr95,auroc,aupr 
-    
-    def mahalanobis_classification(self,predictions, labels):
-        predictions = torch.tensor(predictions,dtype = torch.long)
-        labels = torch.tensor(labels,dtype = torch.long)
-        mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
-        return mahalanobis_test_accuracy
-
-    def get_features(self, pl_module, dataloader):
-        features, labels = [], []
-        
-        total = 0
-        loader = quickloading(self.quick_callback, dataloader)
-        #import ipdb; ipdb.set_trace()
-        for index, (img, *label,indices) in enumerate(loader):
-            assert len(loader)>0, 'loader is empty'
-            if isinstance(img, tuple) or isinstance(img, list):
-                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
-
-            # Selects the correct label based on the desired label level
-            if len(label) > 1:
-                label_index = self.vector_dict['label_level'][self.label_level]
-                label = label[label_index]
-            else: # Used for the case of the OOD data
-                label = label[0]
-                
-            
-            img = img.to(pl_module.device)
-            
-            # Compute feature vector and place in list
-            feature_vector = self.vector_dict['vector_level'][self.vector_level](img) # Performs the callback for the desired level
-            
-            features += list(feature_vector.data.cpu().numpy())
-            labels += list(label.data.cpu().numpy())
-            
-            
-        return np.array(features), np.array(labels)
-    
-    def get_scores(self,ftrain, ftest, food, ypred):
-        # Nawid - get all the features which belong to each of the different classes
-        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
-        
-        din = [
-            np.sum(
-                (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
-                * (
-                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
-                        (ftest - np.mean(x, axis=0, keepdims=True)).T
-                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
-                ).T,
-                axis=-1,
-            )
-            for x in xc # Nawid - done for all the different classes
-        ]
-        
-        dood = [
-            np.sum(
-                (food - np.mean(x, axis=0, keepdims=True))
-                * (
-                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
-                        (food - np.mean(x, axis=0, keepdims=True)).T
-                    )
-                ).T,
-                axis=-1,
-            )
-            for x in xc # Nawid- this calculates the score for all the OOD examples 
-        ]
-        # Calculate the indices corresponding to the values
-        indices_din = np.argmin(din,axis = 0)
-        indices_dood = np.argmin(dood, axis=0)
-
-        din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
-        dood = np.min(dood, axis=0)
-
-        return din, dood, indices_din, indices_dood
-    
-
-        
+          
     def get_eval_results(self,ftrain, ftest, food, labelstrain):
         """
             None.
         """
-        #import ipdb; ipdb.set_trace()
-        # Nawid -normalise the featues for the training, test and ood data
-        # standardize data
-        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
-        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
-        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
-        # Nawid - calculate the mean and std of the traiing features
-        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
-        # Nawid - normalise data using the mean and std
-        ftrain = (ftrain - m) / (s + 1e-10)
-        ftest = (ftest - m) / (s + 1e-10)
-        food = (food - m) / (s + 1e-10)
+        ftrain_norm, ftest_norm, food_norm= self.normalise(ftrain,ftest,food)
         # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain)
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
 
         # Nawid- get false postive rate and asweel as AUROC and aupr
         fpr95 = get_fpr(dtest, dood)
@@ -607,24 +513,13 @@ class Mahalanobis_OvR(pl.Callback):
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
     
 
-class Mahalanobis_OvO(pl.Callback):
+class Mahalanobis_OvO(Mahalanobis_OOD):
     def __init__(self, Datamodule,OOD_Datamodule,
         vector_level:str = 'instance',
         label_level:str = 'fine',
         quick_callback:bool = True):
     
-        super().__init__()
-        self.Datamodule = Datamodule
-        self.OOD_Datamodule = OOD_Datamodule
-        self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
-        self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
-        self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
-        
-        # Chooses what vector representation to use as well as which level of label hierarchy to use
-        self.vector_level = vector_level
-        self.label_level = label_level
-        
-        self.OOD_dataname = self.OOD_Datamodule.name
+        super().__init__(Datamodule,OOD_Datamodule,vector_level,label_level,quick_callback)
 
     def on_validation_epoch_end(self, trainer, pl_module):
         pass
@@ -647,66 +542,13 @@ class Mahalanobis_OvO(pl.Callback):
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
         
-        #table_data = {'Class vs Class': [],'Accuracy': []}
-        #import ipdb; ipdb.set_trace()
-        column_names = [f'{i}' for i in range(len(np.unique(labels_test)))]
-        '''
-        table_data = {i :[] for i in column_names}
-        for i in range(len(np.unique(labels_test))):
-            for j in range(len(np.unique(labels_test))):
-                if i == j: 
-                    pass
-                    test_accuracy = torch.tensor(100.0) 
-                else:
-                    #table_data['Class vs Class'].append(f'{i} vs {j}')
-                    train_mask = np.logical_or(labels_train == i, labels_train == j)
-                    ovo_labels_train = labels_train[train_mask]
-                    max_val = np.amax(ovo_labels_train)
-                    ovo_labels_train = ovo_labels_train == max_val # Change to boolean matrix (true and false / 1 and 0s)
-                    ovo_features_train =  features_train[train_mask]
-
-
-                    test_mask = np.logical_or(labels_test ==i, labels_test ==j)
-                    ovo_labels_test = labels_test[test_mask]
-                    ovo_labels_test = ovo_labels_test == max_val
-                    ovo_features_test = features_test[test_mask]
-                    ovo_features_ood = features_ood[0:32] # shorten the data of OOD as this is not actually important for the ovo classifier
-
-
-                    fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
-                    np.copy(ovo_features_train),
-                    np.copy(ovo_features_test),
-                    np.copy(ovo_features_ood),
-                    np.copy(ovo_labels_train))
-
-                    test_accuracy = self.mahalanobis_classification(indices_dtest, ovo_labels_test)
-                
-                table_data[f'{i}'].append(test_accuracy)
-                #table_data['Accuracy'].append(test_accuracy)
-        
-        table_df = pd.DataFrame(table_data)
-        df = table_df[1:] #take the data less the header row
-        import ipdb; ipdb.set_trace()
-        sns.heatmap(df)
-        plt.xlabel('Actual')
-        plt.ylabel('Predicted')
-        plt.title('One vs One Confusion Matrix')
-        plt.show()
-        table = wandb.Table(dataframe=table_df)
-
-        wandb.log({"One Vs One": table})
-        '''
-        
-
         column_names = [f'{i}' for i in range(len(np.unique(labels_test)))]
         index_names = [f'{i}' for i in range(len(np.unique(labels_test)))]
         data = np.zeros((len(index_names),len(column_names)))
 
-        table_data = {i :[] for i in column_names}
         for i in range(len(np.unique(labels_test))):
             for j in range(len(np.unique(labels_test))):
                 if i == j: 
-                    #pass
                     test_accuracy = torch.tensor(100.0) 
                 else:
                     #table_data['Class vs Class'].append(f'{i} vs {j}')
@@ -715,7 +557,6 @@ class Mahalanobis_OvO(pl.Callback):
                     max_val = np.amax(ovo_labels_train)
                     ovo_labels_train = ovo_labels_train == max_val # Change to boolean matrix (true and false / 1 and 0s)
                     ovo_features_train =  features_train[train_mask]
-
 
                     test_mask = np.logical_or(labels_test ==i, labels_test ==j)
                     ovo_labels_test = labels_test[test_mask]
@@ -735,112 +576,36 @@ class Mahalanobis_OvO(pl.Callback):
                 data[i,j] = test_accuracy
                 #table_data[f'{i}'].append(test_accuracy)
                 #table_data['Accuracy'].append(test_accuracy)
-        
-        #table_df = pd.DataFrame(table_data)
-        table_df = pd.DataFrame(data, index = index_names, columns=column_names)
-        #import ipdb; ipdb.set_trace()
-        #import ipdb; ipdb.set_trace()
-        # plot heat with annotations of the value as well as formating to 2 decimal places
+        data = np.around(data,decimals=1)
 
-          
-        sns.heatmap(table_df,annot=True,fmt=".2f")
+        table_df = pd.DataFrame(data, index = index_names, columns=column_names)
+        # plot heat with annotations of the value as well as formating to 2 decimal places          
+
+        # Choose whether to show annotations based on the number of examples present
+        if len(np.unique(labels_test)) >10: 
+            sns.heatmap(table_df,annot=False,fmt=".1f")
+        else:
+            sns.heatmap(table_df,annot=True,fmt=".1f")
+
         plt.xlabel('Actual')
         plt.ylabel('Predicted')
         plt.title('One vs One Confusion Matrix')
-        plt.show()
         ovo_filename = f'ovo_conf_matrix.png'
         plt.savefig(ovo_filename,bbox_inches='tight')
         wandb_ovo = f'One vs One Matrix'    
         wandb.log({wandb_ovo:wandb.Image(ovo_filename)})
         # Update the data table to selectively remove different tables of the data
         row_values = [j for j in range(len(np.unique(labels_test)))]
-        #import ipdb; ipdb.set_trace()
         updated_data = np.insert(data,0,values = row_values, axis=1)
         column_names.insert(0,'Class') # Inplace operation
         updated_table_df = pd.DataFrame(updated_data, columns=column_names)
 
-
         table = wandb.Table(dataframe=updated_table_df)
 
         wandb.log({"One Vs One": table})
-        
+        plt.close()
         return fpr95,auroc,aupr 
     
-    def mahalanobis_classification(self,predictions, labels):
-        predictions = torch.tensor(predictions,dtype = torch.long)
-        labels = torch.tensor(labels,dtype = torch.long)
-        mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
-        return mahalanobis_test_accuracy
-
-    def get_features(self, pl_module, dataloader):
-        features, labels = [], []
-        
-        total = 0
-        loader = quickloading(self.quick_callback, dataloader)
-        #import ipdb; ipdb.set_trace()
-        for index, (img, *label,indices) in enumerate(loader):
-            assert len(loader)>0, 'loader is empty'
-            if isinstance(img, tuple) or isinstance(img, list):
-                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
-
-            # Selects the correct label based on the desired label level
-            if len(label) > 1:
-                label_index = self.vector_dict['label_level'][self.label_level]
-                label = label[label_index]
-            else: # Used for the case of the OOD data
-                label = label[0]
-                
-            
-            img = img.to(pl_module.device)
-            
-            # Compute feature vector and place in list
-            feature_vector = self.vector_dict['vector_level'][self.vector_level](img) # Performs the callback for the desired level
-            
-            features += list(feature_vector.data.cpu().numpy())
-            labels += list(label.data.cpu().numpy())
-            
-            
-        return np.array(features), np.array(labels)
-    
-    def get_scores(self,ftrain, ftest, food, ypred):
-        # Nawid - get all the features which belong to each of the different classes
-        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
-        
-        din = [
-            np.sum(
-                (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
-                * (
-                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
-                        (ftest - np.mean(x, axis=0, keepdims=True)).T
-                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
-                ).T,
-                axis=-1,
-            )
-            for x in xc # Nawid - done for all the different classes
-        ]
-        
-        dood = [
-            np.sum(
-                (food - np.mean(x, axis=0, keepdims=True))
-                * (
-                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
-                        (food - np.mean(x, axis=0, keepdims=True)).T
-                    )
-                ).T,
-                axis=-1,
-            )
-            for x in xc # Nawid- this calculates the score for all the OOD examples 
-        ]
-        # Calculate the indices corresponding to the values
-        indices_din = np.argmin(din,axis = 0)
-        indices_dood = np.argmin(dood, axis=0)
-
-        din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
-        dood = np.min(dood, axis=0)
-
-        return din, dood, indices_din, indices_dood
-    
-
         
     def get_eval_results(self,ftrain, ftest, food, labelstrain):
         """
@@ -849,23 +614,13 @@ class Mahalanobis_OvO(pl.Callback):
         #import ipdb; ipdb.set_trace()
         # Nawid -normalise the featues for the training, test and ood data
         # standardize data
-        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
-        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
-        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
-        # Nawid - calculate the mean and std of the traiing features
-        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
-        # Nawid - normalise data using the mean and std
-        ftrain = (ftrain - m) / (s + 1e-10)
-        ftest = (ftest - m) / (s + 1e-10)
-        food = (food - m) / (s + 1e-10)
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
         # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain)
-
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
         # Nawid- get false postive rate and asweel as AUROC and aupr
         fpr95 = get_fpr(dtest, dood)
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
 
-        
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
 
 def get_roc_sklearn(xin, xood):
