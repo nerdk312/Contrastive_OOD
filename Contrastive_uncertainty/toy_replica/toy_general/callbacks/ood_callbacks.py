@@ -492,7 +492,7 @@ class Mahalanobis_OvR(Mahalanobis_OOD):
         table_df = pd.DataFrame(table_data)
     
         table = wandb.Table(dataframe=table_df)
-        wandb.log({"One Vs Rest": table})
+        wandb.log({"Mahalanobis One Vs Rest": table})
         #import ipdb; ipdb.set_trace()
 
         return fpr95,auroc,aupr 
@@ -592,7 +592,7 @@ class Mahalanobis_OvO(Mahalanobis_OOD):
         plt.title('One vs One Confusion Matrix')
         ovo_filename = f'ovo_conf_matrix.png'
         plt.savefig(ovo_filename,bbox_inches='tight')
-        wandb_ovo = f'One vs One Matrix'    
+        wandb_ovo = f'Mahalanobis One vs One Matrix'    
         wandb.log({wandb_ovo:wandb.Image(ovo_filename)})
         # Update the data table to selectively remove different tables of the data
         row_values = [j for j in range(len(np.unique(labels_test)))]
@@ -602,7 +602,8 @@ class Mahalanobis_OvO(Mahalanobis_OOD):
 
         table = wandb.Table(dataframe=updated_table_df)
 
-        wandb.log({"One Vs One": table})
+        wandb.log({"Mahalanobis One Vs One": table})
+        # NEED TO CLOSE OTHERWISE WILL HAVE OVERLAPPING MATRICES SAVED IN WANDB
         plt.close()
         return fpr95,auroc,aupr 
     

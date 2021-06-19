@@ -1,5 +1,6 @@
 import ipdb
 from numpy.lib.function_base import quantile
+from pandas.io.formats.format import DataFrameFormatter
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -22,7 +23,9 @@ from sklearn.metrics import roc_auc_score
 
 from Contrastive_uncertainty.toy_replica.toy_general.utils.hybrid_utils import OOD_conf_matrix
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.general_callbacks import quickloading
+from Contrastive_uncertainty.toy_replica.toy_general.callbacks.ood_callbacks import get_roc_sklearn, get_roc_plot
 from Contrastive_uncertainty.toy_replica.toy_general.utils.pl_metrics import precision_at_k, mean
+
 
 class Typicality(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
@@ -72,7 +75,7 @@ class Typicality(pl.Callback):
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         
         # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
-        fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
+        self.get_eval_results(
             np.copy(features_train),
             np.copy(features_val),
             np.copy(features_test),
@@ -80,9 +83,8 @@ class Typicality(pl.Callback):
             np.copy(labels_train),
             np.copy(labels_val),
             np.copy(labels_test))
-
-        
-        return fpr95,auroc,aupr
+        #fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood =
+        #return fpr95,auroc,aupr
 
     def get_features(self, pl_module, dataloader):
         features, labels = [], []
@@ -365,9 +367,39 @@ class Typicality(pl.Callback):
         class_means, class_cov,class_entropy, class_quantile_thresholds = self.get_offline_thresholds(ftrain, fval,labelstrain,labelsval,50,25)
         #def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
         #import ipdb; ipdb.set_trace()
-        self.get_online_test_thresholds(class_means,class_cov,class_entropy,ftest,labels_test, 25)
-        self.get_online_test_ood_thresholds(class_means,class_cov,class_entropy,ftest,labels_test, 25)
-        self.get_online_ood_thresholds(class_means, class_cov,class_entropy, food, 25)
+        # Class conditional thresholds for the correct class
+        test_thresholds = self.get_online_test_thresholds(class_means,class_cov,class_entropy,ftest,labels_test, 25)
+        
+        # Class conditional thresholds using the incorrect class for the ID test data
+        test_ood_thresholds = self.get_online_test_ood_thresholds(class_means,class_cov,class_entropy,ftest,labels_test, 25)
+        # Class conditional thresholds using OOD test data
+        #ood_thresholds = self.get_online_ood_thresholds(class_means, class_cov,class_entropy, food, 25)
+        
+        table_data = {'Class vs Rest': [],'AUROC': []}
+        for class_num in range(len(test_thresholds)):
+            table_data['Class vs Rest'].append(class_num)
+            class_auroc = get_roc_sklearn(test_thresholds[class_num], test_ood_thresholds[class_num])
+            table_data['AUROC'].append(class_auroc)
 
-    
-    
+        table_df = pd.DataFrame(table_data)
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({"Typicality One Vs Rest": table})
+        
+        # Data plotting
+        fig, ax = plt.subplots()
+        # hide axes
+        fig.patch.set_visible(False)
+        ax.axis('off')
+        ax.axis('tight')
+        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
+        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+        data_table.set_fontsize(24)
+        data_table.scale(2.0, 2.0)  # may help
+        #fig.tight_layout()
+        Typicality_ovr_filename = f'Images/Typicality_OVR.png'
+        plt.savefig(Typicality_ovr_filename,bbox_inches='tight')
+        Typicality_ovr = f'Typicality One vs Rest'
+        wandb.log({Typicality_ovr:wandb.Image(Typicality_ovr_filename)})
+        plt.close()            
+                   
+        
