@@ -296,10 +296,13 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         # Collate all the OOD features for the different OOD datamodules
         for i in range(len(self.OOD_Datamodules)):
             ood_loader = self.OOD_Datamodules[i].test_dataloader()
+            # Get features for a particular OOD module
             features_ood, _ = self.get_features(pl_module,ood_loader)
+            # Collate all the features together
             collated_features_ood.append(features_ood)
         #import ipdb; ipdb.set_trace()
         # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
+        
         dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
@@ -341,6 +344,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
         #import ipdb; ipdb.set_trace()
+        # Obtain scores for the training data 
         dtrain = [
             np.sum(
                 (ftrain - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
@@ -354,6 +358,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
             for x in xc # Nawid - done for all the different classes
         ]
         #import ipdb; ipdb.set_trace()
+        # Obtain scores for the testing data
         din = [
             np.sum(
                 (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
@@ -370,6 +375,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         collated_dood = []
         collated_indices_dood = []
         for i in range(len(self.OOD_Datamodules)):
+            # Go through all the data loaders
             dood = [
                 np.sum(
                     (food[i] - np.mean(x, axis=0, keepdims=True))
@@ -383,17 +389,18 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
                 for x in xc # Nawid- this calculates the score for all the OOD examples 
             ]
             #import ipdb; ipdb.set_trace()
+            # Obtain the indices and the scores corresponding to the lowest values
             indices_dood = np.argmin(dood, axis=0)
             dood = np.min(dood, axis=0)
             
             collated_dood.append(dood)
             collated_indices_dood.append(indices_dood)
 
-        # Calculate the indices corresponding to the values
+        # Calculate the indices corresponding to the values for the training and the testing data
         indices_dtrain = np.argmin(dtrain,axis=0)
         indices_din = np.argmin(din,axis = 0)
     
-
+        # Calculate the indices for the training and the testing data
         din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
         dtrain = np.min(dtrain,axis=0) # caclulates the min distance for the train dataset
 
@@ -424,6 +431,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         for i in range(len(self.OOD_Datamodules)):
             food[i] /= np.linalg.norm(food[i], axis=-1, keepdims=True) + 1e-10
             food[i] = (food[i] - m) / (s + 1e-10)
+            # Add the names of all the data modules to the dict
             dataset_names.append(self.OOD_Datamodules[i].name)
 
             
@@ -437,6 +445,7 @@ class Mahalanobis_OOD_Datasets(pl.Callback):
         # Make a dictionary which contains the names and the mappings which I pass into the sns function
         collated_dict = {}
         num_bins = 50
+        # Update the collated_dict with all the data
         for i in range(len(collated_data)):
             collated_dict.update({dataset_names[i]:collated_data[i]})
         data_label = 'Datasets'
@@ -1005,7 +1014,7 @@ def get_roc_plot(xin, xood,OOD_name):
     plt.savefig(ROC_filename)
     wandb_ROC = f'ROC curve: OOD dataset {OOD_name}'
     wandb.log({wandb_ROC:wandb.Image(ROC_filename)})
-
+    
     '''
     wandb.log({f'ROC_{OOD_name}': wandb.plot.roc_curve(anomaly_targets, outputs,#scores,
                         labels=None, classes_to_plot=None)})

@@ -624,6 +624,136 @@ class Mahalanobis_OvO(Mahalanobis_OOD):
 
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
 
+
+class Mahalanobis_Subsample(Mahalanobis_OOD):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        vector_level:str = 'fine',
+        label_level:str = 'fine',
+        quick_callback:bool = True,
+        bootstrap_num: int = 10):
+    
+        super().__init__(Datamodule,OOD_Datamodule,vector_level,label_level,quick_callback)
+        
+        # Get the number of coarse classes
+        self.num_coarse = self.Datamodule.num_coarse_classes
+        # Number of times to bootstrap sample the data
+        self.bootstrap_num = bootstrap_num
+
+    def on_validation_epoch_end(self, trainer, pl_module):
+        pass
+
+    def on_test_epoch_end(self, trainer, pl_module):
+        self.forward_callback(trainer,pl_module)
+
+    # Performs all the computation in the callback
+    def forward_callback(self, trainer, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}} 
+        
+        train_loader = self.Datamodule.train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+        
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_features(pl_module, test_loader)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
+        
+        column_names = [f'{i}' for i in range(len(np.unique(labels_test)))]
+        index_names = [f'{i}' for i in range(len(np.unique(labels_test)))]
+        data = np.zeros((len(index_names),len(column_names)))
+
+        classes_available = len(np.unique(labels_train))
+        for i in range(self.bootstrap_num):
+            specific_classes = np.random.choice(classes_available, size=self.num_coarse, replace=False)
+            class_masks = [labels_train==specific_class for specific_class in specific_classes]
+            train_mask = np.sum(class_masks,axis=0) > 0 
+            specific_labels_train = labels_train[train_mask]
+            specific_features_train =  features_train[train_mask]
+
+            import ipdb; ipdb.set_trace()
+
+            #for specific_class in specific_classes:                
+            #class_mask = labels_train==specific_class
+
+        for i in range(len(np.unique(labels_test))):
+            for j in range(len(np.unique(labels_test))):
+                if i == j: 
+                    test_accuracy = torch.tensor(100.0) 
+                else:
+                    #table_data['Class vs Class'].append(f'{i} vs {j}')
+                    train_mask = np.logical_or(labels_train == i, labels_train == j)
+                    ovo_labels_train = labels_train[train_mask]
+                    max_val = np.amax(ovo_labels_train)
+                    ovo_labels_train = ovo_labels_train == max_val # Change to boolean matrix (true and false / 1 and 0s)
+                    ovo_features_train =  features_train[train_mask]
+
+                    test_mask = np.logical_or(labels_test ==i, labels_test ==j)
+                    ovo_labels_test = labels_test[test_mask]
+                    ovo_labels_test = ovo_labels_test == max_val
+                    ovo_features_test = features_test[test_mask]
+                    ovo_features_ood = features_ood[0:32] # shorten the data of OOD as this is not actually important for the ovo classifier
+
+
+                    fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
+                    np.copy(ovo_features_train),
+                    np.copy(ovo_features_test),
+                    np.copy(ovo_features_ood),
+                    np.copy(ovo_labels_train))
+
+                    test_accuracy = self.mahalanobis_classification(indices_dtest, ovo_labels_test)
+                
+                data[i,j] = test_accuracy
+                #table_data[f'{i}'].append(test_accuracy)
+                #table_data['Accuracy'].append(test_accuracy)
+        data = np.around(data,decimals=1)
+
+        table_df = pd.DataFrame(data, index = index_names, columns=column_names)
+        # plot heat with annotations of the value as well as formating to 2 decimal places          
+
+        # Choose whether to show annotations based on the number of examples present
+        if len(np.unique(labels_test)) >10: 
+            sns.heatmap(table_df,annot=False,fmt=".1f")
+        else:
+            sns.heatmap(table_df,annot=True,fmt=".1f")
+
+        plt.xlabel('Actual')
+        plt.ylabel('Predicted')
+        plt.title('Mahalanobis One vs One Confusion Matrix')
+        ovo_filename = f'ovo_conf_matrix.png'
+        plt.savefig(ovo_filename,bbox_inches='tight')
+        wandb_ovo = f'Mahalanobis One vs One Matrix'    
+        wandb.log({wandb_ovo:wandb.Image(ovo_filename)})
+        # Update the data table to selectively remove different tables of the data
+        row_values = [j for j in range(len(np.unique(labels_test)))]
+        updated_data = np.insert(data,0,values = row_values, axis=1)
+        column_names.insert(0,'Class') # Inplace operation
+        updated_table_df = pd.DataFrame(updated_data, columns=column_names)
+
+        table = wandb.Table(dataframe=updated_table_df)
+
+        wandb.log({"Mahalanobis One Vs One": table})
+        # NEED TO CLOSE OTHERWISE WILL HAVE OVERLAPPING MATRICES SAVED IN WANDB
+        plt.close()
+        return fpr95,auroc,aupr 
+    
+        
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        """
+            None.
+        """
+        #import ipdb; ipdb.set_trace()
+        # Nawid -normalise the featues for the training, test and ood data
+        # standardize data
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        # Nawid- get false postive rate and asweel as AUROC and aupr
+        fpr95 = get_fpr(dtest, dood)
+        auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
+
+        return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
+
 def get_roc_sklearn(xin, xood):
     labels = [0] * len(xin)  + [1] * len(xood)
     data = np.concatenate((xin, xood))
@@ -678,9 +808,10 @@ def count_histogram(input_data,num_bins,name):
     plt.title(f'Mahalanobis Distance Counts {name}')
     histogram_filename = f'Images/Mahalanobis_distance_counts_{name}.png'
     plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+    plt.close()
     wandb_distance = f'Mahalanobis Distance Counts {name}'
     wandb.log({wandb_distance:wandb.Image(histogram_filename)})
-    plt.close()
+    
 
 def probability_histogram(input_data,num_bins,name):
     sns.displot(data = input_data,multiple ='stack',stat ='probability',common_norm=False, bins=num_bins)#,kde =True)
@@ -692,11 +823,10 @@ def probability_histogram(input_data,num_bins,name):
     plt.title(f'Mahalanobis Distance Probabilities {name}')
     histogram_filename = f'Images/Mahalanobis_distances_probabilities_{name}.png'
     plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+    plt.close()
     wandb_distance = f'Mahalanobis Distance Probabilities {name}'
     wandb.log({wandb_distance:wandb.Image(histogram_filename)})
-    plt.close()
-
-
+    
 def kde_plot(input_data,name):
     sns.displot(data =input_data,fill=False,common_norm=False,kind='kde')
     plt.xlabel('Distance')
@@ -705,12 +835,10 @@ def kde_plot(input_data,name):
     plt.title(f'Mahalanobis Distances {name}')
     kde_filename = f'Images/Mahalanobis_distances_kde_{name}.png'
     plt.savefig(kde_filename,bbox_inches='tight')
+    plt.close()
     wandb_distance = f'Mahalanobis Distance KDE {name}'
     wandb.log({wandb_distance:wandb.Image(kde_filename)})
-    plt.close()
-
-
-
+    
 def pairwise_saving(collated_data,dataset_names,num_bins,ref_index):
     table_data = {'Dataset':[],'Count Absolute Deviation':[],'Prob Absolute Deviation':[],'KL (Nats)':[], 'JS (Nats)':[],'KS':[]}
     # Calculates the values in a pairwise 
@@ -773,6 +901,7 @@ def pairwise_saving(collated_data,dataset_names,num_bins,ref_index):
     #fig.tight_layout()
     dist_statistics_filename = f'Images/{ref}_distance_statistics.png'
     plt.savefig(dist_statistics_filename,bbox_inches='tight')
+    plt.close()
     wandb_distance_statistics = f'Mahalanobis Distance {ref} Statistics'
     wandb.log({wandb_distance_statistics:wandb.Image(dist_statistics_filename)})
-    plt.close()
+    

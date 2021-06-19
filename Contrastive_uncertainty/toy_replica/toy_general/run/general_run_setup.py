@@ -1,8 +1,10 @@
 from pytorch_lightning import callbacks
 from re import search
 
+from pytorch_lightning.core import datamodule
+
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.general_callbacks import ModelSaving, MMD_distance
-from Contrastive_uncertainty.toy_replica.toy_general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvR, Mahalanobis_OvO
+from Contrastive_uncertainty.toy_replica.toy_general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvR, Mahalanobis_OvO, Mahalanobis_Subsample
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.experimental_ood_callbacks import Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
@@ -61,7 +63,8 @@ def callback_dictionary(Datamodule,config):
                 f'Typicality_OVR_{ood_dataset}': Typicality_OVR(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'Typicality_OVO_{ood_dataset}': Typicality_OVO(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
-                f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)}
+                f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
+                f'Mahalanobis Subsample': Mahalanobis_Subsample(Datamodule, OOD_Datamodule, vector_level='fine', label_level='fine', quick_callback=quick_callback)}
         #import ipdb; ipdb.set_trace()
         callback_dict.update(OOD_callback)
         Collated_OOD_datamodules.append(OOD_Datamodule)
