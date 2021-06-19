@@ -27,7 +27,7 @@ from Contrastive_uncertainty.toy_replica.toy_general.callbacks.ood_callbacks imp
 from Contrastive_uncertainty.toy_replica.toy_general.utils.pl_metrics import precision_at_k, mean
 
 
-class Typicality(pl.Callback):
+class Typicality_OVR(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
         vector_level:str = 'instance',
         label_level:str = 'fine',
@@ -41,16 +41,17 @@ class Typicality(pl.Callback):
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
         
        
-        
         # Chooses what vector representation to use as well as which level of label hierarchy to use
         self.vector_level = vector_level
         self.label_level = label_level
         
         self.OOD_dataname = self.OOD_Datamodule.name
     
+    '''
     def on_validation_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
-    
+    '''
+
     def on_test_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
 
@@ -208,24 +209,6 @@ class Typicality(pl.Callback):
             test_ood_thresholds.append(class_test_ood_thresholds)
 
         return test_ood_thresholds
-    
-    def get_ovo_test_ood_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
-        test_ood_thresholds = []
-
-        xtest_c = [ftest[ytest == i] for i in np.unique(ytest)]
-
-        for j in range(len(np.unique(ytest))):
-            ovo_ood_thresholds = []
-            for k in range(len(np.unique(ytest))):
-                # Gives comparison between class j and class k
-                
-                class_test_ood_thresholds = self.get_class_thresholds(xtest_c[k], batch_size, means[j], cov[j],entropy[j])
-                # ovo is a list of lists
-                ovo_ood_thresholds.append(class_test_ood_thresholds)
-            # test_ood_thresholds is a list of lists of lists which contains all the values
-            test_ood_thresholds.append(ovo_ood_thresholds)
-
-        return test_ood_thresholds
 
    
     def get_online_ood_thresholds(self, means, cov, entropy, food, batch_size):
@@ -294,6 +277,72 @@ class Typicality(pl.Callback):
         # Class conditional thresholds for the correct class
         
         test_thresholds = self.get_online_test_thresholds(class_means,class_cov,class_entropy,ftest_norm,labels_test, 25)
+        # Class conditional thresholds using the incorrect class for the ID test data
+        test_ood_thresholds = self.get_online_test_ood_thresholds(class_means,class_cov,class_entropy,ftest_norm,labels_test, 25)
+        # Class conditional thresholds using OOD test data
+        ood_thresholds = self.get_online_ood_thresholds(class_means, class_cov,class_entropy, food_norm, 25)
+        
+        table_data = {'Class vs Rest': [],'AUROC': []}
+        for class_num in range(len(test_thresholds)):
+            table_data['Class vs Rest'].append(class_num)
+            class_auroc = get_roc_sklearn(test_thresholds[class_num], test_ood_thresholds[class_num])
+            table_data['AUROC'].append(class_auroc)
+
+        table_df = pd.DataFrame(table_data)
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({"Typicality One Vs Rest": table})
+        
+        # Data plotting
+        fig, ax = plt.subplots()
+        # hide axes
+        fig.patch.set_visible(False)
+        ax.axis('off')
+        ax.axis('tight')
+        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
+        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+        data_table.set_fontsize(24)
+        data_table.scale(2.0, 2.0)  # may help
+        #fig.tight_layout()
+        Typicality_ovr_filename = f'Images/Typicality_OVR.png'
+        plt.savefig(Typicality_ovr_filename,bbox_inches='tight')
+        Typicality_ovr = f'Typicality One vs Rest'
+        wandb.log({Typicality_ovr:wandb.Image(Typicality_ovr_filename)})
+        plt.close()
+
+class Typicality_OVO(Typicality_OVR):
+    def __init__(self, Datamodule, OOD_Datamodule, vector_level: str, label_level: str, quick_callback: bool):
+        super().__init__(Datamodule, OOD_Datamodule, vector_level=vector_level, label_level=label_level, quick_callback=quick_callback)
+    
+    def get_ovo_test_ood_thresholds(self, means, cov, entropy, ftest, ytest, batch_size):
+        test_ood_thresholds = []
+
+        xtest_c = [ftest[ytest == i] for i in np.unique(ytest)]
+
+        for j in range(len(np.unique(ytest))):
+            ovo_ood_thresholds = []
+            for k in range(len(np.unique(ytest))):
+                # Gives comparison between class j and class k
+                
+                class_test_ood_thresholds = self.get_class_thresholds(xtest_c[k], batch_size, means[j], cov[j],entropy[j])
+                # ovo is a list of lists
+                ovo_ood_thresholds.append(class_test_ood_thresholds)
+            # test_ood_thresholds is a list of lists of lists which contains all the values
+            test_ood_thresholds.append(ovo_ood_thresholds)
+
+        return test_ood_thresholds
+    
+    def get_eval_results(self, ftrain,fval, ftest, food, labelstrain, labelsval,labels_test):
+        """
+            None.
+        """
+        #import ipdb; ipdb.set_trace()
+        
+        # Nawid - obtain the scores for the test data and the OOD data
+        ftrain_norm, fval_norm, ftest_norm, food_norm = self.normalise(ftrain, fval, ftest, food)
+        class_means, class_cov,class_entropy, class_quantile_thresholds = self.get_offline_thresholds(ftrain_norm, fval_norm, labelstrain, labelsval,50,25)
+        # Class conditional thresholds for the correct class
+        
+        test_thresholds = self.get_online_test_thresholds(class_means,class_cov,class_entropy,ftest_norm,labels_test, 25)
         ovo_test_thresholds = self.get_ovo_test_ood_thresholds(class_means,class_cov,class_entropy,ftest_norm,labels_test, 25)
 
         column_names = [f'{i}' for i in range(len(np.unique(labels_test)))]
@@ -333,42 +382,3 @@ class Typicality(pl.Callback):
         wandb.log({"Typicality One Vs One": table})
         # NEED TO CLOSE OTHERWISE WILL HAVE OVERLAPPING MATRICES SAVED IN WANDB
         plt.close()
-
-
-        
-        
-        '''
-        # Class conditional thresholds using the incorrect class for the ID test data
-        test_ood_thresholds = self.get_online_test_ood_thresholds(class_means,class_cov,class_entropy,ftest_norm,labels_test, 25)
-        # Class conditional thresholds using OOD test data
-        ood_thresholds = self.get_online_ood_thresholds(class_means, class_cov,class_entropy, food_norm, 25)
-        
-        table_data = {'Class vs Rest': [],'AUROC': []}
-        for class_num in range(len(test_thresholds)):
-            table_data['Class vs Rest'].append(class_num)
-            class_auroc = get_roc_sklearn(test_thresholds[class_num], test_ood_thresholds[class_num])
-            table_data['AUROC'].append(class_auroc)
-
-        table_df = pd.DataFrame(table_data)
-        table = wandb.Table(dataframe=table_df)
-        wandb.log({"Typicality One Vs Rest": table})
-        
-        # Data plotting
-        fig, ax = plt.subplots()
-        # hide axes
-        fig.patch.set_visible(False)
-        ax.axis('off')
-        ax.axis('tight')
-        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
-        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
-        data_table.set_fontsize(24)
-        data_table.scale(2.0, 2.0)  # may help
-        #fig.tight_layout()
-        Typicality_ovr_filename = f'Images/Typicality_OVR.png'
-        plt.savefig(Typicality_ovr_filename,bbox_inches='tight')
-        Typicality_ovr = f'Typicality One vs Rest'
-        wandb.log({Typicality_ovr:wandb.Image(Typicality_ovr_filename)})
-        plt.close()
-        '''
-
-        

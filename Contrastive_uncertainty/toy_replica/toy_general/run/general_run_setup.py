@@ -1,5 +1,4 @@
 from pytorch_lightning import callbacks
-from Contrastive_uncertainty.toy_replica.toy_general.callbacks.typicality_ood_callback import Typicality
 from re import search
 
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.general_callbacks import ModelSaving, MMD_distance
@@ -8,7 +7,7 @@ from Contrastive_uncertainty.toy_replica.toy_general.callbacks.experimental_ood_
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.variational_callback import Variational
-from Contrastive_uncertainty.toy_replica.toy_general.callbacks.typicality_ood_callback import Typicality
+from Contrastive_uncertainty.toy_replica.toy_general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO
 from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict
 
 def train_run_name(model_name, config, group=None):
@@ -59,7 +58,8 @@ def callback_dictionary(Datamodule,config):
         OOD_callback = {f'Mahalanobis_instance_fine_{ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
                 f'Aggregated {ood_dataset}': Aggregated_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Differing {ood_dataset}': Differing_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
-                f'Typicality_{ood_dataset}': Typicality(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
+                f'Typicality_OVR_{ood_dataset}': Typicality_OVR(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
+                f'Typicality_OVO_{ood_dataset}': Typicality_OVO(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)}
         #import ipdb; ipdb.set_trace()
@@ -67,6 +67,7 @@ def callback_dictionary(Datamodule,config):
         Collated_OOD_datamodules.append(OOD_Datamodule)
     callback_dict.update({'OOD_Dataset_distances': Mahalanobis_OOD_Datasets(Datamodule, Collated_OOD_datamodules, quick_callback=quick_callback)})
     return callback_dict
+
 
 def specific_callbacks(callback_dict, names):
     desired_callbacks = []
@@ -80,7 +81,4 @@ def specific_callbacks(callback_dict, names):
                 desired_callbacks.append(callback_dict[key]) # Add the specific callback
     
     return desired_callbacks
-
-
-
 
