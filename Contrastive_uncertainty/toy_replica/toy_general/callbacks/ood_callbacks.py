@@ -589,7 +589,7 @@ class Mahalanobis_OvO(Mahalanobis_OOD):
 
         plt.xlabel('Actual')
         plt.ylabel('Predicted')
-        plt.title('One vs One Confusion Matrix')
+        plt.title('Mahalanobis One vs One Confusion Matrix')
         ovo_filename = f'ovo_conf_matrix.png'
         plt.savefig(ovo_filename,bbox_inches='tight')
         wandb_ovo = f'Mahalanobis One vs One Matrix'    
