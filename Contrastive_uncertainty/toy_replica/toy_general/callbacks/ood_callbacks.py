@@ -664,86 +664,67 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
         data = np.zeros((len(index_names),len(column_names)))
 
         classes_available = len(np.unique(labels_train))
+        accuracy_values = []
         for i in range(self.bootstrap_num):
-            specific_classes = np.random.choice(classes_available, size=self.num_coarse, replace=False)
-            class_masks = [labels_train==specific_class for specific_class in specific_classes]
-            train_mask = np.sum(class_masks,axis=0) > 0 
-            specific_labels_train = labels_train[train_mask]
-            specific_features_train =  features_train[train_mask]
+            specific_classes = np.random.choice(classes_available, size=self.num_coarse, replace=False) # Obtain a sub sample of values
+            class_train_masks = [labels_train==specific_class for specific_class in specific_classes] # Obtain masks for class
+            train_mask = np.sum(class_train_masks,axis=0) > 0 # Make a joint mask for all te different masks
+            specific_labels_train = labels_train[train_mask] # Obtain labels for the different data points
+            specific_features_train =  features_train[train_mask] # Nawid - 
+            # Test data            
+            class_test_masks = [labels_test==specific_class for specific_class in specific_classes]
+            test_mask = np.sum(class_test_masks,axis=0) > 0
+            specific_labels_test = labels_test[test_mask]
+            specific_features_test = features_test[test_mask]
+
             # Sort the values for the specific class
             sorted_classes = sorted(specific_classes)
+            
+            features_ood = features_ood[0:32] # shorten the data of OOD as this is not actually important for the ovo classifier
             # Map the subsamples labels to values between 0 and n where n is the number of coarse labels used 
             for j in range(len(specific_classes)):
                 specific_labels_train[specific_features_train == sorted_classes[j]] = j
-
-
-            import ipdb; ipdb.set_trace()
-
-            #for specific_class in specific_classes:                
-            #class_mask = labels_train==specific_class
-        '''
-        for i in range(len(np.unique(labels_test))):
-            for j in range(len(np.unique(labels_test))):
-                if i == j: 
-                    test_accuracy = torch.tensor(100.0) 
-                else:
-                    #table_data['Class vs Class'].append(f'{i} vs {j}')
-                    train_mask = np.logical_or(labels_train == i, labels_train == j)
-                    ovo_labels_train = labels_train[train_mask]
-                    max_val = np.amax(ovo_labels_train)
-                    ovo_labels_train = ovo_labels_train == max_val # Change to boolean matrix (true and false / 1 and 0s)
-                    ovo_features_train =  features_train[train_mask]
-
-                    test_mask = np.logical_or(labels_test ==i, labels_test ==j)
-                    ovo_labels_test = labels_test[test_mask]
-                    ovo_labels_test = ovo_labels_test == max_val
-                    ovo_features_test = features_test[test_mask]
-                    ovo_features_ood = features_ood[0:32] # shorten the data of OOD as this is not actually important for the ovo classifier
-
-
-                    fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
-                    np.copy(ovo_features_train),
-                    np.copy(ovo_features_test),
-                    np.copy(ovo_features_ood),
-                    np.copy(ovo_labels_train))
-
-                    test_accuracy = self.mahalanobis_classification(indices_dtest, ovo_labels_test)
+                specific_labels_test[specific_labels_test == sorted_classes[j]] = j 
                 
-                data[i,j] = test_accuracy
-                #table_data[f'{i}'].append(test_accuracy)
-                #table_data['Accuracy'].append(test_accuracy)
-        data = np.around(data,decimals=1)
+            fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
+                    np.copy(specific_labels_train),
+                    np.copy(specific_features_test),
+                    np.copy(features_ood),
+                    np.copy(specific_features_train))
 
-        table_df = pd.DataFrame(data, index = index_names, columns=column_names)
-        # plot heat with annotations of the value as well as formating to 2 decimal places          
-
-        # Choose whether to show annotations based on the number of examples present
-        if len(np.unique(labels_test)) >10: 
-            sns.heatmap(table_df,annot=False,fmt=".1f")
-        else:
-            sns.heatmap(table_df,annot=True,fmt=".1f")
-
-        plt.xlabel('Actual')
-        plt.ylabel('Predicted')
-        plt.title('Mahalanobis One vs One Confusion Matrix')
-        ovo_filename = f'ovo_conf_matrix.png'
-        plt.savefig(ovo_filename,bbox_inches='tight')
-        wandb_ovo = f'Mahalanobis One vs One Matrix'    
-        wandb.log({wandb_ovo:wandb.Image(ovo_filename)})
-        # Update the data table to selectively remove different tables of the data
-        row_values = [j for j in range(len(np.unique(labels_test)))]
-        updated_data = np.insert(data,0,values = row_values, axis=1)
-        column_names.insert(0,'Class') # Inplace operation
-        updated_table_df = pd.DataFrame(updated_data, columns=column_names)
-
-        table = wandb.Table(dataframe=updated_table_df)
-
-        wandb.log({"Mahalanobis One Vs One": table})
-        # NEED TO CLOSE OTHERWISE WILL HAVE OVERLAPPING MATRICES SAVED IN WANDB
-        plt.close()
+            test_accuracy = self.mahalanobis_classification(indices_dtest, specific_labels_test)
+            accuracy_values.append(test_accuracy)
         
-        return fpr95,auroc,aupr 
-        '''
+        
+        # Calculate statistics related to the value
+        table_data = {'Mean':[],'Std':[],'Min':[], 'Max':[]}
+        table_data['Mean'].append(statistics.mean(accuracy_values))
+        table_data['Std'].append(statistics.stdev(accuracy_values))
+        table_data['Min'].append(min(accuracy_values))
+        table_data['Max'].append(max(accuracy_values))
+
+        table_df = pd.DataFrame(table_data)
+        
+        # Save data tbale for the specific case
+        fig, ax = plt.subplots()
+        # hide axes
+        fig.patch.set_visible(False)
+        ax.axis('off')
+        ax.axis('tight')
+        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
+        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+        data_table.set_fontsize(24)
+        data_table.scale(2.0, 2.0)  # may help
+        #fig.tight_layout()
+        fine_grain_sampling_filename = f'Images/{ref}_fine_grain_sampling_classification.png'
+        plt.savefig(fine_grain_sampling_filename,bbox_inches='tight')
+        plt.close()
+
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({"Fine grain subsampling": table})
+
+        # NEED TO CLOSE OTHERWISE WILL HAVE OVERLAPPING MATRICES SAVED IN WANDB
+        
         
     def get_eval_results(self,ftrain, ftest, food, labelstrain):
         """
