@@ -3,6 +3,8 @@ trainer_hparams = dict(
 # Miscellaneous arguments
 seed = 26,
 epochs = 1,
+bsz = 64,
+
 # Trainer configurations
 fast_run = False,
 quick_callback = True,

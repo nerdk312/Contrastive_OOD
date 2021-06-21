@@ -1,7 +1,8 @@
 trainer_hparams = dict(
 # Miscellaneous arguments
 seed = 26,
-epochs = 2,
+epochs = 1,
+bsz = 64,
 # Trainer configurations
 fast_run = False,
 quick_callback = False,
@@ -13,7 +14,7 @@ val_check = 1,  # evaluation, Moco_training
 #OOD_dataset = ['MNIST','KMNIST','EMNIST'],
 #callbacks = ['Mahalanobis','Dataset_distances'],
 #callbacks = ['Hierarchical'],
-callbacks = ['Dataset_distances'],
+callbacks = ['Dataset_distances','classification'],
 
 #callbacks =['Variational'],
 )

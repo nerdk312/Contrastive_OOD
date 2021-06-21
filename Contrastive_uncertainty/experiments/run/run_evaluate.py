@@ -10,15 +10,15 @@ run_paths = []
 api = wandb.Api()
 # Gets the runs corresponding to a specific filter
 # https://github.com/wandb/client/blob/v0.10.31/wandb/apis/public.py
-'''
-runs = api.runs(path="nerdk312/evaluation", filters={"config.group": "OOD detection at different scales experiment"})
+
+runs = api.runs(path="nerdk312/evaluation", filters={"config.group": "OOD hierarchy baselines"})
 for i in range(len(runs)):
     # Joins together the path of the runs which are separated into different parts in a list
     run_path = '/'.join(runs[i].path)
     run_paths.append(run_path)
+
+
 '''
-
-
 run_paths = ['nerdk312/evaluation/p4ojvcp2',
             'nerdk312/evaluation/1r3ikanf',
             'nerdk312/evaluation/3a5kvvb9',
@@ -27,5 +27,5 @@ run_paths = ['nerdk312/evaluation/p4ojvcp2',
             'nerdk312/evaluation/13f0cla1'
             ]
 
-
+'''
 evaluate(run_paths, trainer_hparams)
