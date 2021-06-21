@@ -1072,10 +1072,11 @@ def pairwise_saving(collated_data,dataset_names,num_bins,ref_index):
     else:
         ref = 'Test'
     
+    # Iterate all the collated data from the beginning to the end
     for i in range(len(collated_data)-(1+ref_index)):
         pairwise_dict = {}
         # Update the for base case 
-        index_val = 1 +ref_index
+        index_val = i +ref_index #  Have the ref index plus a small value     
         #import ipdb; ipdb.set_trace()
         pairwise_dict.update({dataset_names[ref_index]:collated_data[ref_index]})
         pairwise_dict.update({dataset_names[index_val]:collated_data[index_val]})

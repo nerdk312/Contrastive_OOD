@@ -670,12 +670,18 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
             train_mask = np.sum(class_masks,axis=0) > 0 
             specific_labels_train = labels_train[train_mask]
             specific_features_train =  features_train[train_mask]
+            # Sort the values for the specific class
+            sorted_classes = sorted(specific_classes)
+            # Map the subsamples labels to values between 0 and n where n is the number of coarse labels used 
+            for j in range(len(specific_classes)):
+                specific_labels_train[specific_features_train == sorted_classes[j]] = j
+
 
             import ipdb; ipdb.set_trace()
 
             #for specific_class in specific_classes:                
             #class_mask = labels_train==specific_class
-
+        '''
         for i in range(len(np.unique(labels_test))):
             for j in range(len(np.unique(labels_test))):
                 if i == j: 
@@ -735,8 +741,9 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
         wandb.log({"Mahalanobis One Vs One": table})
         # NEED TO CLOSE OTHERWISE WILL HAVE OVERLAPPING MATRICES SAVED IN WANDB
         plt.close()
+        
         return fpr95,auroc,aupr 
-    
+        '''
         
     def get_eval_results(self,ftrain, ftest, food, labelstrain):
         """
