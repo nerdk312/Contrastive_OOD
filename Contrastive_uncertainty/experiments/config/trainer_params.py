@@ -10,6 +10,8 @@ training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
 val_check = 1,  # evaluation, Moco_training
+typicality_bootstrap = 50,
+typicality_batch = 25,
 
 #OOD_dataset = ['MNIST','KMNIST','EMNIST'],
 #callbacks = ['Mahalanobis','Dataset_distances'],

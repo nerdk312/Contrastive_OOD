@@ -52,12 +52,21 @@ def evaluation(run_path, update_dict, model_module, model_function):
         #update_dict['OOD_dataset'] = OOD_dict[config['dataset']]
         #print('updated dict')
 
-    # Updates config with information from update dict
+    '''
     for update_k, update_v in update_dict.items():
-        # Special case where I did not save callbacks in the past, need to override
+        if update_k in config:
+            config[update_k] = update_v
+    '''
+    new_config_params = ['callbacks','typicality_bootstrap','typicality_bootstrap']
+
+    for update_k, update_v in update_dict.items():
+        '''
         if update_k =='callbacks':
             config[update_k] = update_v
-
+        '''
+        if update_k in new_config_params:
+            config[update_k] = update_v
+             
         if update_k in config:
             if update_k =='epochs':
                 config[update_k] = config[update_k] + update_v

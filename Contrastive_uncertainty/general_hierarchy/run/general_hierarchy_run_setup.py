@@ -1,9 +1,10 @@
 from re import search
 
 from Contrastive_uncertainty.general_hierarchy.callbacks.general_callbacks import  ModelSaving, MMD_distance
-from Contrastive_uncertainty.general_hierarchy.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets
+from Contrastive_uncertainty.general_hierarchy.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR
 from Contrastive_uncertainty.general_hierarchy.callbacks.experimental_ood_callbacks import  Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD 
 from Contrastive_uncertainty.general_hierarchy.callbacks.visualisation_callback import Visualisation
+from Contrastive_uncertainty.general_hierarchy.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO
 from Contrastive_uncertainty.general_hierarchy.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general_hierarchy.callbacks.variational_callback import Variational
 from Contrastive_uncertainty.general_hierarchy.callbacks.hierarchical_ood import Hierarchical_Mahalanobis
@@ -47,6 +48,10 @@ def callback_dictionary(Datamodule,config):
     #num_classes = Datamodule.num_classes
     
     quick_callback = config['quick_callback']
+    typicality_batch = config['typicality_batch']
+    typicality_bootstrap = config['typicality_bootstrap']
+
+
     
     # Manually added callbacks
     callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Models'),
@@ -54,20 +59,22 @@ def callback_dictionary(Datamodule,config):
                     'Metrics_instance_fine':MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                     'Visualisation_instance_fine': Visualisation(Datamodule, vector_level='instance',label_level='fine',quick_callback=quick_callback),
                     'Variational':Variational(Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)}
+                    
+
     
     # Automatically adding callbacks for the Mahalanobis distance for each different vector level as well as each different OOD dataset
+    # Collated list of OOD datamodules
     Collated_OOD_datamodules = []
     for ood_dataset in config['OOD_dataset']:
         OOD_Datamodule = Datamodule_selection(dataset_dict, ood_dataset, config)
         OOD_callback = {f'Mahalanobis_instance_fine_{ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
                 f'Aggregated {ood_dataset}': Aggregated_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Differing {ood_dataset}': Differing_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
-                f'Hierarchical {ood_dataset}':Hierarchical_Mahalanobis(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
-                f'Typicality_OVR_{ood_dataset}': Typicality_OVR(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
-                f'Typicality_OVO_{ood_dataset}': Typicality_OVO(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
+                f'Typicality_OVR_{ood_dataset}': Typicality_OVR(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
+                f'Typicality_OVO_{ood_dataset}': Typicality_OVO(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)}
-        
+               
         #import ipdb; ipdb.set_trace()
         callback_dict.update(OOD_callback)
         Collated_OOD_datamodules.append(OOD_Datamodule)
