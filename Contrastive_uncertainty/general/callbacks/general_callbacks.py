@@ -111,7 +111,7 @@ class MMD_distance(pl.Callback):
         return MMD_dist
 
 # choose whether to iterate over the entire dataset or over a single batch of the data (https://github.com/pytorch/pytorch/issues/1917 - obtaining a single batch)
-def quickloading(quick_test,dataloader):
+def quickloading(quick_test, dataloader):
     if quick_test:
         loader = [next(iter(dataloader))] # This obtains a single batch of the data as a list which can be iterated
     else:

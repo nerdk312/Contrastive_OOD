@@ -28,6 +28,9 @@ validation_ratio = 1.0,
 test_ratio = 1.0,
 val_check = 1,
 model_saving = 1, # Used to control how often the model is saved
+typicality_bootstrap = 50,
+typicality_batch = 25,
+
 
 # Wandb parameters in common
 project = 'Toy_evaluation',
@@ -59,8 +62,8 @@ branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
-#callbacks = ['Typicality'],
-callbacks = ['Subsample'],
+callbacks = ['Typicality'],
+#callbacks = ['Subsample'],
 #callbacks = ['OVO','OVR'],
 #callbacks = ['Hierarchical'],
 #callbacks = [],

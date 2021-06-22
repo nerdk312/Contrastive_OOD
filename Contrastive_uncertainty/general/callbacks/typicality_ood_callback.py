@@ -1,4 +1,4 @@
-import ipdb
+#import ipdb
 from numpy.lib.function_base import quantile
 from pandas.io.formats.format import DataFrameFormatter
 import torch
@@ -115,7 +115,7 @@ class Typicality_OVR(pl.Callback):
             
         return np.array(features), np.array(labels)
   
-    def get_offline_thresholds(self, ftrain, fval, ypred, yval,bootstrap_num,batch_size):
+    def get_offline_thresholds(self, ftrain, fval, ypred, yval,bootstrap_num, batch_size):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
         # Calculate the means of the data
@@ -287,6 +287,7 @@ class Typicality_OVR(pl.Callback):
         table_data = {'Class vs Rest': [],'AUROC': []}
         for class_num in range(len(test_thresholds)):
             table_data['Class vs Rest'].append(class_num)
+            #import ipdb; ipdb.set_trace()
             class_auroc = get_roc_sklearn(test_thresholds[class_num], test_ood_thresholds[class_num])
             table_data['AUROC'].append(class_auroc)
 

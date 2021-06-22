@@ -23,7 +23,7 @@ epochs = 300,
 
 # Trainer configurations in common
 fast_run = True,
-quick_callback = True,
+quick_callback = False,
 training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
@@ -76,7 +76,7 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Aggregated','Differing'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Hierarchical'],
-callbacks = ['classification'],
+callbacks = ['Typicality'],
 # Either goes through all the models or goes through baselines
 
 single_model = 'Baselines'
