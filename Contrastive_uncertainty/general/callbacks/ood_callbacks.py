@@ -848,7 +848,7 @@ def pairwise_saving(collated_data,dataset_names,num_bins,ref_index):
         #import ipdb; ipdb.set_trace()
         pairwise_dict.update({dataset_names[ref_index]:collated_data[ref_index]})
         pairwise_dict.update({dataset_names[index_val]:collated_data[index_val]})
-        data_label = f'{ref} Reference - {dataset_names[i+index_val]}' 
+        data_label = f'{ref} Reference - {dataset_names[index_val]}' 
         
         # Plots the counts, probabilities as well as the kde for pairwise
         count_histogram(pairwise_dict,num_bins,data_label)

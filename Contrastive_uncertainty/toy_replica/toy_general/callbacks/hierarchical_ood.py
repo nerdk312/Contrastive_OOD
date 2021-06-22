@@ -1,4 +1,5 @@
 import torch
+from torch._C import dtype
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
@@ -46,7 +47,6 @@ class Hierarchical_Mahalanobis(pl.Callback):
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
     
     def on_test_epoch_end(self, trainer, pl_module):
-        
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
 
     # Performs all the computation in the callback
@@ -97,6 +97,8 @@ class Hierarchical_Mahalanobis(pl.Callback):
         labels = torch.tensor(labels,dtype = torch.long)
         mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
         return mahalanobis_test_accuracy
+    
+
 
     def get_features(self, pl_module, dataloader, level):
         features, labels = [], []
@@ -307,7 +309,10 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
 
         # Logs the difference in improvement for the network
         self.conditional_accuracy_difference(indices_dtest_fine,indices_dtest_conditional_fine,labels_test_fine)
+        
+        self.joint_mahalanobis_classification(indices_dtest_coarse[:],labels_test_coarse[:],indices_dtest_fine[:],labels_test_fine[:])
 
+    # Calculates conditional accuracy for the data
     def conditional_accuracy_difference(self, unconditional_pred, conditional_pred, labels):
         fine_unconditional_accuracy = self.mahalanobis_classification(unconditional_pred, labels)
         fine_conditional_accuracy = self.mahalanobis_classification(conditional_pred,labels)
@@ -316,6 +321,57 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         wandb.run.summary['Fine Unconditional Accuracy'] = fine_unconditional_accuracy
         wandb.run.summary['Fine Conditional Accuracy'] = fine_conditional_accuracy
         wandb.run.summary['Fine Conditional Improvement'] = conditional_diff
+
+    
+    def joint_mahalanobis_classification(self,coarse_predictions, coarse_labels, fine_predictions,fine_labels):
+        coarse_predictions = torch.tensor(coarse_predictions,dtype = torch.long)
+        coarse_labels = torch.tensor(coarse_labels, dtype = torch.long)
+        coarse_results = coarse_predictions.eq(coarse_labels)
+
+        fine_predictions = torch.tensor(fine_predictions, dtype = torch.long)
+        fine_labels = torch.tensor(fine_labels, dtype = torch.long)
+        fine_results = fine_predictions.eq(fine_labels)
+
+        coarse_correct_fine_correct = (coarse_results>0) & (fine_results >0) 
+        coarse_correct_fine_incorrect = (coarse_results > 0) & (fine_results < 1)
+        coarse_incorrect_fine_correct = (coarse_results < 1) & (fine_results > 0)
+        coarse_incorrect_fine_incorrect  = (coarse_results < 1) & (fine_results < 1)
+                
+        coarse_correct_fine_correct = (100*sum(coarse_correct_fine_correct) /len(coarse_predictions)).item() # change from tensor to scalar
+        coarse_correct_fine_incorrect = (100*sum(coarse_correct_fine_incorrect) /len(coarse_predictions)).item()
+        coarse_incorrect_fine_correct = (100*sum(coarse_incorrect_fine_correct) /len(coarse_predictions)).item()
+        coarse_incorrect_fine_incorrect = (100*sum(coarse_incorrect_fine_incorrect) /len(coarse_predictions)).item()
+        #import ipdb; ipdb.set_trace()
+
+        table_data = {'Coarse Correct Fine Correct (%)':[],'Coarse Correct Fine Incorrect (%)':[],'Coarse Incorrect Fine Correct (%)':[],'Coarse Incorrect Fine Incorrect (%)':[]}
+        table_data['Coarse Correct Fine Correct (%)'].append(coarse_correct_fine_correct)
+        table_data['Coarse Correct Fine Incorrect (%)'].append(coarse_correct_fine_incorrect)
+        table_data['Coarse Incorrect Fine Correct (%)'].append(coarse_incorrect_fine_correct)
+        table_data['Coarse Incorrect Fine Incorrect (%)'].append(coarse_incorrect_fine_incorrect)
+
+    
+        table_df = pd.DataFrame(table_data)
+    
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({f"Joint Coarse Fine classification": table})
+    
+        fig, ax = plt.subplots()
+        # hide axes
+        fig.patch.set_visible(False)
+        ax.axis('off')
+        ax.axis('tight')
+        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
+        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+        data_table.set_fontsize(24)
+        data_table.scale(2.0, 2.0)  # may help
+        #fig.tight_layout()
+        joint_classification_filename = f'Images/joint_mahalanobis_classification.png'
+        plt.savefig(joint_classification_filename,bbox_inches='tight')
+        wandb_joint_classification = f'Joint Mahalanobis Classification'
+        wandb.log({wandb_joint_classification:wandb.Image(joint_classification_filename)})
+        plt.close()
+
+
 
     def get_eval_results(self,ftrain, ftest, food, labelstrain,ptest_index = None, pood_index=None):
         if ptest_index is not None:
