@@ -295,7 +295,7 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         OOD_dict = {f'{self.OOD_dataname} Fine': dood_fine,f'{self.OOD_dataname} Conditional Fine': dood_conditional_fine}
         # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
         all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         # Plots the counts, probabilities as well as the kde
         ID_name = 'Hierarchical Fine ID data scores'
         OOD_name = f'Hierarchical Fine OOD {self.OOD_dataname} data scores'
@@ -304,6 +304,18 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         kde_plot(ID_dict,ID_name,ID_name.replace(" ","_"),ID_name)
         kde_plot(OOD_dict,OOD_name,OOD_name.replace(" ","_"),OOD_name)
         kde_plot(all_dict,all_name, all_name.replace(" ","_"),all_name)
+
+        # Logs the difference in improvement for the network
+        self.conditional_accuracy_difference(indices_dtest_fine,indices_dtest_conditional_fine,labels_test_fine)
+
+    def conditional_accuracy_difference(self, unconditional_pred, conditional_pred, labels):
+        fine_unconditional_accuracy = self.mahalanobis_classification(unconditional_pred, labels)
+        fine_conditional_accuracy = self.mahalanobis_classification(conditional_pred,labels)
+        conditional_diff = fine_conditional_accuracy - fine_unconditional_accuracy
+        
+        wandb.run.summary['Fine Unconditional Accuracy'] = fine_unconditional_accuracy
+        wandb.run.summary['Fine Conditional Accuracy'] = fine_conditional_accuracy
+        wandb.run.summary['Fine Conditional Improvement'] = conditional_diff
 
     def get_eval_results(self,ftrain, ftest, food, labelstrain,ptest_index = None, pood_index=None):
         if ptest_index is not None:
