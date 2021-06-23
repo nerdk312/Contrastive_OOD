@@ -24,13 +24,15 @@ from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_model_instance import ModelInstance as HSupConTDModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_model_instance import ModelInstance as HSupConBUCentroidModelInstance
 
-
-# Import training methods 
-from Contrastive_uncertainty.toy_replica.toy_general.train.train_general import train as general_training
-from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
-
+# Import datamodule info
 from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict as general_dataset_dict
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.datamodule_dict import dataset_dict as general_hierarchy_dataset_dict
+
+# Import training methods 
+from Contrastive_uncertainty.general.train.train_general import train as general_training
+from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
+
+
 
 def train(base_dict):   
     # Actively choose which modeles to choose in the acceptable models 

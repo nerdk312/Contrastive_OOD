@@ -55,46 +55,59 @@ from Contrastive_uncertainty.vae_models.cross_entropy_vae.models.cross_entropy_v
 from Contrastive_uncertainty.vae_models.sup_con_vae.models.sup_con_vae_model_instance import ModelInstance as SupConVAEModelInstance
 from Contrastive_uncertainty.vae_models.moco_vae.models.moco_vae_model_instance import ModelInstance as MocoVAEModelInstance
 
+
 # Import evaluate
 from Contrastive_uncertainty.general.train.evaluate_general import evaluation as general_evaluation
 from Contrastive_uncertainty.general_clustering.train.evaluate_general_clustering import evaluation as general_clustering_evaluation
 from Contrastive_uncertainty.general_hierarchy.train.evaluate_general_hierarchy import evaluation as general_hierarchy_evaluation
 
+from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict as general_dataset_dict, OOD_dict as general_OOD_dict
+from Contrastive_uncertainty.general_hierarchy.datamodules.datamodule_dict import dataset_dict as general_hierarchy_dataset_dict, OOD_dict as general_hierarchy_OOD_dict
+
+
 
 def evaluate(run_paths,update_dict):    
     
-
     # Dict for the model name, parameters and specific training loop
-    
     model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyModule, 
-                    'model_instance':CEModelInstance, 'evaluate':general_evaluation},
+                    'model_instance':CEModelInstance, 'evaluate':general_evaluation,
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
 
                     'Moco':{'params':moco_hparams,'model_module':MocoModule, 
-                    'model_instance':MocoModelInstance, 'evaluate':general_evaluation},
+                    'model_instance':MocoModelInstance, 'evaluate':general_evaluation,
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
 
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConModule, 
-                    'model_instance':SupConModelInstance, 'evaluate':general_evaluation},
+                    'model_instance':SupConModelInstance, 'evaluate':general_evaluation,
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
 
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
-                    'model_instance':HSupConBUCentroidModelInstance, 'evaluate':general_hierarchy_evaluation},
+                    'model_instance':HSupConBUCentroidModelInstance, 'evaluate':general_hierarchy_evaluation,
+                    'data_dict':general_hierarchy_dataset_dict, 'ood_dict':general_hierarchy_OOD_dict},
                     
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
-                    'model_instance':HSupConBUModelInstance,'evaluate':general_hierarchy_evaluation},
+                    'model_instance':HSupConBUModelInstance,'evaluate':general_hierarchy_evaluation,
+                    'data_dict':general_hierarchy_dataset_dict, 'ood_dict':general_hierarchy_OOD_dict},
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDModule, 
-                    'model_instance':HSupConTDModelInstance,'evaluate':general_hierarchy_evaluation},
+                    'model_instance':HSupConTDModelInstance,'evaluate':general_hierarchy_evaluation,
+                    'data_dict':general_hierarchy_dataset_dict, 'ood_dict':general_hierarchy_OOD_dict},
     
                     'CEVAE':{'params':cross_entropy_vae_hparams,'model_module':CrossEntropyVAEModule,
-                    'model_instance':CrossEntropyVAEModelInstance,'evaluate':general_evaluation},
+                    'model_instance':CrossEntropyVAEModelInstance,'evaluate':general_evaluation,
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
 
                     'MocoVAE':{'params':moco_vae_hparams,'model_module':MocoVAEModule,
-                    'model_instance':MocoVAEModelInstance,'evaluate':general_evaluation},
+                    'model_instance':MocoVAEModelInstance,'evaluate':general_evaluation,
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
 
                     'SupConVAE':{'params':sup_con_vae_hparams,'model_module':SupConVAEModule,
-                    'model_instance':SupConVAEModelInstance,'evaluate':general_evaluation},
+                    'model_instance':SupConVAEModelInstance,'evaluate':general_evaluation,
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
 
                     'VAE':{'params':vae_hparams,'model_module':VAEModule,
-                    'model_instance':VAEModelInstance,'evaluate':general_evaluation},
+                    'model_instance':VAEModelInstance,'evaluate':general_evaluation,
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
     }   
     
 
@@ -109,4 +122,6 @@ def evaluate(run_paths,update_dict):
         evaluate_method = model_dict[model_type]['evaluate']
         model_module = model_dict[model_type]['model_module'] 
         model_instance_method = model_dict[model_type]['model_instance']
-        evaluate_method(run_path, update_dict, model_module, model_instance_method)
+        model_data_dict = model_dict[model_type]['data_dict']
+        model_ood_dict = model_dict[model_type]['ood_dict']
+        evaluate_method(run_path, update_dict, model_module, model_instance_method, model_data_dict,model_ood_dict)

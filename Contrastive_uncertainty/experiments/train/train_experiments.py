@@ -54,6 +54,11 @@ from Contrastive_uncertainty.vae_models.cross_entropy_vae.models.cross_entropy_v
 from Contrastive_uncertainty.vae_models.sup_con_vae.models.sup_con_vae_model_instance import ModelInstance as SupConVAEModelInstance
 from Contrastive_uncertainty.vae_models.moco_vae.models.moco_vae_model_instance import ModelInstance as MocoVAEModelInstance
 
+# Import datamodule info
+from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict as general_dataset_dict
+from Contrastive_uncertainty.general_hierarchy.datamodules.datamodule_dict import dataset_dict as general_hierarchy_dataset_dict
+
+
 # Import training methods 
 from Contrastive_uncertainty.general.train.train_general import train as general_training
 from Contrastive_uncertainty.general_clustering.train.train_general_clustering import train as general_clustering_training
@@ -81,34 +86,34 @@ def train(base_dict):
     
     
     model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyModule,
-                    'model_instance':CEModelInstance,'train':general_training},
+                    'model_instance':CEModelInstance,'train':general_training, 'data_dict':general_dataset_dict},
         
                     'Moco':{'params':moco_hparams,'model_module':MocoModule, 
-                    'model_instance':MocoModelInstance,'train':general_training},
+                    'model_instance':MocoModelInstance,'train':general_training, 'data_dict':general_dataset_dict},
                     
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConModule, 
-                    'model_instance':SupConModelInstance,'train':general_training},
+                    'model_instance':SupConModelInstance,'train':general_training, 'data_dict':general_dataset_dict},
     
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
-                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
+                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training, 'data_dict': general_hierarchy_dataset_dict},
                     
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
-                    'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training},
+                    'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training, 'data_dict': general_hierarchy_dataset_dict},
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDModule, 
-                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},
+                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training, 'data_dict': general_hierarchy_dataset_dict},
 
                     'CEVAE':{'params':cross_entropy_vae_hparams,'model_module':CrossEntropyVAEModule,
-                    'model_instance':CrossEntropyVAEModelInstance,'train':general_training},
+                    'model_instance':CrossEntropyVAEModelInstance,'train':general_training, 'data_dict':general_dataset_dict},
 
                     'MocoVAE':{'params':moco_vae_hparams,'model_module':MocoVAEModule,
-                    'model_instance':MocoVAEModelInstance,'train':general_training},
+                    'model_instance':MocoVAEModelInstance,'train':general_training, 'data_dict':general_dataset_dict},
 
                     'SupConVAE':{'params':sup_con_vae_hparams,'model_module':SupConVAEModule,
-                    'model_instance':SupConVAEModelInstance,'train':general_training},
+                    'model_instance':SupConVAEModelInstance,'train':general_training, 'data_dict':general_dataset_dict},
 
                     'VAE':{'params':vae_hparams,'model_module':VAEModule,
-                    'model_instance':VAEModelInstance,'train':general_training},
+                    'model_instance':VAEModelInstance,'train':general_training, 'data_dict':general_dataset_dict},
      
     }
     
@@ -140,8 +145,10 @@ def train(base_dict):
                 train_method = model_dict[model_k]['train']
                 model_module = model_dict[model_k]['model_module'] 
                 model_instance_method = model_dict[model_k]['model_instance']
+                model_data_dict = model_dict[model_k]['data_dict']
                 # Try statement to allow the code to continue even if a single run fails
-                train_method(params, model_module, model_instance_method)
+                #train_method(params, model_module, model_instance_method)
+                train_method(params, model_module, model_instance_method,model_data_dict)
 
     ## SINGLE MODEL
     # Go through a single model on all different datasets
@@ -154,9 +161,9 @@ def train(base_dict):
         params = model_info['params']
         model_module = model_info['model_module'] 
         model_instance_method = model_info['model_instance']
+        model_data_dict = model_info['data_dict']
         # Loop through the different datasets and OOD datasets and examine if the model is able to train for the task
         for dataset, ood_dataset in zip(datasets, ood_datasets):
             params['dataset'] = dataset
             params['OOD_dataset'] = ood_dataset
-            train_method(params, model_module, model_instance_method)
-            
+            train_method(params, model_module, model_instance_method, model_data_dict)

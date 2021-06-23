@@ -1,4 +1,5 @@
-import os 
+import os
+from torch._C import import_ir_module 
 import wandb
 import pytorch_lightning as pl
 import torch
@@ -9,11 +10,10 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
 
-from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary, specific_callbacks
-from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict, OOD_dict
+from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,callback_dictionary, specific_callbacks, Datamodule_selection
 from Contrastive_uncertainty.general.utils.hybrid_utils import previous_model_directory
 
-def evaluation(run_path, update_dict, model_module, model_function):
+def evaluation(run_path, update_dict, model_module, model_function,datamodule_dict,OOD_dict):
     api = wandb.Api()
     previous_run = api.run(path=run_path)
     previous_config = previous_run.config
@@ -29,7 +29,7 @@ def evaluation(run_path, update_dict, model_module, model_function):
 
     pl.seed_everything(config['seed'])
 
-    datamodule = Datamodule_selection(dataset_dict, config['dataset'],config)
+    datamodule = Datamodule_selection(datamodule_dict, config['dataset'],config)
     
     # CHANGE SECTION
     # Load from checkpoint using pytorch lightning loads everything directly to continue training from the class function
@@ -50,18 +50,10 @@ def evaluation(run_path, update_dict, model_module, model_function):
 
     # Update the trainer and the callbacks for a specific test
     
-    '''
-    for update_k, update_v in update_dict.items():
-        if update_k in config:
-            config[update_k] = update_v
-    '''
+    
     new_config_params = ['callbacks','typicality_bootstrap','typicality_batch']
 
     for update_k, update_v in update_dict.items():
-        '''
-        if update_k =='callbacks':
-            config[update_k] = update_v
-        '''
         if update_k in new_config_params:
             config[update_k] = update_v
              
@@ -71,13 +63,13 @@ def evaluation(run_path, update_dict, model_module, model_function):
             else:
                 config[update_k] = update_v
 
-    callback_dict = callback_dictionary(datamodule, config)
+    callback_dict = callback_dictionary(datamodule, config,datamodule_dict)
     desired_callbacks = specific_callbacks(callback_dict, config['callbacks'])
     #wandb.config.update(config, allow_val_change=True) # Updates the config (particularly used to increase the number of epochs present)        
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
 
     
-    trainer = pl.Trainer(precision =16,fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
+    trainer = pl.Trainer(fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks,
@@ -88,4 +80,3 @@ def evaluation(run_path, update_dict, model_module, model_function):
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
      
     run.finish()
-    
