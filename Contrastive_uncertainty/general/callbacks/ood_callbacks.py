@@ -193,6 +193,7 @@ class Mahalanobis_OOD(pl.Callback):
     def normalise(self,ftrain,ftest,food):
         # Nawid -normalise the featues for the training, test and ood data
         # standardize data
+        
         ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
         ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
         food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
@@ -684,21 +685,25 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
             features_ood = features_ood[0:32] # shorten the data of OOD as this is not actually important for the ovo classifier
             # Map the subsamples labels to values between 0 and n where n is the number of coarse labels used 
             for j in range(len(specific_classes)):
-                specific_labels_train[specific_features_train == sorted_classes[j]] = j
+                #import ipdb; ipdb.set_trace()
+                specific_labels_train[specific_labels_train == sorted_classes[j]] = j
                 specific_labels_test[specific_labels_test == sorted_classes[j]] = j 
                 
             fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
-                    np.copy(specific_labels_train),
+                    np.copy(specific_features_train),
                     np.copy(specific_features_test),
                     np.copy(features_ood),
-                    np.copy(specific_features_train))
+                    np.copy(specific_labels_train))
+            
+            
 
-            test_accuracy = self.mahalanobis_classification(indices_dtest, specific_labels_test)
+            test_accuracy = self.mahalanobis_classification(indices_dtest, specific_labels_test).item()
             accuracy_values.append(test_accuracy)
         
         
         # Calculate statistics related to the value
         table_data = {'Mean':[],'Std':[],'Min':[], 'Max':[]}
+        import ipdb; ipdb.set_trace()
         table_data['Mean'].append(statistics.mean(accuracy_values))
         table_data['Std'].append(statistics.stdev(accuracy_values))
         table_data['Min'].append(min(accuracy_values))

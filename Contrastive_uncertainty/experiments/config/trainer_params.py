@@ -17,6 +17,7 @@ typicality_batch = 25,
 #callbacks = ['Mahalanobis','Dataset_distances'],
 #callbacks = ['Hierarchical'],
 #callbacks = ['Dataset_distances','classification'],
-callbacks = ['Typicality'],
+callbacks = ['Dataset_distances'],
+#callbacks = ['Typicality'],
 #callbacks =['Variational'],
 )

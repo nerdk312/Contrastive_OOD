@@ -1,12 +1,12 @@
 
 from Contrastive_uncertainty.general.callbacks.general_callbacks import  ModelSaving, MMD_distance
-from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR
+from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR, Mahalanobis_Subsample
 from Contrastive_uncertainty.general.callbacks.experimental_ood_callbacks import  Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD 
 from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
-from Contrastive_uncertainty.general.callbacks.hierarchical_ood import Hierarchical_Mahalanobis
+from Contrastive_uncertainty.general.callbacks.hierarchical_ood import Hierarchical_Mahalanobis, Hierarchical_scores_comparison
 from Contrastive_uncertainty.general.run.general_run_setup import Datamodule_selection, specific_callbacks
 
 # Run name which includes the branch weights
@@ -39,7 +39,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                     'Metrics_instance_fine':MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                     'Visualisation_instance_fine': Visualisation(Datamodule, vector_level='instance',label_level='fine',quick_callback=quick_callback),
                     'Variational':Variational(Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)}
-                        
+                    
     # Automatically adding callbacks for the Mahalanobis distance for each different vector level as well as each different OOD dataset
     # Collated list of OOD datamodules
     Collated_OOD_datamodules = []
@@ -51,7 +51,10 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Typicality_OVR_{ood_dataset}': Typicality_OVR(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'Typicality_OVO_{ood_dataset}': Typicality_OVO(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
-                f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)}
+                f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
+                f'Hierarchical {ood_dataset}':Hierarchical_Mahalanobis(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
+                f'Hierarchical Scores {ood_dataset}':Hierarchical_scores_comparison(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
+                f'Subsample': Mahalanobis_Subsample(Datamodule,OOD_Datamodule,quick_callback=quick_callback)}
                
         callback_dict.update(OOD_callback)
         Collated_OOD_datamodules.append(OOD_Datamodule)
