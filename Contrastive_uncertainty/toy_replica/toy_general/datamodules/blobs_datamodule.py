@@ -31,6 +31,7 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
         self.test_transforms = test_transforms
         self.centers = centers  # Number of different classes
         self.seed = seed
+        self.name = 'Blobs'
         
     @property
     def num_classes(self):
