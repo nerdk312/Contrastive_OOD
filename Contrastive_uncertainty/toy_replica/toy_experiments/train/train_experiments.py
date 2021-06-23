@@ -35,14 +35,14 @@ from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.datam
 def train(base_dict):   
     # Actively choose which modeles to choose in the acceptable models 
     acceptable_single_models = ['Baselines',
-    'CE',
+    #'CE',
     #'Moco',
     #'SupCon',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
     # 'HSupCon',
-    #'HSupConBU',
+    'HSupConBU',
     # 'HSupConBUCentroid',
     #'HSupConTD'
     ]
