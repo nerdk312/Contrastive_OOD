@@ -11,7 +11,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.run.general_hierarchy_run_setup import train_run_name, eval_run_name,Datamodule_selection, callback_dictionary, specific_callbacks
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.datamodule_dict import dataset_dict, OOD_dict
-from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.utils.hybrid_utils import previous_model_directory
+from Contrastive_uncertainty.general_hierarchy.utils.hybrid_utils import previous_model_directory
 
 
 def evaluation(run_path, update_dict, model_module, model_function):

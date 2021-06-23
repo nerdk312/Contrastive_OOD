@@ -7,7 +7,6 @@ from Contrastive_uncertainty.general.callbacks.visualisation_callback import Vis
 from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
-#from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -23,8 +22,6 @@ def eval_run_name(model_name,config, group=None):
 
 def Datamodule_selection(data_dict, dataset, config):
     # Information regarding the configuration of the data module for the specific task
-    #import ipdb; ipdb.set_trace()
-    #import ipdb; ipdb.set_trace()
     datamodule_info =  data_dict[dataset] # Specific module
     Datamodule = datamodule_info['module'](data_dir= './',batch_size = config['bsz'],seed = config['seed'])
     Datamodule.train_transforms = datamodule_info['train_transform']
