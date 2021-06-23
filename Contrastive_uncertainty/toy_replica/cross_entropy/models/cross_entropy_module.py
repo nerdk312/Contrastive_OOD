@@ -9,8 +9,11 @@ from pytorch_lightning.loggers import WandbLogger
 
 
 from Contrastive_uncertainty.toy_replica.cross_entropy.models.encoder_model import Backbone
-from Contrastive_uncertainty.toy_replica.toy_general.utils.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy 
-from Contrastive_uncertainty.toy_replica.toy_general.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.general.utils.hybrid_utils import label_smoothing, LabelSmoothingCrossEntropy 
+from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
+
+
+
 
 
 class CrossEntropyToy(pl.LightningModule):

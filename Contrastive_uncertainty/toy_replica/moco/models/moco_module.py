@@ -9,7 +9,8 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
 from Contrastive_uncertainty.toy_replica.moco.models.encoder_model import Backbone
-from Contrastive_uncertainty.toy_replica.toy_general.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
+
 
 
 class MocoToy(pl.LightningModule):

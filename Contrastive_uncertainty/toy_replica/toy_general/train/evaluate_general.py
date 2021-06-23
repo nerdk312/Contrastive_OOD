@@ -10,10 +10,9 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
 
-from Contrastive_uncertainty.toy_replica.toy_general.run.general_run_setup import train_run_name, eval_run_name,Datamodule_selection,callback_dictionary, specific_callbacks 
-from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict, OOD_dict
+from Contrastive_uncertainty.toy_replica.toy_general.run.general_run_setup import train_run_name,  eval_run_name, Datamodule_selection, callback_dictionary, specific_callbacks
+from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict
 from Contrastive_uncertainty.toy_replica.toy_general.utils.hybrid_utils import previous_model_directory
-from Contrastive_uncertainty.toy_replica.cross_entropy.models.cross_entropy_module import CrossEntropyToy
 
 def evaluation(run_path, update_dict, model_module, model_function):
     api = wandb.Api()

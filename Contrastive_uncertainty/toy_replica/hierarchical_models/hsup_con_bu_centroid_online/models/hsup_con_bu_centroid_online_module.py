@@ -10,7 +10,7 @@ import collections
 import pytorch_lightning as pl
 
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.models.encoder_model import Backbone
-from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.utils.pl_metrics import precision_at_k, mean
+from Contrastive_uncertainty.general_hierarchy.utils.pl_metrics import precision_at_k, mean
 
 class HSupConBUCentroidOnlineToy(pl.LightningModule):
     def __init__(self,

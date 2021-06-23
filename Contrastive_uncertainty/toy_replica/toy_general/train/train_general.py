@@ -8,13 +8,10 @@ import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-
-
-from Contrastive_uncertainty.toy_replica.toy_general.run.general_run_setup import train_run_name, eval_run_name, Datamodule_selection, callback_dictionary,specific_callbacks
-from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict
+from Contrastive_uncertainty.general.run.general_run_setup import train_run_name, eval_run_name,callback_dictionary, specific_callbacks, Datamodule_selection
 
 # Train takes in params, a particular training module as well a model_function to instantiate the model
-def train(params,model_module,model_function):
+def train(params,model_module,model_function,datamodule_dict):
     run = wandb.init(entity="nerdk312",config = params, project= params['project'], reinit=True,group=params['group'], notes=params['notes'])  # Required to have access to wandb config, which is needed to set up a sweep
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     config = wandb.config
@@ -27,8 +24,8 @@ def train(params,model_module,model_function):
     #wandb.run.name = run_name(config)
     pl.seed_everything(config['seed'])
 
-    datamodule = Datamodule_selection(dataset_dict,config['dataset'],config)
-    callback_dict = callback_dictionary(datamodule, config)
+    datamodule = Datamodule_selection(datamodule_dict,config['dataset'],config)
+    callback_dict = callback_dictionary(datamodule, config,datamodule_dict)
     desired_callbacks = specific_callbacks(callback_dict, config['callbacks'])
     
     

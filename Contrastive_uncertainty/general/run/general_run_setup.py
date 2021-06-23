@@ -7,7 +7,7 @@ from Contrastive_uncertainty.general.callbacks.visualisation_callback import Vis
 from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
-from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
+#from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -24,6 +24,7 @@ def eval_run_name(model_name,config, group=None):
 def Datamodule_selection(data_dict, dataset, config):
     # Information regarding the configuration of the data module for the specific task
     #import ipdb; ipdb.set_trace()
+    #import ipdb; ipdb.set_trace()
     datamodule_info =  data_dict[dataset] # Specific module
     Datamodule = datamodule_info['module'](data_dir= './',batch_size = config['bsz'],seed = config['seed'])
     Datamodule.train_transforms = datamodule_info['train_transform']
@@ -34,7 +35,7 @@ def Datamodule_selection(data_dict, dataset, config):
     return Datamodule
 
 
-def callback_dictionary(Datamodule,config):
+def callback_dictionary(Datamodule,config,data_dict):
     #val_loader = Datamodule.val_dataloader() # Used for metric logger callback also
     #num_classes = Datamodule.num_classes
     
@@ -56,8 +57,9 @@ def callback_dictionary(Datamodule,config):
     # Automatically adding callbacks for the Mahalanobis distance for each different vector level as well as each different OOD dataset
     # Collated list of OOD datamodules
     Collated_OOD_datamodules = []
+    #import ipdb; ipdb.set_trace()
     for ood_dataset in config['OOD_dataset']:
-        OOD_Datamodule = Datamodule_selection(dataset_dict, ood_dataset, config)
+        OOD_Datamodule = Datamodule_selection(data_dict, ood_dataset, config)
         OOD_callback = {f'Mahalanobis_instance_fine_{ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
                 f'Aggregated {ood_dataset}': Aggregated_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Differing {ood_dataset}': Differing_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),

@@ -1,1 +1,0 @@
-from Contrastive_uncertainty.toy_replica.toy_general.callbacks.variational_callback import Variational

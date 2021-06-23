@@ -29,45 +29,48 @@ from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroi
 from Contrastive_uncertainty.toy_replica.toy_general.train.train_general import train as general_training
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
 
+from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict as general_dataset_dict
+from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.datamodule_dict import dataset_dict as general_hierarchy_dataset_dict
+
 def train(base_dict):   
     # Actively choose which modeles to choose in the acceptable models 
     acceptable_single_models = ['Baselines',
-    #'CE',
+    'CE',
     #'Moco',
     #'SupCon',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
     # 'HSupCon',
-    'HSupConBU',
+    #'HSupConBU',
     # 'HSupConBUCentroid',
     #'HSupConTD'
     ]
 
     # Dict for the model name, parameters and specific training loop
     model_dict = {'CE':{'params':cross_entropy_hparams,'model_module':CrossEntropyToy, 
-                    'model_instance':CEModelInstance, 'train':general_training},
+                    'model_instance':CEModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
 
                     'Moco':{'params':moco_hparams,'model_module':MocoToy, 
-                    'model_instance':MocoModelInstance, 'train':general_training},
+                    'model_instance':MocoModelInstance, 'train':general_training,'data_dict':general_dataset_dict},
 
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConToy, 
-                    'model_instance':SupConModelInstance, 'train':general_training},
+                    'model_instance':SupConModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
 
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidToy, 
-                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
+                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training,'data_dict': general_hierarchy_dataset_dict},
                 
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidToy, 
-                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
+                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training,'data_dict': general_hierarchy_dataset_dict },
                     
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidToy, 
-                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training},
+                    'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training,'data_dict': general_hierarchy_dataset_dict},
                     
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUToy, 
-                    'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training},
+                    'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training,'data_dict': general_hierarchy_dataset_dict},
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDToy, 
-                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training},         
+                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training, 'data_dict': general_hierarchy_dataset_dict},         
     }
     
 
@@ -101,8 +104,9 @@ def train(base_dict):
                 train_method = model_dict[model_k]['train']
                 model_module = model_dict[model_k]['model_module'] 
                 model_instance_method = model_dict[model_k]['model_instance']
+                model_data_dict = model_dict[model_k]['data_dict']
                 # Try statement to allow the code to continue even if a single run fails
-                train_method(params, model_module, model_instance_method)
+                train_method(params, model_module, model_instance_method,model_data_dict)
 
 
     ## SINGLE MODEL
@@ -116,9 +120,10 @@ def train(base_dict):
         params = model_info['params']
         model_module = model_info['model_module'] 
         model_instance_method = model_info['model_instance']
+        model_data_dict = model_info['data_dict']
         # Loop through the different datasets and OOD datasets and examine if the model is able to train for the task
         for dataset, ood_dataset in zip(datasets, ood_datasets):
             params['dataset'] = dataset
             params['OOD_dataset'] = ood_dataset
-            train_method(params, model_module, model_instance_method)
+            train_method(params, model_module, model_instance_method, model_data_dict)
             

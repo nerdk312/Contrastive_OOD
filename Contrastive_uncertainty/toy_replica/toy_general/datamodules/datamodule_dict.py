@@ -22,3 +22,6 @@ dataset_dict = {'TwoMoons':{'module':TwoMoonsDataModule,'train_transform':ToyTra
 OOD_dict = {'TwoMoons':['Blobs','Diagonal'],
             'Blobs':['TwoMoons','Diagonal'],
             'Diagonal':['Blobs','TwoMoons']}
+
+
+
