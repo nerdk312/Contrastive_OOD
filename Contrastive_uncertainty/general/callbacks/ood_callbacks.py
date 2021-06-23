@@ -226,7 +226,6 @@ class Mahalanobis_OOD(pl.Callback):
         wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
 
 
-
 # Calculate the Mahalanobis scores for all the dataset
 class Mahalanobis_OOD_Datasets(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodules,
@@ -707,24 +706,7 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
 
         table_df = pd.DataFrame(table_data)
         
-        # Save data tbale for the specific case
-        fig, ax = plt.subplots()
-        # hide axes
-        fig.patch.set_visible(False)
-        ax.axis('off')
-        ax.axis('tight')
-        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
-        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
-        data_table.set_fontsize(24)
-        data_table.scale(2.0, 2.0)  # may help
-        #fig.tight_layout()
-        fine_grain_sampling_filename = f'Images/{ref}_fine_grain_sampling_classification.png'
-        plt.savefig(fine_grain_sampling_filename,bbox_inches='tight')
-        plt.close()
-
-        table = wandb.Table(dataframe=table_df)
-        wandb.log({"Fine grain subsampling": table})
-
+        table_saving(table_df,'Fine Grain Subsampling')
         # NEED TO CLOSE OTHERWISE WILL HAVE OVERLAPPING MATRICES SAVED IN WANDB
         
         
@@ -743,7 +725,6 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
 
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
-        
 
 def get_roc_sklearn(xin, xood):
     labels = [0] * len(xin)  + [1] * len(xood)
@@ -761,7 +742,6 @@ def get_pr_sklearn(xin, xood):
 # Nawid - calculate false positive rate
 def get_fpr(xin, xood):
     return np.sum(xood < np.percentile(xin, 95)) / len(xood)
-
 
 def get_roc_plot(xin, xood,OOD_name):
     anomaly_targets = [0] * len(xin)  + [1] * len(xood)
@@ -782,12 +762,12 @@ def get_roc_plot(xin, xood,OOD_name):
     plt.savefig(ROC_filename)
     wandb_ROC = f'ROC curve: OOD dataset {OOD_name}'
     wandb.log({wandb_ROC:wandb.Image(ROC_filename)})
-    
+
     '''
     wandb.log({f'ROC_{OOD_name}': wandb.plot.roc_curve(anomaly_targets, outputs,#scores,
                         labels=None, classes_to_plot=None)})
     '''
-
+    
 
 def count_histogram(input_data,num_bins,name):
     sns.displot(data = input_data,multiple ='stack',stat ='count',common_norm=False, bins=num_bins)#,kde =True)
@@ -798,9 +778,10 @@ def count_histogram(input_data,num_bins,name):
     plt.title(f'Mahalanobis Distance Counts {name}')
     histogram_filename = f'Images/Mahalanobis_distance_counts_{name}.png'
     plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+    plt.close()
     wandb_distance = f'Mahalanobis Distance Counts {name}'
     wandb.log({wandb_distance:wandb.Image(histogram_filename)})
-    plt.close()
+    
 
 def probability_histogram(input_data,num_bins,name):
     sns.displot(data = input_data,multiple ='stack',stat ='probability',common_norm=False, bins=num_bins)#,kde =True)
@@ -812,10 +793,10 @@ def probability_histogram(input_data,num_bins,name):
     plt.title(f'Mahalanobis Distance Probabilities {name}')
     histogram_filename = f'Images/Mahalanobis_distances_probabilities_{name}.png'
     plt.savefig(histogram_filename,bbox_inches='tight')  #bbox inches used to make it so that the title can be seen effectively
+    plt.close()
     wandb_distance = f'Mahalanobis Distance Probabilities {name}'
     wandb.log({wandb_distance:wandb.Image(histogram_filename)})
-    plt.close()
-
+    
 def kde_plot(input_data,name):
     sns.displot(data =input_data,fill=False,common_norm=False,kind='kde')
     plt.xlabel('Distance')
@@ -824,12 +805,10 @@ def kde_plot(input_data,name):
     plt.title(f'Mahalanobis Distances {name}')
     kde_filename = f'Images/Mahalanobis_distances_kde_{name}.png'
     plt.savefig(kde_filename,bbox_inches='tight')
+    plt.close()
     wandb_distance = f'Mahalanobis Distance KDE {name}'
     wandb.log({wandb_distance:wandb.Image(kde_filename)})
-    plt.close()
-
-
-
+    
 def pairwise_saving(collated_data,dataset_names,num_bins,ref_index):
     table_data = {'Dataset':[],'Count Absolute Deviation':[],'Prob Absolute Deviation':[],'KL (Nats)':[], 'JS (Nats)':[],'KS':[]}
     # Calculates the values in a pairwise 
@@ -840,11 +819,10 @@ def pairwise_saving(collated_data,dataset_names,num_bins,ref_index):
     else:
         ref = 'Test'
     
-    # Iterate all the collated data from the beginning to the end
     for i in range(len(collated_data)-(1+ref_index)):
         pairwise_dict = {}
         # Update the for base case 
-        index_val = i +ref_index #  Have the ref index plus a small value     
+        index_val = i +ref_index
         #import ipdb; ipdb.set_trace()
         pairwise_dict.update({dataset_names[ref_index]:collated_data[ref_index]})
         pairwise_dict.update({dataset_names[index_val]:collated_data[index_val]})
@@ -880,19 +858,23 @@ def pairwise_saving(collated_data,dataset_names,num_bins,ref_index):
     
     table = wandb.Table(dataframe=table_df)
     wandb.log({f"{ref} Distance statistics": table})
+    table_saving(table_df,f'Mahalanobis Distance {ref} Statistics')
     
+
+def table_saving(table_dataframe,name):
     fig, ax = plt.subplots()
     # hide axes
     fig.patch.set_visible(False)
     ax.axis('off')
     ax.axis('tight')
     #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
-    data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+    data_table = ax.table(cellText=table_dataframe.values, colLabels=table_dataframe.columns, loc='center')
     data_table.set_fontsize(24)
     data_table.scale(2.0, 2.0)  # may help
-    #fig.tight_layout()
-    dist_statistics_filename = f'Images/{ref}_distance_statistics.png'
-    plt.savefig(dist_statistics_filename,bbox_inches='tight')
-    wandb_distance_statistics = f'Mahalanobis Distance {ref} Statistics'
-    wandb.log({wandb_distance_statistics:wandb.Image(dist_statistics_filename)})
+    filename = name.replace(" ","_") # Change the values with the empty space to underscore
+    filename = f'Images/{filename}.png'
+    plt.savefig(filename, bbox_inches='tight')
     plt.close()
+    wandb_title = f'{name}'
+    wandb.log({wandb_title:wandb.Image(filename)})
+

@@ -16,7 +16,7 @@ typicality_batch = 25,
 #OOD_dataset = ['MNIST','KMNIST','EMNIST'],
 #callbacks = ['Mahalanobis','Dataset_distances'],
 #callbacks = ['Hierarchical'],
-callbacks = ['Dataset_distances','classification'],
-
+#callbacks = ['Dataset_distances','classification'],
+callbacks = ['Typicality'],
 #callbacks =['Variational'],
 )

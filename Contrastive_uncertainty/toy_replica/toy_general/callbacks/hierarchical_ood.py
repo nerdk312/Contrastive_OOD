@@ -23,7 +23,7 @@ from sklearn.metrics import roc_auc_score
 
 
 from Contrastive_uncertainty.toy_replica.toy_general.callbacks.general_callbacks import quickloading
-from Contrastive_uncertainty.toy_replica.toy_general.callbacks.ood_callbacks import get_fpr, get_pr_sklearn, get_roc_plot, get_roc_sklearn
+from Contrastive_uncertainty.toy_replica.toy_general.callbacks.ood_callbacks import get_fpr, get_pr_sklearn, get_roc_plot, get_roc_sklearn, table_saving
 
 class Hierarchical_Mahalanobis(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
@@ -341,7 +341,6 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         coarse_correct_fine_incorrect = (100*sum(coarse_correct_fine_incorrect) /len(coarse_predictions)).item()
         coarse_incorrect_fine_correct = (100*sum(coarse_incorrect_fine_correct) /len(coarse_predictions)).item()
         coarse_incorrect_fine_incorrect = (100*sum(coarse_incorrect_fine_incorrect) /len(coarse_predictions)).item()
-        #import ipdb; ipdb.set_trace()
 
         table_data = {'Coarse Correct Fine Correct (%)':[],'Coarse Correct Fine Incorrect (%)':[],'Coarse Incorrect Fine Correct (%)':[],'Coarse Incorrect Fine Incorrect (%)':[]}
         table_data['Coarse Correct Fine Correct (%)'].append(coarse_correct_fine_correct)
@@ -349,28 +348,11 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         table_data['Coarse Incorrect Fine Correct (%)'].append(coarse_incorrect_fine_correct)
         table_data['Coarse Incorrect Fine Incorrect (%)'].append(coarse_incorrect_fine_incorrect)
 
-    
         table_df = pd.DataFrame(table_data)
     
         table = wandb.Table(dataframe=table_df)
         wandb.log({f"Joint Coarse Fine classification": table})
-    
-        fig, ax = plt.subplots()
-        # hide axes
-        fig.patch.set_visible(False)
-        ax.axis('off')
-        ax.axis('tight')
-        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
-        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
-        data_table.set_fontsize(24)
-        data_table.scale(2.0, 2.0)  # may help
-        #fig.tight_layout()
-        joint_classification_filename = f'Images/joint_mahalanobis_classification.png'
-        plt.savefig(joint_classification_filename,bbox_inches='tight')
-        wandb_joint_classification = f'Joint Mahalanobis Classification'
-        wandb.log({wandb_joint_classification:wandb.Image(joint_classification_filename)})
-        plt.close()
-
+        table_saving(table_df,'Joint Mahalanobis Classification')
 
 
     def get_eval_results(self,ftrain, ftest, food, labelstrain,ptest_index = None, pood_index=None):

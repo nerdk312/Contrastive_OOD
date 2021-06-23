@@ -57,7 +57,7 @@ def evaluation(run_path, update_dict, model_module, model_function):
             config[update_k] = update_v
     '''
     # Special case where I did not save the callbacks
-    new_config_params = ['callbacks','typicality_bootstrap','typicality_bootstrap']
+    new_config_params = ['callbacks','typicality_bootstrap','typicality_batch']
 
     for update_k, update_v in update_dict.items():
         '''

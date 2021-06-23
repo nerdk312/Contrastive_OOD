@@ -705,24 +705,7 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
 
         table_df = pd.DataFrame(table_data)
         
-        # Save data tbale for the specific case
-        fig, ax = plt.subplots()
-        # hide axes
-        fig.patch.set_visible(False)
-        ax.axis('off')
-        ax.axis('tight')
-        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
-        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
-        data_table.set_fontsize(24)
-        data_table.scale(2.0, 2.0)  # may help
-        #fig.tight_layout()
-        fine_grain_sampling_filename = f'Images/{ref}_fine_grain_sampling_classification.png'
-        plt.savefig(fine_grain_sampling_filename,bbox_inches='tight')
-        plt.close()
-
-        table = wandb.Table(dataframe=table_df)
-        wandb.log({"Fine grain subsampling": table})
-
+        table_saving(table_df,'Fine Grain Subsampling')
         # NEED TO CLOSE OTHERWISE WILL HAVE OVERLAPPING MATRICES SAVED IN WANDB
         
         
@@ -874,20 +857,23 @@ def pairwise_saving(collated_data,dataset_names,num_bins,ref_index):
     
     table = wandb.Table(dataframe=table_df)
     wandb.log({f"{ref} Distance statistics": table})
+    table_saving(table_df,f'Mahalanobis Distance {ref} Statistics')
     
+
+def table_saving(table_dataframe,name):
     fig, ax = plt.subplots()
     # hide axes
     fig.patch.set_visible(False)
     ax.axis('off')
     ax.axis('tight')
     #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
-    data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
+    data_table = ax.table(cellText=table_dataframe.values, colLabels=table_dataframe.columns, loc='center')
     data_table.set_fontsize(24)
     data_table.scale(2.0, 2.0)  # may help
-    #fig.tight_layout()
-    dist_statistics_filename = f'Images/{ref}_distance_statistics.png'
-    plt.savefig(dist_statistics_filename,bbox_inches='tight')
+    filename = name.replace(" ","_") # Change the values with the empty space to underscore
+    filename = f'Images/{filename}.png'
+    plt.savefig(filename, bbox_inches='tight')
     plt.close()
-    wandb_distance_statistics = f'Mahalanobis Distance {ref} Statistics'
-    wandb.log({wandb_distance_statistics:wandb.Image(dist_statistics_filename)})
-    
+    wandb_title = f'{name}'
+    wandb.log({wandb_title:wandb.Image(filename)})
+

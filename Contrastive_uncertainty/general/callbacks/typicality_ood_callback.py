@@ -21,10 +21,9 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
 
-
 from Contrastive_uncertainty.general.utils.hybrid_utils import OOD_conf_matrix
 from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloading
-from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_roc_sklearn, get_roc_plot
+from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_roc_sklearn, get_roc_plot, table_saving
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k
 
 
@@ -89,6 +88,7 @@ class Typicality_OVR(pl.Callback):
             np.copy(labels_train),
             np.copy(labels_val),
             np.copy(labels_test))
+            
         #fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood =
         #return fpr95,auroc,aupr
 
@@ -291,30 +291,14 @@ class Typicality_OVR(pl.Callback):
         table_data = {'Class vs Rest': [],'AUROC': []}
         for class_num in range(len(test_thresholds)):
             table_data['Class vs Rest'].append(class_num)
-            #import ipdb; ipdb.set_trace()
             class_auroc = get_roc_sklearn(test_thresholds[class_num], test_ood_thresholds[class_num])
             table_data['AUROC'].append(class_auroc)
 
         table_df = pd.DataFrame(table_data)
         table = wandb.Table(dataframe=table_df)
         wandb.log({"Typicality One Vs Rest": table})
+        table_saving(table_df,'Typicality One vs Rest')
         
-        # Data plotting
-        fig, ax = plt.subplots()
-        # hide axes
-        fig.patch.set_visible(False)
-        ax.axis('off')
-        ax.axis('tight')
-        #https://stackoverflow.com/questions/15514005/how-to-change-the-tables-fontsize-with-matplotlib-pyplot
-        data_table = ax.table(cellText=table_df.values, colLabels=table_df.columns, loc='center')
-        data_table.set_fontsize(24)
-        data_table.scale(2.0, 2.0)  # may help
-        #fig.tight_layout()
-        Typicality_ovr_filename = f'Images/Typicality_OVR.png'
-        plt.savefig(Typicality_ovr_filename,bbox_inches='tight')
-        Typicality_ovr = f'Typicality One vs Rest'
-        wandb.log({Typicality_ovr:wandb.Image(Typicality_ovr_filename)})
-        plt.close()
 
 class Typicality_OVO(Typicality_OVR):
     def __init__(self, Datamodule,OOD_Datamodule,

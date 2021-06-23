@@ -21,10 +21,10 @@ from sklearn.metrics import roc_auc_score
 
 
 from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloading
-from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_fpr, get_pr_sklearn, get_roc_plot, get_roc_sklearn
+from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_fpr, get_pr_sklearn, get_roc_plot, get_roc_sklearn, table_saving
 
 class Hierarchical_Mahalanobis(pl.Callback):
-    def __init__(self, Datamodule,OOD_Datamodule,
+    def __init__(self, Datamodule, OOD_Datamodule,
         quick_callback:bool = True):
 
         super().__init__()
@@ -39,13 +39,12 @@ class Hierarchical_Mahalanobis(pl.Callback):
 
         self.true_histogram = 'Hierarchical Mahalanobis True data scores'
         self.ood_histogram = 'Hierarchical Mahalanobis OOD data scores'
-    '''
+    
     def on_validation_epoch_end(self, trainer, pl_module):
         # Skip if fast testing as this can lead to issues with the code
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
-    '''
+    
     def on_test_epoch_end(self, trainer, pl_module):
-        
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
 
     # Performs all the computation in the callback
@@ -71,7 +70,7 @@ class Hierarchical_Mahalanobis(pl.Callback):
         
         _, _, _, dtest_coarse, dood_coarse, indices_dtest_coarse, indices_dood_coarse = self.get_eval_results(
             np.copy(features_train_coarse),
-            np.copy(features_test_coarse,),
+            np.copy(features_test_coarse),
             np.copy(features_ood_coarse),
             np.copy(labels_train_coarse))
 
@@ -83,19 +82,21 @@ class Hierarchical_Mahalanobis(pl.Callback):
             np.copy(indices_dtest_coarse),
             np.copy(indices_dood_coarse))
     
-        self.mahalanobis_classification(indices_dtest_fine, labels_test_fine,f'Mahalanobis Hierarchical Classification')
+        test_accuracy = self.mahalanobis_classification(indices_dtest_fine, labels_test_fine)
+        name = f'Mahalanobis Hierarchical Classification'
+        wandb.log({name: test_accuracy})
         if trainer.testing:
             get_roc_plot(dtest_fine,dood_fine, f'Hierarchical_{self.OOD_dataname}', f'Hierarchical {self.OOD_dataname}')  
         return fpr95,auroc,aupr
 
     # Calaculates the accuracy of a data point based on the closest distance to a centroid
-    def mahalanobis_classification(self,predictions, labels, name):
+    def mahalanobis_classification(self,predictions, labels):
         predictions = torch.tensor(predictions,dtype = torch.long)
         labels = torch.tensor(labels,dtype = torch.long)
         mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
-        wandb.log({name: mahalanobis_test_accuracy})
-
+        return mahalanobis_test_accuracy
     
+
 
     def get_features(self, pl_module, dataloader, level):
         features, labels = [], []
@@ -171,7 +172,6 @@ class Hierarchical_Mahalanobis(pl.Callback):
             collated_indices = []
             # Go throuhg each datapoint hierarchically
             for i,sample_distance in enumerate(ddata):
-                #import ipdb; ipdb.set_trace()
                 # coarse_test_mapping==ptest_index[i]] corresponds to a boolean mask placed on sample to get only the values of interest
                 conditioned_distance = sample_distance[coarse_test_mapping==prev_indices[i]] # Get the data point which have the same superclass
                 # Obtain the smallest value for the conditioned distances
@@ -202,36 +202,7 @@ class Hierarchical_Mahalanobis(pl.Callback):
         #import ipdb; ipdb.set_trace()
         wandb.log({histogram_name: wandb.plot.histogram(table, "scores",title=histogram_name)})
 
-
-    '''
-    def log_confidence_scores(self,Dtest,DOOD):  
-        confidence_test = Dtest
-        confidence_OOD  = DOOD
-         # histogram of the confidence scores for the true data
-        true_data = [[s] for s in confidence_test]
-        true_table = wandb.Table(data=true_data, columns=["scores"])
-        # Examine if the centroid was obtained in supervised or unsupervised manner
-            
-        true_histogram_name = self.true_histogram + f': Supervised: {self.vector_level} vector: {num_clusters} classes'
-        ood_histogram_name = self.ood_histogram + f': Supervised: {self.vector_level} vector:{num_clusters} classes: {self.OOD_dataname}'
-       
-        #import ipdb; ipdb.set_trace()
-        wandb.log({true_histogram_name: wandb.plot.histogram(true_table, "scores",title=true_histogram_name)})
-
-        # Histogram of the confidence scores for the OOD data
-        ood_data = [[s] for s in confidence_OOD]
-        ood_table = wandb.Table(data=ood_data, columns=["scores"])
-        wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
-    '''
-
-        
-    def get_eval_results(self,ftrain, ftest, food, labelstrain,ptest_index = None, pood_index=None):
-        if ptest_index is not None:
-            assert pood_index is not None, 'conditioning on the test data but not on OOD should not occur'
-        """
-            None.
-        """
-        #import ipdb; ipdb.set_trace()
+    def normalise(self,ftrain,ftest,food):
         # Nawid -normalise the featues for the training, test and ood data
         # standardize data
         ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
@@ -243,8 +214,20 @@ class Hierarchical_Mahalanobis(pl.Callback):
         ftrain = (ftrain - m) / (s + 1e-10)
         ftest = (ftest - m) / (s + 1e-10)
         food = (food - m) / (s + 1e-10)
+        
+        return ftrain, ftest,food
+
+    
+    def get_eval_results(self,ftrain, ftest, food, labelstrain,ptest_index = None, pood_index=None):
+        if ptest_index is not None:
+            assert pood_index is not None, 'conditioning on the test data but not on OOD should not occur'
+        """
+            None.
+        """
+
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
         # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain, ftest, food, labelstrain, ptest_index, pood_index)
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain, ptest_index, pood_index)
         
         if ptest_index is not None:
             true_histogram_name = 'Hierarchical Mahalanobis True data scores'
@@ -261,7 +244,144 @@ class Hierarchical_Mahalanobis(pl.Callback):
             fpr95, auroc, aupr = None, None, None
 
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
+
+
+class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        quick_callback:bool = True):
     
+        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
+
+    def forward_callback(self, trainer, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}}  
+        train_loader = self.Datamodule.train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        # Obtain representations of the data
+        features_train_coarse, labels_train_coarse = self.get_features(pl_module, train_loader,'coarse')
+        features_train_fine, labels_train_fine = self.get_features(pl_module, train_loader,'fine')
+
+        features_test_coarse, labels_test_coarse = self.get_features(pl_module, test_loader,'coarse')
+        features_test_fine, labels_test_fine = self.get_features(pl_module, test_loader,'fine')
+
+        features_ood_coarse, labels_ood_coarse = self.get_features(pl_module, ood_loader, 'coarse')
+        features_ood_fine, labels_ood_fine = self.get_features(pl_module, ood_loader, 'fine')
+
+        _, _, _, dtest_fine, dood_fine, indices_dtest_fine, indices_dood_fine = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_fine))
+
+
+        _, _, _, dtest_coarse, dood_coarse, indices_dtest_coarse, indices_dood_coarse = self.get_eval_results(
+            np.copy(features_train_coarse),
+            np.copy(features_test_coarse,),
+            np.copy(features_ood_coarse),
+            np.copy(labels_train_coarse))
+
+
+        _, _, _, dtest_conditional_fine, dood_conditional_fine, indices_dtest_conditional_fine, indices_dood_conditional_fine = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_fine),
+            np.copy(indices_dtest_coarse),
+            np.copy(indices_dood_coarse))
+        
+        ID_dict = {'ID Fine': dtest_fine, 'ID Conditional Fine': dood_conditional_fine}
+        OOD_dict = {f'{self.OOD_dataname} Fine': dood_fine,f'{self.OOD_dataname} Conditional Fine': dood_conditional_fine}
+        # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
+        all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
+        #import ipdb; ipdb.set_trace()
+        # Plots the counts, probabilities as well as the kde
+        ID_name = 'Hierarchical Fine ID data scores'
+        OOD_name = f'Hierarchical Fine OOD {self.OOD_dataname} data scores'
+        all_name = f'Hierarchical Fine All {self.OOD_dataname} data scores'
+        # Replace white spaces with underscore  https://stackoverflow.com/questions/1007481/how-do-i-replace-whitespaces-with-underscore
+        kde_plot(ID_dict,ID_name,ID_name.replace(" ","_"),ID_name)
+        kde_plot(OOD_dict,OOD_name,OOD_name.replace(" ","_"),OOD_name)
+        kde_plot(all_dict,all_name, all_name.replace(" ","_"),all_name)
+
+        # Logs the difference in improvement for the network
+        self.conditional_accuracy_difference(indices_dtest_fine,indices_dtest_conditional_fine,labels_test_fine)
+        
+        self.joint_mahalanobis_classification(indices_dtest_coarse[:],labels_test_coarse[:],indices_dtest_fine[:],labels_test_fine[:])
+
+    # Calculates conditional accuracy for the data
+    def conditional_accuracy_difference(self, unconditional_pred, conditional_pred, labels):
+        fine_unconditional_accuracy = self.mahalanobis_classification(unconditional_pred, labels)
+        fine_conditional_accuracy = self.mahalanobis_classification(conditional_pred,labels)
+        conditional_diff = fine_conditional_accuracy - fine_unconditional_accuracy
+        
+        wandb.run.summary['Fine Unconditional Accuracy'] = fine_unconditional_accuracy
+        wandb.run.summary['Fine Conditional Accuracy'] = fine_conditional_accuracy
+        wandb.run.summary['Fine Conditional Improvement'] = conditional_diff
+
+    
+    def joint_mahalanobis_classification(self,coarse_predictions, coarse_labels, fine_predictions,fine_labels):
+        coarse_predictions = torch.tensor(coarse_predictions,dtype = torch.long)
+        coarse_labels = torch.tensor(coarse_labels, dtype = torch.long)
+        coarse_results = coarse_predictions.eq(coarse_labels)
+
+        fine_predictions = torch.tensor(fine_predictions, dtype = torch.long)
+        fine_labels = torch.tensor(fine_labels, dtype = torch.long)
+        fine_results = fine_predictions.eq(fine_labels)
+
+        coarse_correct_fine_correct = (coarse_results>0) & (fine_results >0) 
+        coarse_correct_fine_incorrect = (coarse_results > 0) & (fine_results < 1)
+        coarse_incorrect_fine_correct = (coarse_results < 1) & (fine_results > 0)
+        coarse_incorrect_fine_incorrect  = (coarse_results < 1) & (fine_results < 1)
+                
+        coarse_correct_fine_correct = (100*sum(coarse_correct_fine_correct) /len(coarse_predictions)).item() # change from tensor to scalar
+        coarse_correct_fine_incorrect = (100*sum(coarse_correct_fine_incorrect) /len(coarse_predictions)).item()
+        coarse_incorrect_fine_correct = (100*sum(coarse_incorrect_fine_correct) /len(coarse_predictions)).item()
+        coarse_incorrect_fine_incorrect = (100*sum(coarse_incorrect_fine_incorrect) /len(coarse_predictions)).item()
+
+        table_data = {'Coarse Correct Fine Correct (%)':[],'Coarse Correct Fine Incorrect (%)':[],'Coarse Incorrect Fine Correct (%)':[],'Coarse Incorrect Fine Incorrect (%)':[]}
+        table_data['Coarse Correct Fine Correct (%)'].append(coarse_correct_fine_correct)
+        table_data['Coarse Correct Fine Incorrect (%)'].append(coarse_correct_fine_incorrect)
+        table_data['Coarse Incorrect Fine Correct (%)'].append(coarse_incorrect_fine_correct)
+        table_data['Coarse Incorrect Fine Incorrect (%)'].append(coarse_incorrect_fine_incorrect)
+
+        table_df = pd.DataFrame(table_data)
+    
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({f"Joint Coarse Fine classification": table})
+        table_saving(table_df,'Joint Mahalanobis Classification')
+
+
+    def get_eval_results(self,ftrain, ftest, food, labelstrain,ptest_index = None, pood_index=None):
+        if ptest_index is not None:
+            assert pood_index is not None, 'conditioning on the test data but not on OOD should not occur'
+        """
+            None.
+        """
+        
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain, ptest_index, pood_index)
+        
+        fpr95, auroc, aupr = None, None, None
+
+        return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
+
+
+
+def kde_plot(input_data,title_name,file_name,wandb_name):
+    sns.displot(data =input_data,fill=False,common_norm=False,kind='kde')
+    plt.xlabel('Distance')
+    plt.ylabel('Normalized Density')
+    plt.xlim([0, 500])
+    plt.title(f'{title_name}')
+    kde_filename = f'Images/{file_name}.png'
+    plt.savefig(kde_filename,bbox_inches='tight')
+    plt.close()
+    wandb_distance = f'{wandb_name}'
+    wandb.log({wandb_distance:wandb.Image(kde_filename)})
+
 
 def get_roc_plot(xin, xood,filename,logname):
     anomaly_targets = [0] * len(xin)  + [1] * len(xood)
@@ -282,7 +402,3 @@ def get_roc_plot(xin, xood,filename,logname):
     plt.savefig(ROC_filename)
     wandb_ROC = f'ROC curve: OOD dataset {logname}'
     wandb.log({wandb_ROC:wandb.Image(ROC_filename)})
-
-    
-
-
