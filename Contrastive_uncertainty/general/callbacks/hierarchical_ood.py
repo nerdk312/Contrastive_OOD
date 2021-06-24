@@ -367,6 +367,121 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
 
 
+class Hierarchical_Subsample(Hierarchical_Mahalanobis):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        quick_callback:bool = True,
+        bootstrap_num: int = 25):
+    
+        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
+
+        # Get the number of coarse classes
+        self.num_coarse = self.Datamodule.num_coarse_classes
+        # Number of times to bootstrap sample the data
+        self.bootstrap_num = bootstrap_num
+        
+
+    def forward_callback(self, trainer, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}}  
+        train_loader = self.Datamodule.train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        # Obtain representations of the data
+        features_train_coarse, labels_train_coarse = self.get_features(pl_module, train_loader,'coarse')
+        features_train_fine, labels_train_fine = self.get_features(pl_module, train_loader,'fine')
+
+        features_test_coarse, labels_test_coarse = self.get_features(pl_module, test_loader,'coarse')
+        features_test_fine, labels_test_fine = self.get_features(pl_module, test_loader,'fine')
+
+        features_ood_coarse, labels_ood_coarse = self.get_features(pl_module, ood_loader, 'coarse')
+        features_ood_fine, labels_ood_fine = self.get_features(pl_module, ood_loader, 'fine')
+
+
+        # Used to calculate coarse accuracy using the coarse representations
+        dtest_coarse, dood_coarse, indices_dtest_coarse, indices_dood_coarse = self.get_eval_results(
+            np.copy(features_train_coarse),
+            np.copy(features_test_coarse,),
+            np.copy(features_ood_coarse),
+            np.copy(labels_train_coarse))
+        
+        
+        # Used to caclulate coarse accuracy using the fine representations
+        dtest_fine, dood_fine, indices_dtest_fine, indices_dood_fine = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_coarse))
+
+        coarse_coarse_test_accuracy = self.mahalanobis_classification(indices_dtest_coarse, labels_test_coarse).item()
+        fine_coarse_test_accuracy = self.mahalanobis_classification(indices_dtest_fine, labels_test_coarse).item()
+
+        # Look at the classes available
+        classes_available = len(np.unique(labels_train_fine))
+        accuracy_values = []
+        for i in range(self.bootstrap_num):
+            # Investigate the different classes
+            specific_classes = np.random.choice(classes_available, size=self.num_coarse, replace=False) # Obtain a sub sample of values
+
+            class_train_masks = [labels_train_fine==specific_class for specific_class in specific_classes] # Obtain masks for class
+            train_mask = np.sum(class_train_masks,axis=0) > 0 # Make a joint mask for all te different masks
+            specific_labels_train = labels_train_fine[train_mask] # Obtain labels for the different data points
+            specific_features_train =  features_train_fine[train_mask] # Nawid - 
+            # Test data            
+            class_test_masks = [labels_test_fine==specific_class for specific_class in specific_classes]
+            test_mask = np.sum(class_test_masks,axis=0) > 0
+            specific_labels_test = labels_test_fine[test_mask] # Obtain certain labels
+            specific_features_test = features_test_fine[test_mask] # obtain datapoints which belong to certain classes
+
+            # Sort the values for the specific class
+            sorted_classes = sorted(specific_classes)
+            
+            features_ood_fine = features_ood_fine[0:32] # shorten the data of OOD as this is not actually important for the ovo classifier
+            # Map the subsamples labels to values between 0 and n where n is the number of coarse labels used 
+            for j in range(len(specific_classes)):
+                #import ipdb; ipdb.set_trace()
+                specific_labels_train[specific_labels_train == sorted_classes[j]] = j
+                specific_labels_test[specific_labels_test == sorted_classes[j]] = j 
+            
+            # Obtain subs sample predictions for the fine labels
+            dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
+                    np.copy(specific_features_train),
+                    np.copy(specific_features_test),
+                    np.copy(features_ood_fine),
+                    np.copy(specific_labels_train))
+            
+            test_accuracy = self.mahalanobis_classification(indices_dtest, specific_labels_test).item()
+            accuracy_values.append(test_accuracy)
+        
+        
+        # Calculate statistics related to the value
+        table_data =  {'Coarse-Coarse (%)':[],'Fine-Coarse (%)':[],'Subsample Mean (%)':[],'Subsample Std (%)':[],'Subsample Min (%)':[], 'Subsample Max (%)':[]}
+        table_data['Coarse-Coarse (%)'].append(coarse_coarse_test_accuracy)
+        table_data['Fine-Coarse (%)'].append(fine_coarse_test_accuracy)
+
+        table_data['Subsample Mean (%)'].append(statistics.mean(accuracy_values))
+        table_data['Subsample Std (%)'].append(statistics.stdev(accuracy_values))
+        table_data['Subsample Min (%)'].append(min(accuracy_values))
+        table_data['Subsample Max (%)'].append(max(accuracy_values))
+
+        table_df = pd.DataFrame(table_data)
+        
+        table_saving(table_df,'Fine Grain Subsampling')
+
+        wandb.run.summary['Coarse-Coarse Accuracy (%)'] = coarse_coarse_test_accuracy
+        wandb.run.summary['Fine-Coarse Accuracy (%)'] = fine_coarse_test_accuracy 
+        wandb.run.summary['Fine Subsample Mean Accuracy (%)'] = statistics.mean(accuracy_values)
+        # NEED TO CLOSE OTHERWISE WILL HAVE OVERLAPPING MATRICES SAVED IN WANDB
+
+    
+    
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        return dtest, dood, indices_dtest, indices_dood
+
+
 
 def kde_plot(input_data,title_name,file_name,wandb_name):
     sns.displot(data =input_data,fill=False,common_norm=False,kind='kde')
