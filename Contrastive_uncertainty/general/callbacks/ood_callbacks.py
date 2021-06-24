@@ -703,7 +703,6 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
         
         # Calculate statistics related to the value
         table_data = {'Mean':[],'Std':[],'Min':[], 'Max':[]}
-        import ipdb; ipdb.set_trace()
         table_data['Mean'].append(statistics.mean(accuracy_values))
         table_data['Std'].append(statistics.stdev(accuracy_values))
         table_data['Min'].append(min(accuracy_values))

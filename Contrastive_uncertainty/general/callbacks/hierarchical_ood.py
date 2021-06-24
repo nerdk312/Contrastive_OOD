@@ -96,8 +96,6 @@ class Hierarchical_Mahalanobis(pl.Callback):
         mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
         return mahalanobis_test_accuracy
     
-
-
     def get_features(self, pl_module, dataloader, level):
         features, labels = [], []
         
@@ -215,7 +213,7 @@ class Hierarchical_Mahalanobis(pl.Callback):
         ftest = (ftest - m) / (s + 1e-10)
         food = (food - m) / (s + 1e-10)
         
-        return ftrain, ftest,food
+        return ftrain, ftest, food
 
     
     def get_eval_results(self,ftrain, ftest, food, labelstrain,ptest_index = None, pood_index=None):

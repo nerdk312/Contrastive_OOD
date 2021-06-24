@@ -18,6 +18,7 @@ typicality_batch = 25,
 #callbacks = ['Hierarchical'],
 #callbacks = ['Dataset_distances','classification'],
 callbacks = ['Dataset_distances'],
+#callbacks = ['Hierarchical Scores'],
 #callbacks = ['Typicality'],
 #callbacks =['Variational'],
 )
