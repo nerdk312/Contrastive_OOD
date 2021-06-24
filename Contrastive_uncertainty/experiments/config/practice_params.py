@@ -12,7 +12,7 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet18',
-bsz = 64,
+bsz = 32,
 dataset = 'FashionMNIST',
 #OOD_dataset = ['SVHN','CIFAR10'],
 pretrained_network = None,
@@ -23,7 +23,7 @@ epochs = 300,
 
 # Trainer configurations in common
 fast_run = True,
-quick_callback = False,
+quick_callback = True,
 training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
@@ -78,7 +78,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Aggregated','Differing'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Hierarchical'],
-callbacks = ['Typicality'],
+#callbacks = ['Typicality'],
+callbacks = ['Subsample'],
 # Either goes through all the models or goes through baselines
 
 single_model = 'Baselines'

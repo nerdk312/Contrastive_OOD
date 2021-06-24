@@ -289,7 +289,7 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
             np.copy(indices_dtest_coarse),
             np.copy(indices_dood_coarse))
         
-        ID_dict = {'ID Fine': dtest_fine, 'ID Conditional Fine': dood_conditional_fine}
+        ID_dict = {'ID Fine': dtest_fine, 'ID Conditional Fine': dtest_conditional_fine}
         OOD_dict = {f'{self.OOD_dataname} Fine': dood_fine,f'{self.OOD_dataname} Conditional Fine': dood_conditional_fine}
         # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
         all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
@@ -303,11 +303,13 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         kde_plot(OOD_dict,OOD_name,OOD_name.replace(" ","_"),OOD_name)
         kde_plot(all_dict,all_name, all_name.replace(" ","_"),all_name)
 
+        
         # Logs the difference in improvement for the network
         self.conditional_accuracy_difference(indices_dtest_fine,indices_dtest_conditional_fine,labels_test_fine)
         
-        self.joint_mahalanobis_classification(indices_dtest_coarse[:],labels_test_coarse[:],indices_dtest_fine[:],labels_test_fine[:])
-
+        self.joint_mahalanobis_classification(indices_dtest_coarse,labels_test_coarse,indices_dtest_fine,labels_test_fine)
+        
+        
     # Calculates conditional accuracy for the data
     def conditional_accuracy_difference(self, unconditional_pred, conditional_pred, labels):
         fine_unconditional_accuracy = self.mahalanobis_classification(unconditional_pred, labels)
