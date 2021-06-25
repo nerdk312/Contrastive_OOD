@@ -291,8 +291,9 @@ class Typicality_OVR(pl.Callback):
         table_data = {'Class vs Rest': [],'AUROC': []}
         for class_num in range(len(test_thresholds)):
             table_data['Class vs Rest'].append(class_num)
+            #import ipdb; ipdb.set_trace()
             class_auroc = get_roc_sklearn(test_thresholds[class_num], test_ood_thresholds[class_num])
-            table_data['AUROC'].append(class_auroc)
+            table_data['AUROC'].append(round(class_auroc,2)) # Append the value rounded to 2 decimal places
 
         table_df = pd.DataFrame(table_data)
         table = wandb.Table(dataframe=table_df)

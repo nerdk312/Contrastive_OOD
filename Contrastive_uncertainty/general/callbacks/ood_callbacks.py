@@ -488,8 +488,8 @@ class Mahalanobis_OvR(Mahalanobis_OOD):
             ovr_indices_dtest = np.where(ovr_indices_dtest==i, 0, ovr_indices_dtest)
 
             
-            test_accuracy = self.mahalanobis_classification(ovr_indices_dtest, ovr_labels_test)
-            table_data['Accuracy'].append(test_accuracy)
+            test_accuracy = self.mahalanobis_classification(ovr_indices_dtest, ovr_labels_test).item()
+            table_data['Accuracy'].append(round(test_accuracy,2))
 
         table_df = pd.DataFrame(table_data)
     
