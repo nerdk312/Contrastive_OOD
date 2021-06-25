@@ -111,7 +111,7 @@ class Hierarchical_Mahalanobis(pl.Callback):
                 label = label[label_index]
             else: # Used for the case of the OOD data
                 label = label[0]
-                            
+
             img = img.to(pl_module.device)
             
             # Compute feature vector and place in list
@@ -119,6 +119,7 @@ class Hierarchical_Mahalanobis(pl.Callback):
             
             features += list(feature_vector.data.cpu().numpy())
             labels += list(label.data.cpu().numpy())
+        #import ipdb; ipdb.set_trace()              
 
         return np.array(features), np.array(labels)
     
@@ -163,6 +164,7 @@ class Hierarchical_Mahalanobis(pl.Callback):
         
     
     def get_conditional_scores(self,ddata, prev_indices=None):
+        # import ipdb; ipdb.set_trace()
         if prev_indices is not None: # index of the previous test values
             coarse_test_mapping =  self.Datamodule.coarse_mapping.numpy()
             ddata = np.stack(ddata,axis=1) # stacks the array to make a (batch,num_classes) array
@@ -181,7 +183,6 @@ class Hierarchical_Mahalanobis(pl.Callback):
 
             ddata = np.array(collated_ddata)
             indices_ddata = np.array(collated_indices)
-            #import ipdb; ipdb.set_trace()
         else:    
             indices_ddata = np.argmin(ddata,axis = 0)  
             ddata = np.min(ddata, axis=0) # Nawid - calculate the minimum distance 
@@ -489,7 +490,7 @@ def kde_plot(input_data,title_name,file_name,wandb_name):
     sns.displot(data =input_data,fill=False,common_norm=False,kind='kde')
     plt.xlabel('Distance')
     plt.ylabel('Normalized Density')
-    plt.xlim([0, 500])
+    plt.xlim([0, 1000])
     plt.title(f'{title_name}')
     kde_filename = f'Images/{file_name}.png'
     plt.savefig(kde_filename,bbox_inches='tight')

@@ -67,8 +67,9 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Hierarchical Scores','Subsample','Datasets'],
 #callbacks = ['Subsample'],
 #callbacks = ['Hierarchical Scores'],
-callbacks = ['OVR'],
-#callbacks = ['Hierarchical'],
+#callbacks = ['Mahalanobis'],
+#callbacks = ['Typicality'],
+callbacks = ['Hierarchical Scores'],
 #callbacks = [],
 # Either goes through all the models or goes through baselines
 

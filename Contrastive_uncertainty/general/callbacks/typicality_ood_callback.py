@@ -2,6 +2,7 @@
 from numpy.lib.function_base import quantile
 from pandas.io.formats.format import DataFrameFormatter
 import torch
+from torch._C import dtype
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
@@ -287,7 +288,7 @@ class Typicality_OVR(pl.Callback):
         test_ood_thresholds = self.get_online_test_ood_thresholds(class_means,class_cov,class_entropy,ftest_norm,labels_test)
         # Class conditional thresholds using OOD test data
         ood_thresholds = self.get_online_ood_thresholds(class_means, class_cov,class_entropy, food_norm)
-        
+        import ipdb; ipdb.set_trace()
         table_data = {'Class vs Rest': [],'AUROC': []}
         for class_num in range(len(test_thresholds)):
             table_data['Class vs Rest'].append(class_num)
