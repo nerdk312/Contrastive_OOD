@@ -495,6 +495,7 @@ class Mahalanobis_OvR(Mahalanobis_OOD):
     
         table = wandb.Table(dataframe=table_df)
         wandb.log({"Mahalanobis One Vs Rest": table})
+        table_saving(table_df,'Mahalanobis One vs Rest')
         #import ipdb; ipdb.set_trace()
 
         return fpr95,auroc,aupr 
