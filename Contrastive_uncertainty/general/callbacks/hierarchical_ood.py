@@ -293,7 +293,8 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         ID_dict = {'ID Fine': dtest_fine, 'ID Conditional Fine': dtest_conditional_fine}
         OOD_dict = {f'{self.OOD_dataname} Fine': dood_fine,f'{self.OOD_dataname} Conditional Fine': dood_conditional_fine}
         # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
-        all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
+        #all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
+        all_dict = {'ID Fine': dtest_fine, 'ID Conditional Fine': dtest_conditional_fine,f'{self.OOD_dataname} Fine': dood_fine,f'{self.OOD_dataname} Conditional Fine': dood_conditional_fine}
         #import ipdb; ipdb.set_trace()
         # Plots the counts, probabilities as well as the kde
         ID_name = 'Hierarchical Fine ID data scores'

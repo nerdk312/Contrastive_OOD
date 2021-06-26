@@ -13,12 +13,16 @@ val_check = 1,  # evaluation, Moco_training
 typicality_bootstrap = 50,
 typicality_batch = 25,
 
+# Used to update callback dict
+vector_level = 'fine',
+label_level = 'coarse',
+
 #OOD_dataset = ['MNIST','KMNIST','EMNIST'],
 #callbacks = ['Mahalanobis','Dataset_distances'],
 #callbacks = ['Hierarchical'],
 #callbacks = ['Dataset_distances','classification'],
 #callbacks = ['Subsample'],
-callbacks = ['Hierarchical Scores'],
+callbacks = ['Mahalanobis'],
 #callbacks = ['Typicality'],
 #callbacks =['Variational'],
 )

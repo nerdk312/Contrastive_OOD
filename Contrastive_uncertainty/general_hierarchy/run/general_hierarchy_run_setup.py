@@ -32,6 +32,8 @@ def callback_dictionary(Datamodule,config,data_dict):
     quick_callback = config['quick_callback']
     typicality_batch = config['typicality_batch']
     typicality_bootstrap = config['typicality_bootstrap']
+    vector_level = config['vector_level']
+    label_level = config['label_level']
 
     # Manually added callbacks
     callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Models'),
@@ -45,7 +47,7 @@ def callback_dictionary(Datamodule,config,data_dict):
     Collated_OOD_datamodules = []
     for ood_dataset in config['OOD_dataset']:
         OOD_Datamodule = Datamodule_selection(data_dict, ood_dataset, config)
-        OOD_callback = {f'Mahalanobis_instance_fine_{ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
+        OOD_callback = {f'Mahalanobis {vector_level} {label_level} {ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level=vector_level, label_level=label_level),
                 f'Aggregated {ood_dataset}': Aggregated_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Differing {ood_dataset}': Differing_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Typicality_OVR_{ood_dataset}': Typicality_OVR(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
@@ -59,6 +61,13 @@ def callback_dictionary(Datamodule,config,data_dict):
                
         callback_dict.update(OOD_callback)
         Collated_OOD_datamodules.append(OOD_Datamodule)
+        '''
+        vector_level = config['vector_level']
+        label_level = config['label_level']
+        for i in range(len(config['vector_level'])):
+            mahalanobis_callback = {f'Mahalanobis {vector_level} {label_level} {ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level=vector_level[i], label_level=label_level[i])}
+            callback_dict.update(mahalanobis_callback)
+        '''
     callback_dict.update({'OOD_Dataset_distances': Mahalanobis_OOD_Datasets(Datamodule, Collated_OOD_datamodules, quick_callback=quick_callback)})
     return callback_dict
     
