@@ -207,6 +207,20 @@ class FashionMNISTDataModule(LightningDataModule):
             pin_memory=True
         )
         return loader
+    
+    def deterministic_train_dataloader(self): #  Makes it so that the data does not shuffle (Used for the case of the hierarchical approach)
+        """
+        FashionMNIST train set removes a subset to use for validation
+        """
+        loader = DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            drop_last=True,
+            pin_memory=True
+        )
+        return loader
 
     def val_dataloader(self):
         """
