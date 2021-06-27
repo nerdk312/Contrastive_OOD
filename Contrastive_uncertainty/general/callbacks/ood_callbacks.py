@@ -50,6 +50,7 @@ class Mahalanobis_OOD(pl.Callback):
         # Chooses what vector representation to use as well as which level of label hierarchy to use
         self.vector_level = vector_level
         self.label_level = label_level
+        #import ipdb; ipdb.set_trace()
         
         self.OOD_dataname = self.OOD_Datamodule.name
     
@@ -66,6 +67,7 @@ class Mahalanobis_OOD(pl.Callback):
     def forward_callback(self,trainer,pl_module):
         self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
         'label_level':{'fine':0,'coarse':1}} 
+        import ipdb; ipdb.set_trace()
         
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
@@ -125,8 +127,6 @@ class Mahalanobis_OOD(pl.Callback):
             features += list(feature_vector.data.cpu().numpy())
             labels += list(label.data.cpu().numpy())
             
-             
-        
         return np.array(features), np.array(labels)
     
     

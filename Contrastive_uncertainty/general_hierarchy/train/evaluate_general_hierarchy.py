@@ -54,7 +54,7 @@ def evaluation(run_path, update_dict, model_module, model_function,datamodule_di
         if update_k in config:
             config[update_k] = update_v
     '''
-    new_config_params = ['callbacks','typicality_bootstrap','typicality_batch']
+    new_config_params = ['callbacks','typicality_bootstrap','typicality_batch','vector_level','label_level']
 
     for update_k, update_v in update_dict.items():
         '''

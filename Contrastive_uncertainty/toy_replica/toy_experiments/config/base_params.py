@@ -9,9 +9,9 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 # Training parameters in common
-emb_dim = 128,
+emb_dim = 4,#128,
 instance_encoder = 'resnet50',
-bsz = 256,
+bsz = 64,#256,
 dataset = 'Blobs',
 # OOD_dataset = ['TwoMoons'],
 pretrained_network = None,
@@ -22,7 +22,7 @@ epochs = 1,
 
 # Trainer configurations in common
 fast_run = False,
-quick_callback = False,
+quick_callback = True,
 training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
@@ -59,8 +59,13 @@ num_cluster = [100],
 
 # HSupConBU parameters
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
-vector_level = ['instance', 'fine', 'coarse'],
-label_level = ['fine','fine','coarse'],
+
+#vector_level = ['instance', 'fine', 'coarse'],
+#label_level = ['fine','fine','coarse'],
+
+
+vector_level = 'fine',
+label_level = 'coarse',
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Typicality'],
 #callbacks = ['Dataset_distances'],
@@ -68,8 +73,9 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Subsample'],
 #callbacks = ['Hierarchical Scores'],
 #callbacks = ['Mahalanobis'],
+callbacks = ['Comparison'],
 #callbacks = ['Typicality'],
-callbacks = ['Hierarchical Scores'],
+#callbacks = ['Hierarchical Scores'],
 #callbacks = [],
 # Either goes through all the models or goes through baselines
 
