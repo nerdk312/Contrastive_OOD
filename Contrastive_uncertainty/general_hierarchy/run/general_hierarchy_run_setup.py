@@ -1,3 +1,4 @@
+from Contrastive_uncertainty.general.callbacks.practice.practice_hierarchical_callback import Practice_Hierarchical
 from Contrastive_uncertainty.general.callbacks.general_callbacks import  ModelSaving, MMD_distance
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR, Mahalanobis_Subsample
 from Contrastive_uncertainty.general.callbacks.experimental_ood_callbacks import  Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD 
@@ -6,8 +7,8 @@ from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Ty
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
 from Contrastive_uncertainty.general.callbacks.hierarchical_ood import Hierarchical_Mahalanobis, Hierarchical_scores_comparison, Hierarchical_Subsample
-from Contrastive_uncertainty.general.callbacks.practice_callback import Comparison_practice
-
+#from Contrastive_uncertainty.general.callbacks.practice_callback import Comparison_practice
+from Contrastive_uncertainty.general.callbacks.practice.practice_hierarchical_callback import Practice_Hierarchical
 from Contrastive_uncertainty.general.run.general_run_setup import Datamodule_selection, specific_callbacks
 
 
@@ -58,6 +59,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'Hierarchical {ood_dataset}':Hierarchical_Mahalanobis(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
                 f'Hierarchical Scores {ood_dataset}':Hierarchical_scores_comparison(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
+                f'Practice Hierarchical {ood_dataset}': Practice_Hierarchical(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Subsample': Hierarchical_Subsample(Datamodule,OOD_Datamodule,quick_callback=quick_callback)}
                 
                 #f'Comparison {ood_dataset}': Comparison_practice(Datamodule, OOD_Datamodule, quick_callback=quick_callback)}

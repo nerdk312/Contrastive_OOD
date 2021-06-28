@@ -387,7 +387,7 @@ class Hierarchical_Subsample(Hierarchical_Mahalanobis):
     def forward_callback(self, trainer, pl_module):
         self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
         'label_level':{'fine':0,'coarse':1}}  
-        train_loader = self.Datamodule.deterministic_deterministic_train_dataloader()
+        train_loader = self.Datamodule.deterministic_train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
         ood_loader = self.OOD_Datamodule.test_dataloader()
 

@@ -12,8 +12,8 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet18',
-bsz = 32,
-dataset = 'FashionMNIST',
+bsz = 64,
+dataset = 'MNIST',
 #OOD_dataset = ['SVHN','CIFAR10'],
 pretrained_network = None,
 
@@ -79,7 +79,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Hierarchical'],
 #callbacks = ['Typicality'],
-callbacks = ['Subsample'],
+#callbacks = ['Subsample'],
+callbacks = ['Practice'],
 # Either goes through all the models or goes through baselines
 
 single_model = 'Baselines'

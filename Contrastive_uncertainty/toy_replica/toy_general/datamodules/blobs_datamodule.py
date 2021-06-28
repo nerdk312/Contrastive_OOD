@@ -110,6 +110,12 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
         train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last = True,num_workers = 8)
         
         return train_loader
+    
+    def deterministic_train_dataloader(self):
+        '''returns training dataloader'''
+        train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=False, drop_last = True,num_workers = 8)
+        
+        return train_loader
 
     def val_dataloader(self):
         '''returns validation dataloader'''
