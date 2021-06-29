@@ -80,7 +80,9 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Hierarchical'],
 #callbacks = ['Typicality'],
 #callbacks = ['Subsample'],
-callbacks = ['Practice'],
+#callbacks = ['Practice'],
+callbacks = ['General Scores'],
+#callbacks = ['Practice Hierarchical scores'],
 # Either goes through all the models or goes through baselines
 
 single_model = 'Baselines'

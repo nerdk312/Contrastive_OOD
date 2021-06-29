@@ -40,10 +40,6 @@ class Hierarchical_Mahalanobis(pl.Callback):
         self.true_histogram = 'Hierarchical Mahalanobis True data scores'
         self.ood_histogram = 'Hierarchical Mahalanobis OOD data scores'
     
-    def on_validation_epoch_end(self, trainer, pl_module):
-        # Skip if fast testing as this can lead to issues with the code
-        self.forward_callback(trainer=trainer, pl_module=pl_module) 
-    
     def on_test_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
 
@@ -248,10 +244,11 @@ class Hierarchical_Mahalanobis(pl.Callback):
 class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
     def __init__(self, Datamodule,OOD_Datamodule,
         quick_callback:bool = True):
-    
-        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
 
+        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
+        #print('Hierarchical being used')
     def forward_callback(self, trainer, pl_module):
+        #print('Hierarchical being used')
         self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
         'label_level':{'fine':0,'coarse':1}}  
         train_loader = self.Datamodule.deterministic_train_dataloader()
@@ -297,20 +294,29 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         all_dict = {'ID Fine': dtest_fine, 'ID Conditional Fine': dtest_conditional_fine,f'{self.OOD_dataname} Fine': dood_fine,f'{self.OOD_dataname} Conditional Fine': dood_conditional_fine}
         #import ipdb; ipdb.set_trace()
         # Plots the counts, probabilities as well as the kde
-        ID_name = 'Hierarchical Fine ID data scores'
+        ID_name = f'Hierarchical Fine ID {self.OOD_dataname} data scores'
         OOD_name = f'Hierarchical Fine OOD {self.OOD_dataname} data scores'
         all_name = f'Hierarchical Fine All {self.OOD_dataname} data scores'
+
+        
+
         # Replace white spaces with underscore  https://stackoverflow.com/questions/1007481/how-do-i-replace-whitespaces-with-underscore
         kde_plot(ID_dict,ID_name,ID_name.replace(" ","_"),ID_name)
         kde_plot(OOD_dict,OOD_name,OOD_name.replace(" ","_"),OOD_name)
         kde_plot(all_dict,all_name, all_name.replace(" ","_"),all_name)
 
+        # Plots the table data for the model
+        table_df = pd.DataFrame(all_dict)
+        table = wandb.Table(data=table_df)
+        wandb.log({all_name:table})
         
+
+        '''
         # Logs the difference in improvement for the network
         self.conditional_accuracy_difference(indices_dtest_fine,indices_dtest_conditional_fine,labels_test_fine)
         
         self.joint_mahalanobis_classification(indices_dtest_coarse,labels_test_coarse,indices_dtest_fine,labels_test_fine)
-        
+        '''
         
     # Calculates conditional accuracy for the data
     def conditional_accuracy_difference(self, unconditional_pred, conditional_pred, labels):
@@ -369,6 +375,9 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         fpr95, auroc, aupr = None, None, None
 
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
+
+
+
 
 
 class Hierarchical_Subsample(Hierarchical_Mahalanobis):
@@ -488,7 +497,7 @@ class Hierarchical_Subsample(Hierarchical_Mahalanobis):
 
 
 def kde_plot(input_data,title_name,file_name,wandb_name):
-    sns.displot(data =input_data,fill=False,common_norm=False,kind='kde')
+    sns.displot(data =input_data,fill=False,common_norm=False,kind='kde', multiple="stack")
     plt.xlabel('Distance')
     plt.ylabel('Normalized Density')
     plt.xlim([0, 1000])
@@ -499,6 +508,17 @@ def kde_plot(input_data,title_name,file_name,wandb_name):
     wandb_distance = f'{wandb_name}'
     wandb.log({wandb_distance:wandb.Image(kde_filename)})
 
+def count_plot(input_data,title_name,file_name,wandb_name):
+    sns.displot(data =input_data,fill=True,common_norm=False, multiple="stack")#,binrange = (0,1000))
+    plt.xlabel('Distance')
+    plt.ylabel('Counts')
+    #plt.xlim([0, 1000])
+    plt.title(f'{title_name}')
+    filename = f'Images/{file_name}.png'
+    plt.savefig(filename,bbox_inches='tight')
+    plt.close()
+    wandb_distance = f'{wandb_name}'
+    wandb.log({wandb_distance:wandb.Image(filename)})
 
 def get_roc_plot(xin, xood,filename,logname):
     anomaly_targets = [0] * len(xin)  + [1] * len(xood)

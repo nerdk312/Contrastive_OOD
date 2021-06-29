@@ -7,8 +7,10 @@ from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Ty
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
 from Contrastive_uncertainty.general.callbacks.hierarchical_ood import Hierarchical_Mahalanobis, Hierarchical_scores_comparison, Hierarchical_Subsample
+from Contrastive_uncertainty.general.callbacks.scores_callback import scores_comparison
 #from Contrastive_uncertainty.general.callbacks.practice_callback import Comparison_practice
-from Contrastive_uncertainty.general.callbacks.practice.practice_hierarchical_callback import Practice_Hierarchical
+from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Oracle_Hierarchical
+from Contrastive_uncertainty.general.callbacks.practice.practice_hierarchical_callback import Practice_Hierarchical, Practice_Hierarchical_scores
 from Contrastive_uncertainty.general.run.general_run_setup import Datamodule_selection, specific_callbacks
 
 
@@ -57,10 +59,14 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Typicality_OVO_{ood_dataset}': Typicality_OVO(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
+                
                 f'Hierarchical {ood_dataset}':Hierarchical_Mahalanobis(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
                 f'Hierarchical Scores {ood_dataset}':Hierarchical_scores_comparison(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
-                f'Practice Hierarchical {ood_dataset}': Practice_Hierarchical(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
+                f'Oracle Hierarchical {ood_dataset}':Oracle_Hierarchical(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
+                f'Practice Hierarchical scores {ood_dataset}': Practice_Hierarchical_scores(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
+                f'General Scores {ood_dataset}':scores_comparison(Datamodule,OOD_Datamodule,vector_level='coarse',label_level='coarse', quick_callback=quick_callback),
                 f'Subsample': Hierarchical_Subsample(Datamodule,OOD_Datamodule,quick_callback=quick_callback)}
+
                 
                 #f'Comparison {ood_dataset}': Comparison_practice(Datamodule, OOD_Datamodule, quick_callback=quick_callback)}
                 
