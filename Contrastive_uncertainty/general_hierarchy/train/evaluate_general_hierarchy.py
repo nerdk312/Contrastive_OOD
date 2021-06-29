@@ -74,7 +74,7 @@ def evaluation(run_path, update_dict, model_module, model_function,datamodule_di
     desired_callbacks = specific_callbacks(callback_dict, config['callbacks'])
     #wandb.config.update(config, allow_val_change=True) # Updates the config (particularly used to increase the number of epochs present)
     wandb_logger.watch(model, log='gradients', log_freq=100) # logs the gradients
-    trainer = pl.Trainer(precision =16,fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20,
+    trainer = pl.Trainer(precision =16,fast_dev_run = config['fast_run'],progress_bar_refresh_rate=20, benchmark= True,
                         limit_train_batches = config['training_ratio'],limit_val_batches=config['validation_ratio'],limit_test_batches = config['test_ratio'],
                         max_epochs = config['epochs'],check_val_every_n_epoch = config['val_check'],
                         gpus=1,logger=wandb_logger,checkpoint_callback = False,deterministic =True,callbacks = desired_callbacks,
