@@ -59,7 +59,11 @@ class scores_comparison(Mahalanobis_OOD):
             np.copy(features_ood),
             np.copy(labels_train))
 
-        
+        limit = min(len(dtest),len(dood))
+        dtest = dtest[:limit]
+        dood = dood[:limit]
+
+
         # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
         #all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
         data_dict = {f'ID {self.vector_level} {self.label_level}': dtest, f'{self.OOD_dataname} {self.vector_level} {self.label_level}':dood}

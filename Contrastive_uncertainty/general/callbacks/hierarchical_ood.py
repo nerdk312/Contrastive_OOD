@@ -286,7 +286,16 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
             np.copy(labels_train_fine),
             np.copy(indices_dtest_coarse),
             np.copy(indices_dood_coarse))
-        
+
+
+        #import ipdb; ipdb.set_trace()
+        limit = min(len(dtest_fine),len(dood_fine))
+          
+        dtest_fine = dtest_fine[:limit]
+        dtest_conditional_fine = dtest_conditional_fine[:limit]
+        dood_fine = dood_fine[:limit]
+        dood_conditional_fine = dood_conditional_fine[:limit]
+
         ID_dict = {'ID Fine': dtest_fine, 'ID Conditional Fine': dtest_conditional_fine}
         OOD_dict = {f'{self.OOD_dataname} Fine': dood_fine,f'{self.OOD_dataname} Conditional Fine': dood_conditional_fine}
         # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
@@ -297,8 +306,6 @@ class Hierarchical_scores_comparison(Hierarchical_Mahalanobis):
         ID_name = f'Hierarchical Fine ID {self.OOD_dataname} data scores'
         OOD_name = f'Hierarchical Fine OOD {self.OOD_dataname} data scores'
         all_name = f'Hierarchical Fine All {self.OOD_dataname} data scores'
-
-        
 
         # Replace white spaces with underscore  https://stackoverflow.com/questions/1007481/how-do-i-replace-whitespaces-with-underscore
         kde_plot(ID_dict,ID_name,ID_name.replace(" ","_"),ID_name)

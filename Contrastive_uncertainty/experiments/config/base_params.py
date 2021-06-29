@@ -16,7 +16,7 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'CIFAR100',
+dataset = 'MNIST',
 #OOD_dataset = ['SVHN'],
 pretrained_network = None,
 
@@ -41,8 +41,8 @@ project = 'evaluation',
 #notes = 'Examining how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
 
 
-group = 'OOD hierarchy baselines',
-notes = 'Baselines for the OOD detection for the ID and OOD data',  # Add notes to the specific models each time
+group = 'Group: Separate branch combinations',
+notes = 'Training different combinations of branches weights for the hierarchical network',  # Add notes to the specific models each time
 
 # VAE specific params
 kl_coeff = 0.1,
@@ -73,13 +73,14 @@ memory_momentum = 0.5,
 num_cluster = [100],
 
 # HSupConBU parameters
-branch_weights = [1.0/3, 1.0/3, 1.0/3],
-
+#branch_weights = [1.0/3, 1.0/3, 1.0/3],
+branch_weights = [0.15, 0.30, 0.55],
 # Either goes through all the models or goes through baselines
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
 #callbacks = ['Model_saving','Variational'],
-callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
+callbacks = ['Model_saving'],
+#callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Aggregated','Differing'],
 
 single_model = 'Baselines'

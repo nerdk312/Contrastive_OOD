@@ -132,7 +132,7 @@ def train(base_dict):
     # Checks whether base_dict single model is present in the list
     assert base_dict['single_model'] in acceptable_single_models, 'single model response not in list of acceptable responses'
     
-    datasets = ['MNIST','FashionMNIST','CIFAR10', 'CIFAR100']
+    datasets = ['MNIST','FashionMNIST','KMNIST','CIFAR10', 'CIFAR100']
     ood_datasets = [['FashionMNIST'],['MNIST'],['SVHN'],['SVHN']]
     
     # BASELINES
