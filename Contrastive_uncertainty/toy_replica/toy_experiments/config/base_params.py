@@ -75,7 +75,9 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Mahalanobis'],
 #callbacks = ['Oracle'],
 #callbacks = ['Practice Hierarchical scores'],
-callbacks = ['Hierarchical Scores','General Scores'],
+#callbacks = ['Hierarchical Scores','General Scores'],
+#callbacks = ['Mahalanobis'],
+callbacks = ['One'],
 #callbacks = ['Typicality'],
 #callbacks = ['Hierarchical Scores'],
 #callbacks = [],
@@ -83,7 +85,6 @@ callbacks = ['Hierarchical Scores','General Scores'],
 
 single_model = 'Baselines'
 )  # evaluation
-
 # Updates OOD dataset if not manually specified
 if 'OOD_dataset' in base_hparams:
     pass    

@@ -67,7 +67,7 @@ class Mahalanobis_OOD(pl.Callback):
     def forward_callback(self,trainer,pl_module):
         self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
         'label_level':{'fine':0,'coarse':1}} 
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()

@@ -16,7 +16,7 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
-dataset = 'MNIST',
+dataset = 'CIFAR100',
 #OOD_dataset = ['SVHN'],
 pretrained_network = None,
 
