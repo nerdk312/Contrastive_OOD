@@ -41,7 +41,7 @@ project = 'evaluation',
 #notes = 'Examining how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
 
 
-group = 'Group: Separate branch combinations',
+group = 'Separate branch combinations',
 notes = 'Training different combinations of branches weights for the hierarchical network',  # Add notes to the specific models each time
 
 # VAE specific params
