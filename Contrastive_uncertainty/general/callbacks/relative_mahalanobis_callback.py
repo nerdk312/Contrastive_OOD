@@ -53,11 +53,24 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         features_test, labels_test = self.get_features(pl_module, test_loader,self.vector_level, self.label_level)
         features_ood, labels_ood = self.get_features(pl_module, ood_loader, self.vector_level, self.label_level)
 
-        dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
+        dtest, dood = self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
             np.copy(features_ood),
             np.copy(labels_train))
+
+        #import ipdb; ipdb.set_trace()
+        xs = np.arange(len(dtest))
+        #baseline = np.zeros_like(dtest)
+        ys = [dtest, dood]
+
+        # Plots multiple lines for the mahalanobis distance of the data
+        wandb.log({f"1D Mahalanobis {self.OOD_dataname}" : wandb.plot.line_series(
+                       xs=xs,
+                       ys=ys,
+                       keys= ["ID data Mahalanobis per dim", "OOD data Mahalanobis per dim"],
+                       title= "1-Dimensional Mahalanobis Distances",
+                       xname= "Dimension")})
 
 
     def get_features(self, pl_module, dataloader, vector_level, label_level):
@@ -91,36 +104,9 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
         
-        din = [
-            np.sum(
-                (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
-                * (
-                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
-                        (ftest - np.mean(x, axis=0, keepdims=True)).T
-                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
-                ).T,
-                axis=-1,
-            )
-            for x in xc # Nawid - done for all the different classes
-        ]
-        
-        dood = [
-            np.sum(
-                (food - np.mean(x, axis=0, keepdims=True))
-                * (
-                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
-                        (food - np.mean(x, axis=0, keepdims=True)).T
-                    )
-                ).T,
-                axis=-1,
-            )
-            for x in xc # Nawid- this calculates the score for all the OOD examples 
-        ]
-        
-         
-
         cov = [np.cov(x.T, bias=True) for x in xc] # Cov and means part should be fine
         means = [np.mean(x,axis=0,keepdims=True) for x in xc] # Calculates mean from (B,embdim) to (1,embdim)
+        
         eigvalues = []
         eigvectors = []
         for class_cov in cov:
@@ -134,12 +120,17 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         # Vector of datapoints(embdim,num_eigenvectors) (each column is eigenvector so the different columns is the number of eigenvectors)
         # data - means is shape (B, emb_dim), therefore the matrix multiplication needs to be (num_eigenvectors, embdim), (embdim,batch) to give (num eigenvectors, Batch) and then this is divided by (num eigenvectors,1) 
         # to give (num eigen vectors, batch) different values for 1 dimensional mahalanobis distances 
-        output = [np.matmul(eigvectors[class_num].T,(food - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(cov))]     
-        output_values = np.min(output,axis=0) # Find min along the class dimension
-        mean_dims = np.mean(output_values, axis=1) # Find the mean of all the data points
 
-        array = []
+        din = [np.abs(np.matmul(eigvectors[class_num].T,(ftest - means[class_num]).T)**2/eigvalues[class_num]) for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present 
+        din = np.min(din,axis=0) # Find min along the class dimension
+        din = np.mean(din, axis=1) # Find the mean of all the data points, din per dimension
+
+        dood = [np.abs(np.matmul(eigvectors[class_num].T,(food - means[class_num]).T)**2/eigvalues[class_num]) for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present
+        dood = np.min(dood,axis=0) # Find min along the class dimension
+        dood = np.mean(dood, axis=1) # Find the mean of all the data points, dood per dimension
         
+        '''
+        array = []
         array1 = np.array([[3,4],[1,2],[5,6],[0,9]])
         array2 = np.array([[1,2],[3,4],[5,6],[7,8]])
         array3 = np.array([[3,5],[1,3],[4,6],[1,7]])
@@ -147,22 +138,14 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         array.append(array2)
         array.append(array3)
         import ipdb; ipdb.set_trace()
-
-
-
-        # Calculate the indices corresponding to the values
-        indices_din = np.argmin(din,axis = 0)
-        indices_dood = np.argmin(dood, axis=0)
-
-        din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
-        dood = np.min(dood, axis=0)
-
-        return din, dood, indices_din, indices_dood
+        '''
+        
+        return din, dood
 
     def get_eval_results(self,ftrain, ftest, food, labelstrain):
         
         ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
         # Nawid - obtain the scores for the test data and the OOD data
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        dtest, dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
         
-        return dtest, dood, indices_dtest, indices_dood
+        return dtest, dood
