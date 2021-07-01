@@ -72,6 +72,7 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
                        title= f"1-Dimensional Mahalanobis Distances - {self.OOD_dataname} OOD data",
                        xname= "Dimension")})
 
+        
 
     def get_features(self, pl_module, dataloader, vector_level, label_level):
         features, labels = [], []
@@ -183,7 +184,7 @@ class Relative_Mahalanobis(Mahalanobis_OOD):
         dtest, dood, indices_dtest, indices_dood = self.get_eval_results(features_train, features_test, features_ood, labels_train)
         # Calculate AUROC
         auroc = get_roc_sklearn(dtest, dood)
-        wandb.log({f'Relative Mahalanobis AUROC: {self.vector_level} vector: {self.label_level} labels : {self.OOD_dataname}': auroc})
+        wandb.run.summary[f'Relative Mahalanobis AUROC: {self.vector_level} vector: {self.label_level} labels : {self.OOD_dataname}'] = auroc
 
         # Saves the confidence valeus of the data table
         limit = min(len(dtest),len(dood))
@@ -194,13 +195,17 @@ class Relative_Mahalanobis(Mahalanobis_OOD):
         #all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
         data_dict = {f'ID {self.vector_level} {self.label_level}': dtest, f'{self.OOD_dataname} {self.vector_level} {self.label_level}':dood}
         # Plots the counts, probabilities as well as the kde
-        data_name = f' Relative Mahalanobis - {self.vector_level} - {self.label_level} - {self.OOD_dataname} data scores'
+        data_name = f'Relative Mahalanobis - {self.vector_level} - {self.label_level} - {self.OOD_dataname} data scores'
         
         table_df = pd.DataFrame(data_dict)
         table = wandb.Table(data=table_df)
 
         wandb.log({data_name:table})
 
+
+        relative_mahalanobis_test_accuracy = self.mahalanobis_classification(indices_dtest, labels_test)
+        wandb.run.summary[f'Relative Mahalanobis Classification: {self.vector_level}: {self.label_level}'] = relative_mahalanobis_test_accuracy
+    
     def get_features(self, pl_module, dataloader, vector_level, label_level):
         features, labels = [], []
         
