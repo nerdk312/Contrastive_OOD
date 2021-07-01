@@ -550,35 +550,15 @@ class Hierarchical_Relative_Mahalanobis(Hierarchical_Mahalanobis):
             np.copy(indices_dood_coarse))
         
         # AUROC for the different situations
-        hierarchical_auroc = get_roc_sklearn(dtest_conditional_fine, dood_conditional_fine)
-        auroc =  get_roc_sklearn(dtest_fine, dood_fine)
-        hierarchical_auroc_improvement = hierarchical_auroc - auroc
-        wandb.run.summary[f'Hierarchical_Relative_Mahalanobis AUROC: {self.OOD_dataname}']= hierarchical_auroc
-        wandb.run.summary['Hierarchical Relative Mahalobis AUROC Improvement'] = hierarchical_auroc_improvement
-
+        self.relative_hierarchical_AUROC(dtest_conditional_fine, dood_conditional_fine,dtest_fine, dood_fine,
+                        f'Hierarchical_Relative_Mahalanobis AUROC: {self.OOD_dataname}',f'Hierarchical Relative Mahalobis AUROC Improvement:{self.OOD_dataname}')
+        
+        # Classification improvement
+        self.relative_hierarchical_classification(dtest_conditional_fine,dtest_fine,labels_test_fine,
+            f'Hierarchical Relative Mahalanobis Classification','Hierarchical Relative Mahalobis Classification Improvement')
         
         # Plotting the confidence scores for the situation
-        # Saves the confidence valeus of the data table
-        limit = min(len(dtest_fine),len(dood_fine))
-        dtest_fine = dtest_fine[:limit]
-        dood_fine = dood_fine[:limit]
-        # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
-        data_dict = {f'ID': dtest_fine, f'{self.OOD_dataname}':dood_fine}
-        # Plots the counts, probabilities as well as the kde
-        data_name = f' Hierarchical Relative Mahalanobis - {self.OOD_dataname} data scores'
-        table_df = pd.DataFrame(data_dict)
-        table = wandb.Table(data=table_df)
-        wandb.log({data_name:table})
-
-
-        # Classification improvement
-        hierarchical_test_accuracy = self.mahalanobis_classification(indices_dtest_conditional_fine, labels_test_fine)
-        unconditional_test_accuracy = self.mahalanobis_classification(indices_dood_fine,labels_test_fine)
-        classification_improvement =hierarchical_test_accuracy - unconditional_test_accuracy
-        hierarchical_name = f'Relative Mahalanobis Hierarchical Classification'
-        improvement_name = 'Hierarchical Relative Mahalobis Classification Improvement'
-        wandb.run.summary[hierarchical_name] =  hierarchical_test_accuracy
-        wandb.run.summary[improvement_name] = classification_improvement 
+        self.relative_hiearachical_scores_saving(dtest_conditional_fine,dood_conditional_fine,dtest_fine,dood_fine,f' Hierarchical Relative Mahalanobis - {self.OOD_dataname} data scores')
 
 
     # Calaculates the accuracy of a data point based on the closest distance to a centroid
@@ -587,6 +567,38 @@ class Hierarchical_Relative_Mahalanobis(Hierarchical_Mahalanobis):
         labels = torch.tensor(labels,dtype = torch.long)
         mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
         return mahalanobis_test_accuracy
+    
+    def relative_hierarchical_AUROC(self,din_conditional_fine,dood_conditional_fine,din_fine,dood_fine, name, improvement_name):
+        # AUROC for the different situations
+        hierarchical_auroc = get_roc_sklearn(din_conditional_fine, dood_conditional_fine)
+        auroc =  get_roc_sklearn(din_fine, dood_fine)
+        hierarchical_auroc_improvement = hierarchical_auroc - auroc
+        wandb.run.summary[name]= hierarchical_auroc
+        wandb.run.summary[improvement_name] = hierarchical_auroc_improvement
+    
+    def relative_hierarchical_classification(self,din_conditional_fine,din_fine,labels, name, improvement_name):
+        hierarchical_test_accuracy = self.mahalanobis_classification(din_conditional_fine, labels)
+        unconditional_test_accuracy = self.mahalanobis_classification(din_fine,labels)
+        classification_improvement =hierarchical_test_accuracy - unconditional_test_accuracy
+        wandb.run.summary[name] =  hierarchical_test_accuracy
+        wandb.run.summary[improvement_name] = classification_improvement 
+    
+    def relative_hiearachical_scores_saving(self, din_conditional_fine, dood_conditional_fine, din_fine, dood_fine,data_name):
+        # Plotting the confidence scores for the situation
+        # Saves the confidence valeus of the data table
+        limit = min(len(din_fine),len(dood_fine))
+        din_fine = din_fine[:limit]
+        dood_fine = dood_fine[:limit]
+        din_conditional_fine = din_conditional_fine[:limit]
+        dood_conditional_fine = dood_conditional_fine[:limit]
+
+        # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
+        data_dict = {f'ID Fine': din_fine, f'ID Conditional Fine': din_conditional_fine,
+            f'OOD Fine {self.OOD_dataname}':dood_fine, f'OOD Conditional Fine {self.OOD_dataname}':dood_conditional_fine}
+        # Plots the counts, probabilities as well as the kde
+        table_df = pd.DataFrame(data_dict)
+        table = wandb.Table(data=table_df)
+        wandb.log({data_name:table})
     
     def get_features(self, pl_module, dataloader, level):
         features, labels = [], []
@@ -735,21 +747,7 @@ class Hierarchical_Relative_Mahalanobis(Hierarchical_Mahalanobis):
         # Nawid - obtain the scores for the test data and the OOD data
         dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain, ptest_index, pood_index)
         
-        if ptest_index is not None:
-            true_histogram_name = 'Hierarchical Mahalanobis True data scores'
-            ood_histogram_name = f'Hierarchical Mahalanobis OOD data scores {self.OOD_dataname}'
-            self.log_confidence_scores(dtest,true_histogram_name)
-            self.log_confidence_scores(dood,ood_histogram_name)
-            
-            fpr95 = get_fpr(dtest, dood)
-            auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
-            wandb.log({'Hierarchical Mahalanobis'+ f' AUROC: {self.OOD_dataname}': auroc})
-            wandb.log({'Hierarchical Mahalanobis'+ f' AUPR: {self.OOD_dataname}': aupr})
-            wandb.log({'Hierarchical Mahalanobis'+ f' FPR: {self.OOD_dataname}': fpr95})
-        else:
-            fpr95, auroc, aupr = None, None, None
-
-        return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
+        return dtest, dood, indices_dtest, indices_dood
 
 
 

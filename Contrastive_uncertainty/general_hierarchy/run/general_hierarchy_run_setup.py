@@ -63,6 +63,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'One Dimensional Mahalanobis {ood_dataset}': One_Dim_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'Relative Mahalanobis {ood_dataset}': Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'Hierarchical {ood_dataset}':Hierarchical_Mahalanobis(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
+                f'Hierarchical Relative Mahalanobis {ood_dataset}': Hierarchical_Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'Hierarchical Scores {ood_dataset}':Hierarchical_scores_comparison(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
                 f'Oracle Hierarchical {ood_dataset}':Oracle_Hierarchical(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
                 f'Practice Hierarchical scores {ood_dataset}': Practice_Hierarchical_scores(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
