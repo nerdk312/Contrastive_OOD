@@ -187,12 +187,12 @@ class Typicality_OVR(pl.Callback):
     def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest):
         test_thresholds = [] # List of all threshold values
         # All the data for the different classes of the test features
-        #import ipdb; ipdb.set_trace()
         xtest_c = [ftest[ytest == i] for i in np.unique(ytest)]
         # Iterate through the classes
         for class_num in range(len(np.unique(ytest))):
+            # Get data for a particular class
             xtest_class = xtest_c[class_num] 
-            class_test_thresholds = self.get_class_thresholds(xtest_class, means[class_num], cov[class_num],entropy[class_num])
+            class_test_thresholds = self.get_class_thresholds(xtest_class, means[class_num], cov[class_num],entropy[class_num]) # Get class thresholds for the particular class
             test_thresholds.append(class_test_thresholds)
 
         return test_thresholds
@@ -207,15 +207,14 @@ class Typicality_OVR(pl.Callback):
             # Remove a subarray related to a particular class (Based on https://stackoverflow.com/questions/11903083/find-the-set-difference-between-two-large-arrays-matrices-in-python)
             a1_rows = ftest.view([('', ftest.dtype)] * ftest.shape[1])
             a2_rows = xtest_c[class_num].view([('', xtest_c[class_num].dtype)] * xtest_c[class_num].shape[1])
-            # Get all the data points excluding the data point of a particular class
+            # Get all the data points excluding the data point of a particular class (remove all the data for the current class)
             xtest_ood =  np.setdiff1d(a1_rows, a2_rows).view(ftest.dtype).reshape(-1, ftest.shape[1])
 
-
+            # Obtain the test thresholds for this class where the data points of this particular class is removed from the rest
             class_test_ood_thresholds = self.get_class_thresholds(xtest_ood, means[class_num], cov[class_num],entropy[class_num])
             test_ood_thresholds.append(class_test_ood_thresholds)
 
         return test_ood_thresholds
-
    
     def get_online_ood_thresholds(self, means, cov, entropy, food):
         # Treating other classes as OOD dataset for a particular class
@@ -288,11 +287,35 @@ class Typicality_OVR(pl.Callback):
         test_ood_thresholds = self.get_online_test_ood_thresholds(class_means,class_cov,class_entropy,ftest_norm,labels_test)
         # Class conditional thresholds using OOD test data
         ood_thresholds = self.get_online_ood_thresholds(class_means, class_cov,class_entropy, food_norm)
-        import ipdb; ipdb.set_trace()
+        
+        
+        
+        #import ipdb; ipdb.set_trace()
+        ######
+        self.OVR_AUROC_saving(test_thresholds,test_ood_thresholds,f'Class vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname}')
+        '''
+        ood_table_data = {f'Class vs OOD Rest {self.OOD_dataname}': [],'AUROC': []}
+        for class_num in range(len(test_thresholds)):
+            ood_table_data[f'Class vs OOD Rest {self.OOD_dataname}'].append(class_num)
+            class_ood_auroc = get_roc_sklearn(test_thresholds[class_num], ood_thresholds[class_num])
+            ood_table_data['AUROC'].append(round(class_ood_auroc,2)) # Append the value rounded to 2 decimal places
+
+        ood_table_df = pd.DataFrame(ood_table_data)
+        ood_table = wandb.Table(dataframe=ood_table_df)
+        wandb.log({f"Typicality One Vs OOD Rest {self.OOD_dataname}": ood_table})
+        table_saving(ood_table_df,f"Typicality One Vs OOD Rest {self.OOD_dataname}")    
+        '''
+
+        
+        ######
+        # OVR for the case of test data against over classes of test data
+        self.OVR_AUROC_saving(test_thresholds,test_ood_thresholds,'Class vs Rest','Typicality One vs Rest')
+        '''
         table_data = {'Class vs Rest': [],'AUROC': []}
         for class_num in range(len(test_thresholds)):
             table_data['Class vs Rest'].append(class_num)
             #import ipdb; ipdb.set_trace()
+            #import ipdb; ipdb.set_trace() 
             class_auroc = get_roc_sklearn(test_thresholds[class_num], test_ood_thresholds[class_num])
             table_data['AUROC'].append(round(class_auroc,2)) # Append the value rounded to 2 decimal places
 
@@ -300,6 +323,19 @@ class Typicality_OVR(pl.Callback):
         table = wandb.Table(dataframe=table_df)
         wandb.log({"Typicality One Vs Rest": table})
         table_saving(table_df,'Typicality One vs Rest')
+        '''
+    def OVR_AUROC_saving(self,test_thresholds,ood_thresholds,table_name,wandb_name):
+        table_data = {table_name: [],'AUROC': []}
+        for class_num in range(len(test_thresholds)):
+            table_data[table_name].append(class_num)
+            auroc = get_roc_sklearn(test_thresholds[class_num], ood_thresholds[class_num])
+            table_data['AUROC'].append(round(auroc,2)) # Append the value rounded to 2 decimal places
+
+        table_df = pd.DataFrame(table_data)
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({wandb_name: table})
+        table_saving(table_df,wandb_name) 
+
         
 
 class Typicality_OVO(Typicality_OVR):
