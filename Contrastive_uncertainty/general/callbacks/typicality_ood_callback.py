@@ -292,7 +292,7 @@ class Typicality_OVR(pl.Callback):
         
         #import ipdb; ipdb.set_trace()
         ######
-        self.OVR_AUROC_saving(test_thresholds,test_ood_thresholds,f'Class vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname}')
+        self.OVR_AUROC_saving(test_thresholds,ood_thresholds,f'Class vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname}')
         '''
         ood_table_data = {f'Class vs OOD Rest {self.OOD_dataname}': [],'AUROC': []}
         for class_num in range(len(test_thresholds)):
@@ -309,7 +309,7 @@ class Typicality_OVR(pl.Callback):
         
         ######
         # OVR for the case of test data against over classes of test data
-        self.OVR_AUROC_saving(test_thresholds,test_ood_thresholds,'Class vs Rest','Typicality One vs Rest')
+        #self.OVR_AUROC_saving(test_thresholds,test_ood_thresholds,'Class vs Rest','Typicality One vs Rest')
         '''
         table_data = {'Class vs Rest': [],'AUROC': []}
         for class_num in range(len(test_thresholds)):

@@ -513,6 +513,7 @@ class Hierarchical_Relative_Mahalanobis(Hierarchical_Mahalanobis):
 
     # Performs all the computation in the callback
     def forward_callback(self, trainer, pl_module):
+        #print('HIERARCHICAL RELATIVE BEING USED')
         self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
         'label_level':{'fine':0,'coarse':1}}  
         train_loader = self.Datamodule.deterministic_train_dataloader()
@@ -554,7 +555,7 @@ class Hierarchical_Relative_Mahalanobis(Hierarchical_Mahalanobis):
                         f'Hierarchical_Relative_Mahalanobis AUROC: {self.OOD_dataname}',f'Hierarchical Relative Mahalobis AUROC Improvement:{self.OOD_dataname}')
         
         # Classification improvement
-        self.relative_hierarchical_classification(dtest_conditional_fine,dtest_fine,labels_test_fine,
+        self.relative_hierarchical_classification(indices_dtest_conditional_fine,indices_dtest_fine,labels_test_fine,
             f'Hierarchical Relative Mahalanobis Classification','Hierarchical Relative Mahalobis Classification Improvement')
         
         # Plotting the confidence scores for the situation
