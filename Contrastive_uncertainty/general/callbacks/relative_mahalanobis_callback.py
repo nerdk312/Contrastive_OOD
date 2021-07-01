@@ -180,7 +180,54 @@ class Relative_Mahalanobis(Mahalanobis_OOD):
         features_test, labels_test = self.get_features(pl_module, test_loader,self.vector_level, self.label_level)
         features_ood, labels_ood = self.get_features(pl_module, ood_loader, self.vector_level, self.label_level)
 
-    
+        dtest, dood, indices_dtest, indices_dood = self.get_eval_results(features_train, features_test, features_ood, labels_train)
+        # Calculate AUROC
+        auroc = get_roc_sklearn(dtest, dood)
+        wandb.log({f'Relative Mahalanobis AUROC: {self.vector_level} vector: {self.label_level} labels : {self.OOD_dataname}': auroc})
+
+        # Saves the confidence valeus of the data table
+        limit = min(len(dtest),len(dood))
+        dtest = dtest[:limit]
+        dood = dood[:limit]
+
+        # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
+        #all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
+        data_dict = {f'ID {self.vector_level} {self.label_level}': dtest, f'{self.OOD_dataname} {self.vector_level} {self.label_level}':dood}
+        # Plots the counts, probabilities as well as the kde
+        data_name = f' Relative Mahalanobis - {self.vector_level} - {self.label_level} - {self.OOD_dataname} data scores'
+        
+        table_df = pd.DataFrame(data_dict)
+        table = wandb.Table(data=table_df)
+
+        wandb.log({data_name:table})
+
+    def get_features(self, pl_module, dataloader, vector_level, label_level):
+        features, labels = [], []
+        
+        loader = quickloading(self.quick_callback, dataloader)
+        for index, (img, *label, indices) in enumerate(loader):
+            assert len(loader)>0, 'loader is empty'
+            if isinstance(img, tuple) or isinstance(img, list):
+                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
+
+            # Selects the correct label based on the desired label level
+            if len(label) > 1:
+                label_index = self.vector_dict['label_level'][label_level]
+                label = label[label_index]
+            else: # Used for the case of the OOD data
+                label = label[0]
+
+            img = img.to(pl_module.device)
+            
+            # Compute feature vector and place in list
+            feature_vector = self.vector_dict['vector_level'][vector_level](img) # Performs the callback for the desired level
+            
+            features += list(feature_vector.data.cpu().numpy())
+            labels += list(label.data.cpu().numpy())
+        #import ipdb; ipdb.set_trace()              
+
+        return np.array(features), np.array(labels)
+
     def get_scores(self,ftrain, ftest, food, ypred):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
@@ -213,8 +260,43 @@ class Relative_Mahalanobis(Mahalanobis_OOD):
         # Calculate the mean of the entire diataset and the covariance of the entire training set
         mean = np.mean(ftrain, axis=0,keepdims=True)
         cov = np.cov(ftrain.T, bias=True)
-        #import ipdb; ipdb.set_trace()
+        
+        background_din = np.sum(
+                ftest - mean
+                * (
+                    np.linalg.pinv(cov).dot(
+                        (ftest- mean).T
+                    )
+                ).T,
+                axis=-1,
+            )
+        
+        background_dood = np.sum(
+                food - mean
+                * (
+                    np.linalg.pinv(cov).dot(
+                        (food- mean).T
+                    )
+                ).T,
+                axis=-1,
+            )
+        
+        din = din - background_din
+        dood = dood - background_dood
 
+        '''
+        # Checks how the code works for the task
+        #import ipdb; ipdb.set_trace()
+        array = []
+        array1 = np.array([3,4])
+        array2 = np.array([1,2])
+        array3 = np.array([4,7])
+        array.append(array1)
+        array.append(array2)
+        array.append(array3)
+        background_val = np.array([-1,10])
+        import ipdb; ipdb.set_trace()
+        '''
 
         # Calculate the indices corresponding to the values
         indices_din = np.argmin(din,axis = 0)
@@ -224,3 +306,11 @@ class Relative_Mahalanobis(Mahalanobis_OOD):
         dood = np.min(dood, axis=0)
 
         return din, dood, indices_din, indices_dood
+
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        
+        return dtest, dood, indices_dtest, indices_dood
