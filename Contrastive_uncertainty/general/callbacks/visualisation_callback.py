@@ -132,9 +132,20 @@ class Visualisation(pl.Callback): # General class for visualisation
 
         features = torch.cat(features)
         collated_labels = torch.cat(collated_labels)
+
+        # Centroid calculation
+        # Calculate a list for the centroids, which is then concatenated together
+        centroids = [torch.mean(features[collated_labels==i],dim=0,keepdim=True) for i in torch.unique(collated_labels)] 
+        centroids = torch.cat(centroids)
+        # Concatenate the features and the centroids, as well as adding additional features for the centroid
+        features = torch.cat((features, centroids))
+        collated_labels = torch.cat((collated_labels,torch.unique(collated_labels))) 
+        
         return features, collated_labels
 
     def pca_visualisation(self, representations, labels, name,num_classes):
+        # Font size for annotation
+        font_size = 15 if num_classes <100 else 10
         pca = PCA(n_components=3)
         pca_result = pca.fit_transform(representations)
         pca_one = pca_result[:,0]
@@ -149,6 +160,13 @@ class Visualisation(pl.Callback): # General class for visualisation
         legend="full",
         alpha=0.3
         )
+        
+        # Values of +1 required to make it move backwards effectively
+        for class_num in range(num_classes):
+            plt.annotate(f'{num_classes - (class_num+1)}', xy= (pca_one[-(class_num+1)],pca_two[-(class_num+1)]),fontsize=font_size)
+        
+        #plt.show()
+        
         # Limits for te plot
 
         #sns.plt.xlim(-2.5,2.5)
@@ -158,7 +176,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         plt.savefig(pca_filename)
         wandb_pca = name +' PCA of Features'
         wandb.log({wandb_pca:wandb.Image(pca_filename)})
-        
+        plt.close()
         # 3D PCA plot
         ax = plt.figure(figsize=(16,10)).gca(projection='3d')
         ax.scatter(
@@ -171,6 +189,12 @@ class Visualisation(pl.Callback): # General class for visualisation
         ax.set_xlabel('pca-one')
         ax.set_ylabel('pca-two')
         ax.set_zlabel('pca-three')
+        for class_num in range(num_classes):
+            ax.text(pca_one[-(class_num+1)], pca_two[-(class_num+1)], pca_three[-(class_num+1)], f"{num_classes - (class_num+1)}")
+        '''
+        for class_num in range(num_classes):
+            plt.annotate(f'{num_classes - (class_num+1)}', xy= (pca_one[-(class_num+1)],pca_two[-(class_num+1)]),fontsize=20)
+        '''
         #limits for plot to ensure fixed scale
         #ax.xlim(-2.5,2.5)
         #ax.ylim(-2.5,2.5)
@@ -181,6 +205,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         plt.close()
 
     def tsne_visualisation(self, representations, labels, name,num_classes):
+        font_size = 15 if num_classes <100 else 10
         tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
         tsne_results = tsne.fit_transform(representations)
         tsne_one = tsne_results[:,0]
@@ -194,6 +219,10 @@ class Visualisation(pl.Callback): # General class for visualisation
         legend="full",
         alpha=0.3
         )
+
+        for class_num in range(num_classes):
+            plt.annotate(f'{num_classes - (class_num+1)}', xy= (tsne_one[-(class_num+1)],tsne_two[-(class_num+1)]),fontsize=font_size)
+        
         # Used to control the scale of a seaborn plot
         #sns.plt.ylim(-15, 15)
         #sns.plt.xlim(-15, 15)
