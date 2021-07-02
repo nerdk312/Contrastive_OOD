@@ -293,6 +293,7 @@ class Typicality_OVR(pl.Callback):
         #import ipdb; ipdb.set_trace()
         ######
         self.OVR_AUROC_saving(test_thresholds,ood_thresholds,f'Class vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname}')
+        #print('USING TYPICALITY FOR ood TE')
         '''
         ood_table_data = {f'Class vs OOD Rest {self.OOD_dataname}': [],'AUROC': []}
         for class_num in range(len(test_thresholds)):
@@ -334,6 +335,7 @@ class Typicality_OVR(pl.Callback):
         table_df = pd.DataFrame(table_data)
         table = wandb.Table(dataframe=table_df)
         wandb.log({wandb_name: table})
+        import ipdb; ipdb.set_trace()
         table_saving(table_df,wandb_name) 
 
         

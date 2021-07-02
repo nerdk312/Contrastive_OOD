@@ -29,7 +29,7 @@ test_ratio = 1.0,
 val_check = 1,
 model_saving = 1, # Used to control how often the model is saved
 typicality_bootstrap = 50,
-typicality_batch = 25,
+typicality_batch = 5,
 
 
 # Wandb parameters in common
@@ -78,8 +78,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Hierarchical Scores','General Scores'],
 #callbacks = ['One'],
 #callbacks = ['Relative'],
-callbacks = ['Hierarchical Relative'],
-#callbacks = ['Typicality'],
+#callbacks = ['Hierarchical Relative'],
+callbacks = ['Typicality_OVR'],
 #callbacks = ['Hierarchical Scores'],
 #callbacks = [],
 # Either goes through all the models or goes through baselines
