@@ -79,7 +79,7 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['One'],
 #callbacks = ['Relative'],
 #callbacks = ['Hierarchical Relative'],
-callbacks = ['Typicality_OVR'],
+callbacks = ['Typicality_OVR','Visualisation','Mahalanobis Distance','Metrics'],
 #callbacks = ['Hierarchical Scores'],
 #callbacks = [],
 # Either goes through all the models or goes through baselines

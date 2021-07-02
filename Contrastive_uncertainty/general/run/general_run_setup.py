@@ -45,10 +45,8 @@ def callback_dictionary(Datamodule,config,data_dict):
     
     # Manually added callbacks
     callback_dict = {'Model_saving':ModelSaving(config['model_saving'],'Models'),
-                    'MMD_instance': MMD_distance(Datamodule,vector_level='instance', quick_callback=quick_callback),
-                    'Metrics_instance_fine':MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='instance', label_level='fine', quick_callback=quick_callback),
-                    'Visualisation_instance_fine': Visualisation(Datamodule, vector_level='instance',label_level='fine',quick_callback=quick_callback),
-                    'Variational':Variational(Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)}
+                    'Metrics':MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='instance', label_level='fine', quick_callback=quick_callback),
+                    'Visualisation': Visualisation(Datamodule, vector_level='instance',label_level='fine',quick_callback=quick_callback)}
                     
 
     
@@ -58,16 +56,16 @@ def callback_dictionary(Datamodule,config,data_dict):
     #import ipdb; ipdb.set_trace()
     for ood_dataset in config['OOD_dataset']:
         OOD_Datamodule = Datamodule_selection(data_dict, ood_dataset, config)
-        OOD_callback = {f'Mahalanobis_instance_fine_{ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
-                f'Aggregated {ood_dataset}': Aggregated_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
-                f'Differing {ood_dataset}': Differing_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
-                f'One Dimensional Mahalanobis {ood_dataset}': One_Dim_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
-                f'Relative Mahalanobis {ood_dataset}': Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+        OOD_callback = {                
+                #  # Callbacks related to typicality as well as OVR and OVO classification
                 f'Typicality_OVR_{ood_dataset}': Typicality_OVR(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'Typicality_OVO_{ood_dataset}': Typicality_OVO(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
-                f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)}
+                f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                
+                f'One Dimensional Mahalanobis {ood_dataset}': One_Dim_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+                f'Relative Mahalanobis {ood_dataset}': Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+                f'Mahalanobis Distance {ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine')}
         #import ipdb; ipdb.set_trace()
         callback_dict.update(OOD_callback)
         Collated_OOD_datamodules.append(OOD_Datamodule)
@@ -86,3 +84,9 @@ def specific_callbacks(callback_dict, names):
                 desired_callbacks.append(callback_dict[key]) # Add the specific callback
     
     return desired_callbacks
+
+
+#'MMD_instance': MMD_distance(Datamodule,vector_level='instance', quick_callback=quick_callback),
+#'Variational':Variational(Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback)
+#f'Aggregated {ood_dataset}': Aggregated_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
+#f'Differing {ood_dataset}': Differing_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
