@@ -296,7 +296,7 @@ class Typicality_OVR(pl.Callback):
         
         ######
         # OVR for the case of test data against over classes of test data
-        #self.OVR_AUROC_saving(test_thresholds,test_ood_thresholds,'Class vs Rest','Typicality One vs Rest','Typicality One vs Rest Table')
+        self.OVR_AUROC_saving(test_thresholds,test_ood_thresholds,'Class vs Rest','Typicality One vs Rest','Typicality One vs Rest Table')
 
     def OVR_AUROC_saving(self,ftest_thresholds,food_thresholds,table_name,wandb_name,wandb_table_image):
         table_data = {table_name: [],'AUROC': []}

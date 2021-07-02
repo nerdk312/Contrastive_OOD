@@ -219,7 +219,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         legend="full",
         alpha=0.3
         )
-
+        # https://matplotlib.org/stable/gallery/mplot3d/text3d.html
         for class_num in range(num_classes):
             plt.annotate(f'{num_classes - (class_num+1)}', xy= (tsne_one[-(class_num+1)],tsne_two[-(class_num+1)]),fontsize=font_size)
         

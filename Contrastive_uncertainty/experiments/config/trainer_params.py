@@ -14,12 +14,13 @@ typicality_bootstrap = 50,
 typicality_batch = 25,
 
 # Used to update callback dict
-vector_level = ['fine'],
-label_level = ['coarse'],
+vector_level = ['instance', 'fine', 'coarse'],
+label_level = ['fine','fine','coarse'],
+#vector_level = ['fine'],
+#label_level = ['coarse'],
 
-#OOD_dataset = ['MNIST','KMNIST','EMNIST'],
-#callbacks = ['Mahalanobis','Dataset_distances'],
-#callbacks = ['Hierarchical'],
+
+
 #callbacks = ['Dataset_distances','classification'],
 #callbacks = ['Subsample'],
 #callbacks = ['Oracle'],
@@ -28,6 +29,7 @@ label_level = ['coarse'],
 #callbacks = ['Hierarchical Relative'],
 #callbacks = ['Practice Hierarchical scores'],
 #callbacks = ['Mahalanobis'],
-callbacks = ['Typicality_OVR'],
+callbacks = ['Visualisation','Metrics','Mahalanobis Distance', 'Hierarchical Mahalanobis', 'Hierarchical Scores','Oracle Hierarchical', 'General Scores'],
+#callbacks = ['Typicality_OVR'],
 #callbacks =['Variational'],
 )
