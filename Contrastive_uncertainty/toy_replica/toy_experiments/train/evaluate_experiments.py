@@ -28,8 +28,8 @@ from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroi
 
 
 # Import training methods 
-from Contrastive_uncertainty.toy_replica.toy_general.train.evaluate_general import evaluation as general_evaluation
-from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.train.evaluate_general_hierarchy import evaluation as general_hierarchy_evaluation
+from Contrastive_uncertainty.general.train.evaluate_general import evaluation as general_evaluation
+from Contrastive_uncertainty.general_hierarchy.train.evaluate_general_hierarchy import evaluation as general_hierarchy_evaluation
 
 from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict as general_dataset_dict, OOD_dict as general_OOD_dict
 from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.datamodule_dict import dataset_dict as general_hierarchy_dataset_dict, OOD_dict as general_hierarchy_OOD_dict

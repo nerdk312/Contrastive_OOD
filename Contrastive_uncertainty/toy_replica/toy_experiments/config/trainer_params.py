@@ -15,6 +15,10 @@ val_check = 1,  # evaluation, Moco_training
 typicality_bootstrap = 50,
 typicality_batch = 25,
 
+
+group = 'newer changed Group',
+notes = 'Changing group',  # Add notes to the specific models each time
+
 # Updating for the test run
 #OOD_dataset = ['TwoMoons','Diagonal'],
 callbacks =['Mahalanobis'],

@@ -14,8 +14,8 @@ typicality_bootstrap = 50,
 typicality_batch = 25,
 
 # Used to update callback dict
-vector_level = 'fine',
-label_level = 'coarse',
+vector_level = ['fine'],
+label_level = ['coarse'],
 
 #OOD_dataset = ['MNIST','KMNIST','EMNIST'],
 #callbacks = ['Mahalanobis','Dataset_distances'],

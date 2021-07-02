@@ -140,7 +140,7 @@ class Visualisation(pl.Callback): # General class for visualisation
         pca_one = pca_result[:,0]
         pca_two = pca_result[:,1]
         pca_three = pca_result[:,2]
-        
+        # 2D plot
         plt.figure(figsize=(16,10))
         sns.scatterplot(
         x=pca_one, y=pca_two,
@@ -158,7 +158,8 @@ class Visualisation(pl.Callback): # General class for visualisation
         plt.savefig(pca_filename)
         wandb_pca = name +' PCA of Features'
         wandb.log({wandb_pca:wandb.Image(pca_filename)})
-
+        
+        # 3D PCA plot
         ax = plt.figure(figsize=(16,10)).gca(projection='3d')
         ax.scatter(
         xs=pca_one,
