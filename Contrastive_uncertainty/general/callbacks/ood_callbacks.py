@@ -881,5 +881,6 @@ def table_saving(table_dataframe,name):
     plt.savefig(filename, bbox_inches='tight')
     plt.close()
     wandb_title = f'{name}'
+    #import ipdb; ipdb.set_trace()
     wandb.log({wandb_title:wandb.Image(filename)})
 

@@ -292,51 +292,27 @@ class Typicality_OVR(pl.Callback):
         
         #import ipdb; ipdb.set_trace()
         ######
-        self.OVR_AUROC_saving(test_thresholds,ood_thresholds,f'Class vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname}')
-        #print('USING TYPICALITY FOR ood TE')
-        '''
-        ood_table_data = {f'Class vs OOD Rest {self.OOD_dataname}': [],'AUROC': []}
-        for class_num in range(len(test_thresholds)):
-            ood_table_data[f'Class vs OOD Rest {self.OOD_dataname}'].append(class_num)
-            class_ood_auroc = get_roc_sklearn(test_thresholds[class_num], ood_thresholds[class_num])
-            ood_table_data['AUROC'].append(round(class_ood_auroc,2)) # Append the value rounded to 2 decimal places
-
-        ood_table_df = pd.DataFrame(ood_table_data)
-        ood_table = wandb.Table(dataframe=ood_table_df)
-        wandb.log({f"Typicality One Vs OOD Rest {self.OOD_dataname}": ood_table})
-        table_saving(ood_table_df,f"Typicality One Vs OOD Rest {self.OOD_dataname}")    
-        '''
-
+        self.OVR_AUROC_saving(test_thresholds,ood_thresholds,f'Class vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname} Table')
         
         ######
         # OVR for the case of test data against over classes of test data
-        #self.OVR_AUROC_saving(test_thresholds,test_ood_thresholds,'Class vs Rest','Typicality One vs Rest')
-        '''
-        table_data = {'Class vs Rest': [],'AUROC': []}
-        for class_num in range(len(test_thresholds)):
-            table_data['Class vs Rest'].append(class_num)
-            #import ipdb; ipdb.set_trace()
-            #import ipdb; ipdb.set_trace() 
-            class_auroc = get_roc_sklearn(test_thresholds[class_num], test_ood_thresholds[class_num])
+        self.OVR_AUROC_saving(test_thresholds,test_ood_thresholds,'Class vs Rest','Typicality One vs Rest','Typicality One vs Rest Table')
+
+    def OVR_AUROC_saving(self,ftest_thresholds,food_thresholds,table_name,wandb_name,wandb_table_image):
+        table_data = {table_name: [],'AUROC': []}
+        for class_num in range(len(ftest_thresholds)):
+            table_data[table_name].append(class_num)
+            class_auroc = get_roc_sklearn(ftest_thresholds[class_num], food_thresholds[class_num])
             table_data['AUROC'].append(round(class_auroc,2)) # Append the value rounded to 2 decimal places
 
         table_df = pd.DataFrame(table_data)
-        table = wandb.Table(dataframe=table_df)
-        wandb.log({"Typicality One Vs Rest": table})
-        table_saving(table_df,'Typicality One vs Rest')
-        '''
-    def OVR_AUROC_saving(self,test_thresholds,ood_thresholds,table_name,wandb_name):
-        table_data = {table_name: [],'AUROC': []}
-        for class_num in range(len(test_thresholds)):
-            table_data[table_name].append(class_num)
-            auroc = get_roc_sklearn(test_thresholds[class_num], ood_thresholds[class_num])
-            table_data['AUROC'].append(round(auroc,2)) # Append the value rounded to 2 decimal places
+        ood_table = wandb.Table(dataframe=table_df)
+        # NEED TO Have different names for wandb.log (wandbname) and table saving as table saving also uses wandb.log which causes conflicting names being present
+        wandb.log({wandb_name: ood_table})
+        table_saving(table_df,wandb_table_image)
+        
 
-        table_df = pd.DataFrame(table_data)
-        table = wandb.Table(dataframe=table_df)
-        wandb.log({wandb_name: table})
-        import ipdb; ipdb.set_trace()
-        table_saving(table_df,wandb_name) 
+
 
         
 
