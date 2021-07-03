@@ -61,37 +61,40 @@ class scores_comparison(Mahalanobis_OOD):
             np.copy(labels_train))
 
         
-        dtest_class = [pd.DataFrame(dtest[indices_dtest == i]) for i in np.unique(indices_dtest)] # Nawid - training data which have been predicted to belong to a particular class
+        self.class_specific_scores(dtest,indices_dtest,'ID',f'Class data scores ID {self.vector_level} {self.label_level}')
+        self.class_specific_scores(dood,indices_dood,'OOD',f'Class data scores OOD {self.vector_level} {self.label_level} {self.OOD_dataname} ')
+        self.ID_OOD_scores(dtest,dood)
+        
 
+    # Mahalanobis distance scores for a particular class
+    def class_specific_scores(self,ddata, indices,data_distribution,class_data_name):
+        ddata_class = [pd.DataFrame(ddata[indices == i]) for i in np.unique(indices)] # Nawid - training data which have been predicted to belong to a particular class
+        
         # Concatenate all the dataframes (which places nans in situations where the columns have different lengths)
-        class_table_df = pd.concat(dtest_class,axis=1)
+        class_table_df = pd.concat(ddata_class,axis=1)
         #https://stackoverflow.com/questions/30647247/replace-nan-in-a-dataframe-with-random-values
         class_table_df = class_table_df.applymap(lambda l: l if not np.isnan(l) else random.uniform(-2,-1))
         #class_table_df = class_table_df.fillna(-1) # replace nans with -1
-        class_table_df.columns =[f'ID {self.vector_level} {self.label_level} class {i}' for i in np.unique(indices_dtest)]
+        class_table_df.columns =[f'{data_distribution} {self.vector_level} {self.label_level} class {i}' for i in np.unique(indices)]
         
-        class_data_name = f'ID {self.vector_level} {self.label_level} class data scores'        
-        #table_df = pd.DataFrame(practice_data_dict)
         class_table = wandb.Table(data=class_table_df)
-        #import ipdb; ipdb.set_trace()
         wandb.log({class_data_name:class_table})
-        
-        
-        limit = min(len(dtest),len(dood))
-        dtest = dtest[:limit]
+    
+    # Mahalanobis distance scores for the ID and OOD data
+    def ID_OOD_scores(self,din,dood):
+        limit = min(len(din),len(dood))
+        din = din[:limit]
         dood = dood[:limit] 
         # Actual code fort the normal case
         # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
         #all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
-        data_dict = {f'ID {self.vector_level} {self.label_level}': dtest, f'{self.OOD_dataname} {self.vector_level} {self.label_level}':dood}
+        data_dict = {f'ID {self.vector_level} {self.label_level}': din, f'{self.OOD_dataname} {self.vector_level} {self.label_level}':dood}
         # Plots the counts, probabilities as well as the kde
         data_name = f'{self.vector_level} {self.label_level} {self.OOD_dataname} data scores'
         
         table_df = pd.DataFrame(data_dict)
         table = wandb.Table(data=table_df)
         wandb.log({data_name:table})
-        #import ipdb; ipdb.set_trace()
-        
 
     def get_features(self, pl_module, dataloader, vector_level, label_level):
         features, labels = [], []
