@@ -2,7 +2,7 @@ import wandb
 
 # Import general params
 from Contrastive_uncertainty.experiments.train.update_experiments import update
-from Contrastive_uncertainty.experiments.config.trainer_params import trainer_hparams
+from Contrastive_uncertainty.experiments.config.update_params import update_hparams
 
 
 # Code to obtain run paths from a project and group
@@ -38,4 +38,4 @@ run_paths = ['nerdk312/evaluation/3n5sk5kt',
             ]
 '''
 
-update(run_paths, trainer_hparams)
+update(run_paths, update_hparams)

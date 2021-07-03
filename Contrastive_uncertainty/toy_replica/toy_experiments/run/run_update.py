@@ -2,9 +2,9 @@ import wandb
 
 # Import general params
 from Contrastive_uncertainty.experiments.train.update_experiments import update # Method which can be used in any case
-from Contrastive_uncertainty.toy_replica.toy_experiments.config.trainer_params import trainer_hparams
+from Contrastive_uncertainty.toy_replica.toy_experiments.config.update_params import update_hparams
 
-
+'''
 # Code to obtain run paths from a project and group
 run_paths = []
 api = wandb.Api()
@@ -17,7 +17,7 @@ for i in range(len(runs)):
     # Joins together the path of the runs which are separated into different parts in a list
     run_path = '/'.join(runs[i].path)
     run_paths.append(run_path)
-
+'''
 
 #"Group: Separate branch combinations"
 #"OOD detection at different scales experiment"
@@ -26,4 +26,4 @@ for i in range(len(runs)):
 run_paths = ['nerdk312/Toy_evaluation/1mutstsx']
 
 
-update(run_paths, trainer_hparams)
+update(run_paths, update_hparams)
