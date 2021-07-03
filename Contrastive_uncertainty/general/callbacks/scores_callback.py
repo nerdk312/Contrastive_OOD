@@ -3,6 +3,7 @@ import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
+import random
 
 import os
 import numpy as np
@@ -59,11 +60,27 @@ class scores_comparison(Mahalanobis_OOD):
             np.copy(features_ood),
             np.copy(labels_train))
 
+        
+        dtest_class = [pd.DataFrame(dtest[indices_dtest == i]) for i in np.unique(indices_dtest)] # Nawid - training data which have been predicted to belong to a particular class
+
+        # Concatenate all the dataframes (which places nans in situations where the columns have different lengths)
+        class_table_df = pd.concat(dtest_class,axis=1)
+        #https://stackoverflow.com/questions/30647247/replace-nan-in-a-dataframe-with-random-values
+        class_table_df = class_table_df.applymap(lambda l: l if not np.isnan(l) else random.uniform(-2,-1))
+        #class_table_df = class_table_df.fillna(-1) # replace nans with -1
+        class_table_df.columns =[f'ID {self.vector_level} {self.label_level} class {i}' for i in np.unique(indices_dtest)]
+        
+        class_data_name = f'ID {self.vector_level} {self.label_level} class data scores'        
+        #table_df = pd.DataFrame(practice_data_dict)
+        class_table = wandb.Table(data=class_table_df)
+        #import ipdb; ipdb.set_trace()
+        wandb.log({class_data_name:class_table})
+        
+        
         limit = min(len(dtest),len(dood))
         dtest = dtest[:limit]
-        dood = dood[:limit]
-
-
+        dood = dood[:limit] 
+        # Actual code fort the normal case
         # https://towardsdatascience.com/merge-dictionaries-in-python-d4e9ce137374
         #all_dict = {**ID_dict,**OOD_dict} # Merged dictionary
         data_dict = {f'ID {self.vector_level} {self.label_level}': dtest, f'{self.OOD_dataname} {self.vector_level} {self.label_level}':dood}
@@ -74,6 +91,7 @@ class scores_comparison(Mahalanobis_OOD):
         table = wandb.Table(data=table_df)
         wandb.log({data_name:table})
         #import ipdb; ipdb.set_trace()
+        
 
     def get_features(self, pl_module, dataloader, vector_level, label_level):
         features, labels = [], []

@@ -16,8 +16,7 @@ typicality_bootstrap = 50,
 typicality_batch = 25,
 
 
-group = 'even more updated changed Group',
-notes = 'Changing group',  # Add notes to the specific models each time
+
 callbacks =['Visualisation'],
 # Updating for the test run
 #OOD_dataset = ['TwoMoons','Diagonal'],
