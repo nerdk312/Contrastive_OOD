@@ -15,6 +15,6 @@ for i in range(len(runs)):
 '''
 
 
-run_paths = ['nerdk312/Toy_evaluation/3b6xtrzx']
+run_paths = ['nerdk312/Toy_evaluation/1mutstsx']
 
 evaluate(run_paths, trainer_hparams)

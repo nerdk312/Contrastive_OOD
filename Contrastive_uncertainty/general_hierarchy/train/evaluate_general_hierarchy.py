@@ -13,7 +13,7 @@ from Contrastive_uncertainty.general_hierarchy.run.general_hierarchy_run_setup i
 from Contrastive_uncertainty.general.utils.hybrid_utils import previous_model_directory
 
 
-def evaluation(run_path, update_dict, model_module, model_function,datamodule_dict,OOD_dict):
+def evaluation(run_path, update_dict, model_module, model_function, datamodule_dict, OOD_dict):
     api = wandb.Api()
     previous_run = api.run(path=run_path)
     previous_config = previous_run.config
@@ -49,18 +49,18 @@ def evaluation(run_path, update_dict, model_module, model_function,datamodule_di
         #update_dict['OOD_dataset'] = OOD_dict[config['dataset']]
         #print('updated dict')
 
-    '''
-    for update_k, update_v in update_dict.items():
-        if update_k in config:
-            config[update_k] = update_v
-    '''
+    
+    #for update_k, update_v in update_dict.items():
+    #     if update_k in config:
+    #         config[update_k] = update_v
+    
     new_config_params = ['callbacks','typicality_bootstrap','typicality_batch','vector_level','label_level']
 
     for update_k, update_v in update_dict.items():
-        '''
-        if update_k =='callbacks':
-            config[update_k] = update_v
-        '''
+        # 
+        # if update_k =='callbacks':
+        #     config[update_k] = update_v
+        # 
         if update_k in new_config_params:
             config[update_k] = update_v
              
@@ -83,5 +83,5 @@ def evaluation(run_path, update_dict, model_module, model_function,datamodule_di
 
     trainer.test(model,datamodule=datamodule,
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
-     
+    
     run.finish()
