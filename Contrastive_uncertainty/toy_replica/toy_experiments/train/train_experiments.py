@@ -44,7 +44,7 @@ def train(base_dict):
     # 'MultiPCL',
     # 'UnSupConMemory',
     # 'HSupCon',
-    'HSupConBU',
+    #'HSupConBU',
     # 'HSupConBUCentroid',
     #'HSupConTD'
     ]

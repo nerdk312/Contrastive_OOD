@@ -23,7 +23,7 @@ for i in range(len(runs)):
 #"OOD detection at different scales experiment"
 #"OOD hierarchy baselines"
 
-run_paths = ['nerdk312/Toy_evaluation/1mutstsx']
+run_paths = ['nerdk312/Toy_evaluation/2xyccgvz']
 
 
 update(run_paths, update_hparams)

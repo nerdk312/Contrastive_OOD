@@ -34,7 +34,7 @@ typicality_batch = 5,
 
 # Wandb parameters in common
 project = 'Toy_evaluation',
-group = 'Practice group 2',
+group = 'Practice040721',
 notes = 'Examining how to automate selection of runs',  # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
