@@ -34,7 +34,7 @@ typicality_batch = 5,
 
 # Wandb parameters in common
 project = 'Toy_evaluation',
-group = 'Toy Group practice',
+group = 'Practice group 2',
 notes = 'Examining how to automate selection of runs',  # Add notes to the specific models each time
 
 # Cross entropy Specific parameters
@@ -69,8 +69,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Typicality'],
 #callbacks = ['Visualisation','Metrics','Mahalanobis Distance', 'Hierarchical Mahalanobis', 'Hierarchical Scores','Oracle Hierarchical', 'General Scores'],
-#callbacks = ['Model_saving'],
-callbacks = ['General Scores','Visualisation'],
+callbacks = ['Model_saving'],
+#callbacks = ['General Scores','Visualisation'],
 #callbacks = ['Dataset_distances'],
 #callbacks = ['Hierarchical Scores','Subsample','Datasets'],
 #callbacks = ['Subsample'],
