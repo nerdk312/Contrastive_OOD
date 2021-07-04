@@ -1,0 +1,6 @@
+# Import general params
+from Contrastive_uncertainty.toy_replica.toy_experiments.config.base_trainer_params import base_hparams, trainer_hparams
+from Contrastive_uncertainty.toy_replica.toy_experiments.train.train_evaluate_experiments import train_evaluate
+
+
+train_evaluate(base_hparams,trainer_hparams)

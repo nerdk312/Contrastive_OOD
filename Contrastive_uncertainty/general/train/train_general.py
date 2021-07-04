@@ -13,8 +13,12 @@ from Contrastive_uncertainty.general.run.general_run_setup import train_run_name
 # Train takes in params, a particular training module as well a model_function to instantiate the model
 def train(params,model_module,model_function,datamodule_dict):
     run = wandb.init(entity="nerdk312",config = params, project= params['project'], reinit=True,group=params['group'], notes=params['notes'])  # Required to have access to wandb config, which is needed to set up a sweep
-    wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
+    wandb_logger = WandbLogger(log_model=True, sync_step=False, commit=False)
     config = wandb.config
+    
+    # Gets the path which could be used for evaluation
+    run_path = wandb.run.path
+
 
     folder = 'Images'
     if not os.path.exists(folder):
@@ -28,7 +32,7 @@ def train(params,model_module,model_function,datamodule_dict):
     callback_dict = callback_dictionary(datamodule, config,datamodule_dict)
     desired_callbacks = specific_callbacks(callback_dict, config['callbacks'])
     
-    
+    #import ipdb; ipdb.set_trace()
                         
     # model_function takes in the model module and the config and uses it to instantiate the model
     model = model_function(model_module,config,datamodule)
@@ -50,4 +54,5 @@ def train(params,model_module,model_function,datamodule_dict):
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
     
     run.finish()
+    return run_path # Output run path for use if I want to perform subsequent evaluation
 

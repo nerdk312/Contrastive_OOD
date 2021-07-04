@@ -18,6 +18,10 @@ def train(params, model_module, model_function,datamodule_dict):
     wandb_logger = WandbLogger(log_model=True,sync_step=False,commit=False)
     config = wandb.config
 
+    # Gets the path which could be used for evaluation
+    run_path = wandb.run.path
+
+
     folder = 'Images'
     if not os.path.exists(folder):
         os.mkdir(folder)
@@ -51,3 +55,4 @@ def train(params, model_module, model_function,datamodule_dict):
             ckpt_path=None)  # uses last-saved model , use test set to call the reliability diagram only at the end of the training process
     
     run.finish()
+    return run_path # Output run path for use if I want to perform subsequent evaluation
