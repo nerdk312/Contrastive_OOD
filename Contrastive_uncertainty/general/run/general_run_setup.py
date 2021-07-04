@@ -48,8 +48,6 @@ def callback_dictionary(Datamodule,config,data_dict):
                     'Metrics':MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                     'Visualisation': Visualisation(Datamodule, vector_level='instance',label_level='fine',quick_callback=quick_callback)}
                     
-
-    
     # Automatically adding callbacks for the Mahalanobis distance for each different vector level as well as each different OOD dataset
     # Collated list of OOD datamodules
     Collated_OOD_datamodules = []
