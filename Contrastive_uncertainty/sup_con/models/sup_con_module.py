@@ -168,7 +168,7 @@ class SupConModule(pl.LightningModule):
 
 
     def loss_function(self, batch):
-        (img_1, img_2), labels,indices = batch
+        (img_1, img_2), labels, indices = batch
         imgs = torch.cat([img_1, img_2], dim=0)
         bsz = labels.shape[0]
         features = self.encoder(imgs)
