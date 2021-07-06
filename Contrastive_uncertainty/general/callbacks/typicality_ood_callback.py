@@ -433,16 +433,22 @@ class Typicality_diff_bsz(Typicality_OVR_diff_bsz):
         ftrain_norm, fval_norm, ftest_norm, food_norm = self.normalise(ftrain, fval, ftest, food)
         class_means, class_cov,class_entropy, class_quantile_thresholds = self.get_offline_thresholds(ftrain_norm, fval_norm, labelstrain, labelsval)
         # Class conditional thresholds for the correct class
-        bszs = [1] #[1,10]#[1,10]
+        bszs = [1,10] #[1,10]#[1,10]
         self.OVR_AUROC_saving(class_means,class_cov, class_entropy,
         ftest_norm,food_norm,labels_test,bszs,'Batch Size',f'Typicality OOD {self.OOD_dataname} Batch Sizes')
 
 
     def get_class_thresholds(self,fdata,class_means,class_cov,class_entropy,bsz):
-        class_thresholds = [] #  List of class threshold values
-        # obtain the num batches
-        num_batches = len(fdata)//bsz 
         
+        if bsz == 1:
+            class_thresholds = self.get_class_thresholds_single(fdata,class_means,class_cov,class_entropy)
+        else:
+            class_thresholds = self.get_class_threshold_batch(fdata,class_means,class_cov,class_entropy,bsz)
+
+        return class_thresholds
+    
+    # Code to calculate the thresholds in singles
+    def get_class_thresholds_single(self,fdata,class_means,class_cov,class_entropy):
         ddata = np.sum(
             (fdata - class_means) # Nawid - distance between the data point and the mean
             * (
@@ -455,34 +461,14 @@ class Typicality_diff_bsz(Typicality_OVR_diff_bsz):
         nll = - (0.5*(ddata**2))
         threshold_k = np.abs(nll- class_entropy)
         class_thresholds = threshold_k.tolist()
-        '''
-        # Get the data for the case where there are different values present
-        fdata = fdata[:num_batches*bsz] # shape (b, embeddim)
-        
-        #data = np.linalg.pinv(class_cov).dot(fdata_batch - class_means).T
-        #import ipdb; ipdb.set_trace()
-        
-        fdata_batch = fdata.reshape(num_batches,-1,128) # dim (27,1,128)
-        #np.linalg.pinv(class_cov).dot((fdata_batch - class_means).reshape(27,128,1))
-        #import ipdb; ipdb.set_trace()
-        ddata = np.sum(
-            (fdata_batch - class_means) # Nawid - distance between the data point and the mean (shape (27,1,128)
-            * (
-                np.linalg.pinv(class_cov).dot(
-                    (fdata_batch - class_means).reshape(num_batches,128,-1)  # fdata_batch  - class_means becomes shape 27,1,128, transposing it becomes (128,1,27)
-                ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
-            ).reshape(num_batches,-1,128), 
-            axis=-1)
-        
+        return class_thresholds
 
-        nll = - np.mean(0.5*(ddata**2),axis = 1)
-        threshold_k = np.abs(nll- class_entropy)
-        class_thresholds_batch = threshold_k
-
+    # Code to calculate the thresholds in batch
+    def get_class_threshold_batch(self,fdata,class_means,class_cov,class_entropy,bsz):
+        class_thresholds = [] #  List of class threshold values
+        # obtain the num batches
+        num_batches = len(fdata)//bsz 
         
-        #class_thresholds.append(threshold_k)
-        '''
-        '''        
         for i in range(num_batches):
             fdata_batch = fdata[(i*bsz):((i+1)*bsz)]
             ddata = np.sum(
@@ -498,11 +484,7 @@ class Typicality_diff_bsz(Typicality_OVR_diff_bsz):
             threshold_k = np.abs(nll- class_entropy)
             class_thresholds.append(threshold_k)
         
-        import ipdb; ipdb.set_trace()
-        '''
         return class_thresholds
-
-
 
     def OVR_AUROC_saving(self,class_means, class_cov,class_entropy,ftest, food,labels,bszs,table_name,wandb_name):
         table_data = {table_name: [],'AUROC': []}
