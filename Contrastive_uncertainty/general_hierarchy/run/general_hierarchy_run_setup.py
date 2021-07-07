@@ -3,7 +3,7 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import  ModelSa
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR, Mahalanobis_Subsample
 from Contrastive_uncertainty.general.callbacks.experimental_ood_callbacks import  Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD 
 from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation
-from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO
+from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO, Typicality_General_Point
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
 from Contrastive_uncertainty.general.callbacks.hierarchical_ood import Hierarchical_Mahalanobis, Hierarchical_scores_comparison, Hierarchical_Subsample, Hierarchical_Relative_Mahalanobis
@@ -71,8 +71,8 @@ def callback_dictionary(Datamodule,config,data_dict):
         # Callbacks which use different feature vectors for the task
         for i in range(len(config['vector_level'])):
             mahalanobis_callback = {f'Mahalanobis Distance {vector_level[i]} {label_level[i]} {ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level=vector_level[i], label_level=label_level[i]),
-            f'Relative Mahalanobis {vector_level[i]} {label_level[i]} {ood_dataset}': Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback,vector_level=vector_level[i], label_level=label_level[i])}
-            
+            f'Relative Mahalanobis {vector_level[i]} {label_level[i]} {ood_dataset}': Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback,vector_level=vector_level[i], label_level=label_level[i]),
+            f'Typicality General Point {vector_level[i]} {label_level[i]} {ood_dataset}': Typicality_General_Point(Datamodule,OOD_Datamodule, vector_level=vector_level[i], label_level=label_level[i], quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch)}
             metric_visual_callbacks = {f'Metrics {vector_level[i]} {label_level[i]}':MetricLogger(evaluation_metrics,Datamodule,evaltypes, vector_level=vector_level[i], label_level=label_level[i], quick_callback=quick_callback),
                                     f'Visualisation {vector_level[i]} {label_level[i]}': Visualisation(Datamodule, vector_level=vector_level[i],label_level=label_level[i],quick_callback=quick_callback)}
 

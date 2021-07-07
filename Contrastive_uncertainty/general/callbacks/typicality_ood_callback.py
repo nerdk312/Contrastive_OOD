@@ -441,7 +441,7 @@ class Typicality_General_Point(Typicality_OVR_diff_bsz):
         label_level:str = 'fine',
         quick_callback:bool = True,
         bootstrap_num: int = 50,
-        typicality_bsz:int = 1):
+        typicality_bsz:int = 25):
         
         super().__init__(Datamodule, OOD_Datamodule, vector_level=vector_level,
         label_level=label_level,
@@ -461,7 +461,7 @@ class Typicality_General_Point(Typicality_OVR_diff_bsz):
         # Class conditional thresholds for the correct class
         
         self.AUROC_saving(class_means,class_cov, class_entropy,
-        ftest_norm,food_norm,labels_test,f'Typicality General Point OOD {self.OOD_dataname}')
+        ftest_norm,food_norm,labels_test,f'Typicality General Point {self.vector_level} {self.label_level} OOD {self.OOD_dataname}')
 
     def AUROC_saving(self,class_means, class_cov,class_entropy,ftest, food,labels,wandb_name):
         test_thresholds = self.get_online_test_thresholds(class_means,class_cov,class_entropy,ftest,labels,1)
@@ -473,7 +473,8 @@ class Typicality_General_Point(Typicality_OVR_diff_bsz):
         auroc = round(get_roc_sklearn(test_thresholds, ood_thresholds),2)
 
         wandb.run.summary[wandb_name] = auroc
-            
+        #print('summary added')
+
 class Typicality_OVO(Typicality_OVR):
     def __init__(self, Datamodule,OOD_Datamodule,
         vector_level:str = 'instance',
