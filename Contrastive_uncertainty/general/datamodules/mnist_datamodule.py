@@ -10,7 +10,7 @@ from torchvision import transforms as transform_lib
 from torchvision.datasets import MNIST
 
 from Contrastive_uncertainty.general.datamodules.dataset_normalizations import mnist_normalization
-from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, MNIST_coarse_labels
+from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, MNIST_coarse_labels, dataset_with_indices_hierarchy
 
 
 class MNISTDataModule(LightningDataModule):
@@ -63,7 +63,7 @@ class MNISTDataModule(LightningDataModule):
         super().__init__(*args, **kwargs)
         self.dims = (1, 28, 28)
         self.DATASET = MNIST
-        self.DATASET_with_indices = dataset_with_indices(self.DATASET)
+        self.DATASET_with_indices = dataset_with_indices_hierarchy(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size

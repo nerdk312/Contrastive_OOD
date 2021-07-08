@@ -10,7 +10,7 @@ from torchvision import transforms as transform_lib
 from torchvision.datasets import KMNIST
 
 from Contrastive_uncertainty.general.datamodules.dataset_normalizations import kmnist_normalization
-from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, KMNIST_coarse_labels
+from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, KMNIST_coarse_labels, dataset_with_indices_hierarchy
 
 
 class KMNISTDataModule(LightningDataModule):

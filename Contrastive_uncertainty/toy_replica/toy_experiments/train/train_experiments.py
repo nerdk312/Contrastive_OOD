@@ -37,9 +37,9 @@ from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy imp
 def train(base_dict):   
     # Actively choose which modeles to choose in the acceptable models 
     acceptable_single_models = ['Baselines',
-    'CE',
+    #'CE',
     #'Moco',
-    #'SupCon',
+    'SupCon',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',

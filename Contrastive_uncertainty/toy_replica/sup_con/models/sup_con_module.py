@@ -159,6 +159,7 @@ class SupConToy(pl.LightningModule):
         (img_1, img_2), *labels, indices = batch
         if isinstance(labels, tuple) or isinstance(labels, list):
             labels, *coarse_labels = labels
+
         imgs = torch.cat([img_1, img_2], dim=0)
         bsz = labels.shape[0]
         features = self.encoder(imgs)

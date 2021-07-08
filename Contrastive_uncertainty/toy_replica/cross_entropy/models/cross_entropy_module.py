@@ -86,7 +86,16 @@ class CrossEntropyToy(pl.LightningModule):
         return logits
 
     def loss_function(self, batch):
-        (img_1, img_2), labels, indices = batch
+        (img_1, img_2), *labels, indices = batch
+        # Takes into account if it has coarse labels
+        # Using * makes it into a list (so the length of the list is related to how many different labels types there are)
+        if isinstance(labels, tuple) or isinstance(labels, list):
+            labels, *coarse_labels = labels
+        '''
+        if len(labels) > 1:
+            labels = labels[0]
+        '''
+        
         logits = self.class_forward(img_1)
         if self.hparams.label_smoothing:
             loss = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 

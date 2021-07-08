@@ -804,9 +804,10 @@ class Class_Mahalanobis_OOD(Mahalanobis_OOD):
         wandb.log({wandb_name:table})
         table_saving(table_df,table_name)
 
+'''
 # Calculates the  
 class Oracle_Conditional_Mahalanobis_OOD
-        
+'''     
 
 
 
