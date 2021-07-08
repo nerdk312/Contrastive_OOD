@@ -780,7 +780,9 @@ class Class_Mahalanobis_OOD(Mahalanobis_OOD):
         # NEED TO MAKE IT SO THAT THE CLASS WISE VALUES CAN BE OBTAINED FOR THE TASK
         
         
-        self.AUROC_saving(dtest_class,dood_class,'Class Wise Mahalanobis AUROC','Class Wise Mahalanobis AUROC Table')
+        self.AUROC_saving(dtest_class,dood_class,
+        f'Class Wise Mahalanobis {self.vector_level} {self.label_level} OOD {self.OOD_dataname} AUROC',
+        f'Class Wise Mahalanobis {self.vector_level} {self.label_level} OOD {self.OOD_dataname} AUROC Table')
         '''
         table_data = {'Class':[], 'AUROC': []}
         
