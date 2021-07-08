@@ -222,6 +222,118 @@ class Oracle_Hierarchical(pl.Callback):
         return dtest, dood, indices_dtest, indices_dood
 
 
+# Calculates the class wise AUROC when using the oracle as well as the improvement, also calculates the classification accuracy
+class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
+    def __init__(self, Datamodule, OOD_Datamodule,
+        quick_callback:bool = True):
+
+        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
+
+
+    # Performs all the computation in the callback
+    def forward_callback(self, trainer, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}}  
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+        
+        # Obtain representations of the data
+        features_train_fine, labels_train_fine = self.get_features(pl_module, train_loader,'fine')
+
+        # Coarse test labels required for conditioning
+        features_test_coarse, labels_test_coarse = self.get_features(pl_module, test_loader,'coarse')
+        features_test_fine, labels_test_fine = self.get_features(pl_module, test_loader,'fine')
+
+        features_ood_fine, labels_ood_fine = self.get_features(pl_module, ood_loader, 'fine')
+        
+        
+        dtest_fine, dood_fine, indices_dtest_fine, indices_dood_fine = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_fine))
+
+        # Condition on the true test labels
+        dtest_conditional_fine, _, indices_dtest_conditional_fine, _ = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_fine),
+            # Additional used for conditioning on the true coarse labels to see if it improves the results 
+            np.copy(labels_test_coarse))
+        
+        self.data_saving(dtest_fine,indices_dtest_fine,
+            dtest_conditional_fine,indices_dtest_conditional_fine,
+            dood_fine,indices_dood_fine,labels_test_fine,
+            f'Hierarchical Oracle Metrics OOD {self.OOD_dataname}',f'Hierarchical Oracle Metrics OOD {self.OOD_dataname} Table')
+
+        #auroc, aupr = get_roc_sklearn(dtest, dood)
+    
+    def data_saving(self,ID_scores,indices_ID, 
+        ID_conditional_scores,indices_conditional_ID,
+        OOD_scores,indices_OOD,labels, wandb_name,table_name):
+        
+        # Metrics should be all the different class AUROC, the general AUROC as well as the classification accuracy
+        table_data = {'Metric':[], 'Oracle': [], 'Oracle Improvement':[]}
+        
+        # class scores for the ID, conditional ID and OOD data
+        din_class = [ID_scores[indices_ID==i] for i in np.unique(labels)]
+        din_conditional_class = [ID_conditional_scores[indices_conditional_ID==i] for i in np.unique(labels)]
+        dood_class = [OOD_scores[indices_OOD ==i] for i in np.unique(labels)]
+
+        # Class AUROC values
+        for class_num in range(len(din_class)):
+            # Calculate AUROC for the normal class case as well as the Oracle class case
+            class_AUROC = self.calculate_class_ROC(din_class[class_num],dood_class[class_num])
+            oracle_class_AUROC = self.calculate_class_ROC(din_conditional_class[class_num],dood_class[class_num])
+            #import ipdb; ipdb.set_trace()
+            # Calculate the difference in the values
+            oracle_class_improvement = oracle_class_AUROC - class_AUROC
+            table_data['Metric'].append(f'Class {class_num} AUROC')
+            table_data['Oracle'].append(oracle_class_AUROC)
+            table_data['Oracle Improvement'].append(oracle_class_improvement)
+        
+        # Non class specific metrics
+        table_data['Metric'].append('AUROC')
+        # Calculate general scores
+        auroc = get_roc_sklearn(ID_scores,OOD_scores)
+        oracle_auroc = get_roc_sklearn(ID_conditional_scores,OOD_scores)
+        oracle_auroc_improvement = oracle_auroc - auroc
+
+        table_data['Oracle'] = oracle_auroc
+        table_data['Oracle Improvement'] = oracle_auroc_improvement
+
+        table_data['Metric'].append('Classification Accuracy')
+        classification = self.mahalanobis_classification(indices_ID,labels)
+        oracle_classification = self.mahalanobis_classification(indices_conditional_ID,labels)
+        oracle_classification_improvement = oracle_auroc - auroc
+        table_data['Oracle'] = oracle_classification
+        table_data['Oracle Improvement'] = oracle_classification_improvement
+
+        # Table saving
+        table_df = pd.DataFrame(table_data)
+        import ipdb; ipdb.set_trace()
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({wandb_name:table})
+        table_saving(table_df,table_name)
+        #print('HIERARCHICAL METRIC BEING USED')
+        
+
+    # Function to compute classwise AUROC
+    def calculate_class_ROC(self, class_ID_scores, class_OOD_scores):
+        if len(class_ID_scores) ==0 or len(class_OOD_scores)==0:
+            class_AUROC = -1.0
+        else:
+            class_AUROC = get_roc_sklearn(class_ID_scores, class_OOD_scores)
+        return class_AUROC
+
+
+
+
+
+
+
 '''
 class Oracle_Hierarchical_OOD(Oracle_Hierarchical):
     def __init__(self, Datamodule, OOD_Datamodule,
@@ -268,55 +380,4 @@ class Oracle_Hierarchical_OOD(Oracle_Hierarchical):
             np.copy(labels_train_fine),
             # Additional used for conditioning on the true coarse labels to see if it improves the results 
             np.copy(labels_test_coarse))
-        
-
-        auroc, aupr = get_roc_sklearn(dtest, dood)
-
-'''
-
-class Oracle_Hierarchical_OOD(Oracle_Hierarchical):
-    def __init__(self, Datamodule, OOD_Datamodule,
-        quick_callback:bool = True):
-
-        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
-
-
-    # Performs all the computation in the callback
-    def forward_callback(self, trainer, pl_module):
-        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
-        'label_level':{'fine':0,'coarse':1}}  
-        train_loader = self.Datamodule.deterministic_train_dataloader()
-        test_loader = self.Datamodule.test_dataloader()
-        ood_loader = self.OOD_Datamodule.test_dataloader()
-        
-        # Obtain representations of the data
-        features_train_coarse, labels_train_coarse = self.get_features(pl_module, train_loader,'coarse')
-        features_train_fine, labels_train_fine = self.get_features(pl_module, train_loader,'fine')
-
-        features_test_coarse, labels_test_coarse = self.get_features(pl_module, test_loader,'coarse')
-        features_test_fine, labels_test_fine = self.get_features(pl_module, test_loader,'fine')
-
-        features_ood_coarse, labels_ood_coarse = self.get_features(pl_module, ood_loader, 'coarse')
-        features_ood_fine, labels_ood_fine = self.get_features(pl_module, ood_loader, 'fine')
-        
-        dtest_coarse, dood_coarse, indices_dtest_coarse, indices_dood_coarse = self.get_eval_results(
-            np.copy(features_train_coarse),
-            np.copy(features_test_coarse),
-            np.copy(features_ood_coarse),
-            np.copy(labels_train_coarse))
-
-        dtest_fine, dood_fine, indices_dtest_fine, indices_dood_fine = self.get_eval_results(
-            np.copy(features_train_fine),
-            np.copy(features_test_fine),
-            np.copy(features_ood_fine),
-            np.copy(labels_train_fine))
-
-
-        dtest_conditional_fine, _, indices_dtest_conditional_fine, _ = self.get_eval_results(
-            np.copy(features_train_fine),
-            np.copy(features_test_fine),
-            np.copy(features_ood_fine),
-            np.copy(labels_train_fine),
-            # Additional used for conditioning on the true coarse labels to see if it improves the results 
-            np.copy(labels_test_coarse))
-        
+'''       
