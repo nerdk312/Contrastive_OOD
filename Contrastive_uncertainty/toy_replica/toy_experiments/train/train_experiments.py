@@ -26,12 +26,10 @@ from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroi
 
 # Import datamodule info
 from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict as general_dataset_dict
-from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.datamodule_dict import dataset_dict as general_hierarchy_dataset_dict
 
 # Import training methods 
 from Contrastive_uncertainty.general.train.train_general import train as general_training
 from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
-
 
 
 def train(base_dict):   
@@ -39,14 +37,14 @@ def train(base_dict):
     acceptable_single_models = ['Baselines',
     #'CE',
     #'Moco',
-    'SupCon',
+    #'SupCon',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
     # 'HSupCon',
-    #'HSupConBU',
+    'HSupConBU',
     # 'HSupConBUCentroid',
-    #'HSupConTD'
+    'HSupConTD'
     ]
 
     # Dict for the model name, parameters and specific training loop
@@ -60,10 +58,10 @@ def train(base_dict):
                     'model_instance':SupConModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
                     
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUToy, 
-                    'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training,'data_dict': general_hierarchy_dataset_dict},
+                    'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training,'data_dict': general_dataset_dict},
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDToy, 
-                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training, 'data_dict': general_hierarchy_dataset_dict},         
+                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training, 'data_dict': general_dataset_dict},         
     }
     
 

@@ -32,7 +32,7 @@ from Contrastive_uncertainty.general.train.evaluate_general import evaluation as
 from Contrastive_uncertainty.general_hierarchy.train.evaluate_general_hierarchy import evaluation as general_hierarchy_evaluation
 
 from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict as general_dataset_dict, OOD_dict as general_OOD_dict
-from Contrastive_uncertainty.toy_replica.toy_general_hierarchy.datamodules.datamodule_dict import dataset_dict as general_hierarchy_dataset_dict, OOD_dict as general_hierarchy_OOD_dict
+
 
 def evaluate(run_paths,update_dict):    
     
@@ -52,7 +52,7 @@ def evaluate(run_paths,update_dict):
 
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module': HSupConBUToy, 
                     'model_instance': HSupConBUModelInstance,'evaluate':general_hierarchy_evaluation,
-                    'data_dict':general_hierarchy_dataset_dict, 'ood_dict':general_hierarchy_OOD_dict},
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
     }
     
 

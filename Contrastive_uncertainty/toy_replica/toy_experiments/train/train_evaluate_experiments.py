@@ -70,11 +70,11 @@ def train_evaluate(base_dict, update_dict):
                     
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUToy, 
                     'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training,'evaluate':general_hierarchy_evaluation,
-                    'data_dict':general_hierarchy_dataset_dict, 'ood_dict':general_hierarchy_OOD_dict},
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDToy, 
                     'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training, 'evaluate':general_hierarchy_evaluation,
-                    'data_dict':general_hierarchy_dataset_dict, 'ood_dict':general_hierarchy_OOD_dict},         
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},         
     }
     
     

@@ -62,7 +62,7 @@ from Contrastive_uncertainty.general_clustering.train.evaluate_general_clusterin
 from Contrastive_uncertainty.general_hierarchy.train.evaluate_general_hierarchy import evaluation as general_hierarchy_evaluation
 
 from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_dict as general_dataset_dict, OOD_dict as general_OOD_dict
-from Contrastive_uncertainty.general_hierarchy.datamodules.datamodule_dict import dataset_dict as general_hierarchy_dataset_dict, OOD_dict as general_hierarchy_OOD_dict
+#from Contrastive_uncertainty.general_hierarchy.datamodules.datamodule_dict import dataset_dict as general_hierarchy_dataset_dict, OOD_dict as general_hierarchy_OOD_dict
 
 
 
@@ -83,15 +83,15 @@ def evaluate(run_paths,update_dict):
 
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
                     'model_instance':HSupConBUCentroidModelInstance, 'evaluate':general_hierarchy_evaluation,
-                    'data_dict':general_hierarchy_dataset_dict, 'ood_dict':general_hierarchy_OOD_dict},
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
                     
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUModule, 
                     'model_instance':HSupConBUModelInstance,'evaluate':general_hierarchy_evaluation,
-                    'data_dict':general_hierarchy_dataset_dict, 'ood_dict':general_hierarchy_OOD_dict},
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDModule, 
                     'model_instance':HSupConTDModelInstance,'evaluate':general_hierarchy_evaluation,
-                    'data_dict':general_hierarchy_dataset_dict, 'ood_dict':general_hierarchy_OOD_dict},
+                    'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
     
                     'CEVAE':{'params':cross_entropy_vae_hparams,'model_module':CrossEntropyVAEModule,
                     'model_instance':CrossEntropyVAEModelInstance,'evaluate':general_evaluation,

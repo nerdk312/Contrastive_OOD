@@ -63,7 +63,7 @@ class MNISTDataModule(LightningDataModule):
         super().__init__(*args, **kwargs)
         self.dims = (1, 28, 28)
         self.DATASET = MNIST
-        self.DATASET_with_indices = dataset_with_indices_hierarchy(self.DATASET)
+        self.DATASET_with_indices = dataset_with_indices_hierarchy(self.DATASET, MNIST_coarse_labels)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size
