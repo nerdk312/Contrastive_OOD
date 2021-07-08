@@ -730,6 +730,99 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
         auroc, aupr = get_roc_sklearn(dtest, dood), get_pr_sklearn(dtest, dood)
 
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
+    
+
+class Class_Mahalanobis_OOD(Mahalanobis_OOD):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        vector_level:str = 'instance',
+        label_level:str = 'fine',
+        quick_callback:bool = True):
+
+        super().__init__(Datamodule,OOD_Datamodule,vector_level,label_level,quick_callback)
+    
+    def on_validation_epoch_end(self, trainer, pl_module):
+        pass
+
+    def on_test_epoch_end(self, trainer, pl_module):
+        self.forward_callback(trainer,pl_module)
+    
+    # Performs all the computation in the callback
+    def forward_callback(self, trainer, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}} 
+
+        train_loader = self.Datamodule.train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_features(pl_module, test_loader)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
+
+        self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train))
+
+
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        """
+            None.
+        """
+        ftrain_norm,ftest_norm,food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        dtest_class = [dtest[indices_dtest==i] for i in np.unique(indices_dtest)]
+        dood_class = [dood[indices_dood ==i] for i in np.unique(indices_dtest)] # Make it so that the unique indices are the same for both cases
+        # NEED TO MAKE IT SO THAT THE CLASS WISE VALUES CAN BE OBTAINED FOR THE TASK
+        
+        
+        self.AUROC_saving(dtest_class,dood_class,'Class Wise Mahalanobis AUROC','Class Wise Mahalanobis AUROC Table')
+        '''
+        table_data = {'Class':[], 'AUROC': []}
+        
+        #import ipdb; ipdb.set_trace()
+
+        for class_num in range(len(dtest_class)):
+            if len(dtest_class[class_num]) ==0 or len(dood_class[class_num])==0:
+                class_AUROC = -1.0
+            else:  
+                class_AUROC = get_roc_sklearn(dtest_class[class_num],dood_class[class_num])
+            
+            table_data['Class'].append(class_num)
+            table_data['AUROC'].append(round(class_AUROC,2))
+
+        table_df = pd.DataFrame(table_data)
+        print(table_df)
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({"Class Mahalanobis AUROC":table})
+        table_saving(table_df,"Class Mahalanobis AUROC Table")
+        '''
+
+    def AUROC_saving(self,class_ID_scores, class_OOD_scores,wandb_name, table_name):
+        # NEED TO MAKE IT SO THAT THE CLASS WISE VALUES CAN BE OBTAINED FOR THE TASK
+        table_data = {'Class':[], 'AUROC': []}
+        
+        for class_num in range(len(class_ID_scores)):
+            if len(class_ID_scores[class_num]) ==0 or len(class_OOD_scores[class_num])==0:
+                class_AUROC = -1.0
+            else:  
+                class_AUROC = get_roc_sklearn(class_ID_scores[class_num],class_OOD_scores[class_num])
+            
+            table_data['Class'].append(class_num)
+            table_data['AUROC'].append(round(class_AUROC,2))
+
+        table_df = pd.DataFrame(table_data)
+        #print(table_df)
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({wandb_name:table})
+        table_saving(table_df,table_name)
+        
+
+
 
 def get_roc_sklearn(xin, xood):
     labels = [0] * len(xin)  + [1] * len(xood)
