@@ -1,3 +1,4 @@
+from numpy.core.numeric import indices
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -775,16 +776,64 @@ class Class_Mahalanobis_OOD(Mahalanobis_OOD):
         # Nawid - obtain the scores for the test data and the OOD data
         
         dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
-        dtest_class = [dtest[indices_dtest==i] for i in np.unique(indices_dtest)]
-        dood_class = [dood[indices_dood ==i] for i in np.unique(indices_dtest)] # Make it so that the unique indices are the same for both cases
+        # Using actual labels to count the indices
+        self.AUROC_saving(dtest, indices_dtest,
+            dood,indices_dood,labelstrain,
+            f'Class Wise Mahalanobis {self.vector_level} {self.label_level} OOD {self.OOD_dataname} AUROC',
+            f'Class Wise Mahalanobis {self.vector_level} {self.label_level} OOD {self.OOD_dataname} AUROC Table')
+
+
+        
+        #dtest_class = [dtest[indices_dtest==i] for i in np.unique(indices_dtest)]
+        #dood_class = [dood[indices_dood ==i] for i in np.unique(indices_dtest)] # Make it so that the unique indices are the same for both cases
         # NEED TO MAKE IT SO THAT THE CLASS WISE VALUES CAN BE OBTAINED FOR THE TASK
         
-        
+        '''
         self.AUROC_saving(dtest_class,dood_class,
         f'Class Wise Mahalanobis {self.vector_level} {self.label_level} OOD {self.OOD_dataname} AUROC',
         f'Class Wise Mahalanobis {self.vector_level} {self.label_level} OOD {self.OOD_dataname} AUROC Table')
-        
+        '''
 
+
+    def AUROC_saving(self,ID_scores,indices_ID, OOD_scores, indices_OOD,labels,wandb_name, table_name):
+        # NEED TO MAKE IT SO THAT THE CLASS WISE VALUES CAN BE OBTAINED FOR THE TASK as well as the fraction of data points in a particular class
+        table_data = {'Class':[], 'AUROC': [], 'ID Samples Fraction':[], 'OOD Samples Fraction':[]}
+        #np.unique(indices_ID)
+        class_ID_scores = [ID_scores[indices_ID==i] for i in np.unique(labels)]
+        class_OOD_scores = [OOD_scores[indices_OOD==i] for i in np.unique(labels)]
+    
+
+        for class_num in range(len(np.unique(labels))):
+            if len(class_ID_scores[class_num]) ==0 or len(class_OOD_scores[class_num])==0:
+                class_AUROC = -1.0
+            else:  
+                class_AUROC = get_roc_sklearn(class_ID_scores[class_num],class_OOD_scores[class_num])
+            
+            class_ID_fraction = len(class_ID_scores[class_num])/len(ID_scores)
+            class_OOD_fraction = len(class_OOD_scores[class_num])/len(OOD_scores)
+            table_data['Class'].append(f'{class_num}')
+            table_data['AUROC'].append(round(class_AUROC,2))
+            table_data['ID Samples Fraction'].append(round(class_ID_fraction,2))
+            table_data['OOD Samples Fraction'].append(round(class_OOD_fraction,2))
+
+            #import ipdb; ipdb.set_trace()
+        
+        
+        # calculate the AUROC for the dataset in general
+        All_AUROC = get_roc_sklearn(ID_scores,OOD_scores)
+        #table_data['Class'].append(-1)
+        table_data['Class'].append('All')
+        table_data['AUROC'].append(round(All_AUROC,2))
+        table_data['ID Samples Fraction'].append(1.0)
+        table_data['OOD Samples Fraction'].append(1.0)
+
+        table_df = pd.DataFrame(table_data)
+        #print(table_df)
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({wandb_name:table})
+        table_saving(table_df,table_name)
+
+    '''
     def AUROC_saving(self,class_ID_scores, class_OOD_scores,wandb_name, table_name):
         # NEED TO MAKE IT SO THAT THE CLASS WISE VALUES CAN BE OBTAINED FOR THE TASK
         table_data = {'Class':[], 'AUROC': []}
@@ -803,6 +852,8 @@ class Class_Mahalanobis_OOD(Mahalanobis_OOD):
         table = wandb.Table(dataframe=table_df)
         wandb.log({wandb_name:table})
         table_saving(table_df,table_name)
+    '''
+
 
 '''
 # Calculates the  
