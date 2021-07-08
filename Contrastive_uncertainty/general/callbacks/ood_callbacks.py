@@ -731,7 +731,7 @@ class Mahalanobis_Subsample(Mahalanobis_OOD):
 
         return fpr95, auroc, aupr, dtest, dood, indices_dtest, indices_dood
     
-
+# Calculates the class wise mahalanobis distances and places the different values in a table
 class Class_Mahalanobis_OOD(Mahalanobis_OOD):
     def __init__(self, Datamodule,OOD_Datamodule,
         vector_level:str = 'instance',
@@ -783,26 +783,7 @@ class Class_Mahalanobis_OOD(Mahalanobis_OOD):
         self.AUROC_saving(dtest_class,dood_class,
         f'Class Wise Mahalanobis {self.vector_level} {self.label_level} OOD {self.OOD_dataname} AUROC',
         f'Class Wise Mahalanobis {self.vector_level} {self.label_level} OOD {self.OOD_dataname} AUROC Table')
-        '''
-        table_data = {'Class':[], 'AUROC': []}
         
-        #import ipdb; ipdb.set_trace()
-
-        for class_num in range(len(dtest_class)):
-            if len(dtest_class[class_num]) ==0 or len(dood_class[class_num])==0:
-                class_AUROC = -1.0
-            else:  
-                class_AUROC = get_roc_sklearn(dtest_class[class_num],dood_class[class_num])
-            
-            table_data['Class'].append(class_num)
-            table_data['AUROC'].append(round(class_AUROC,2))
-
-        table_df = pd.DataFrame(table_data)
-        print(table_df)
-        table = wandb.Table(dataframe=table_df)
-        wandb.log({"Class Mahalanobis AUROC":table})
-        table_saving(table_df,"Class Mahalanobis AUROC Table")
-        '''
 
     def AUROC_saving(self,class_ID_scores, class_OOD_scores,wandb_name, table_name):
         # NEED TO MAKE IT SO THAT THE CLASS WISE VALUES CAN BE OBTAINED FOR THE TASK
@@ -822,6 +803,9 @@ class Class_Mahalanobis_OOD(Mahalanobis_OOD):
         table = wandb.Table(dataframe=table_df)
         wandb.log({wandb_name:table})
         table_saving(table_df,table_name)
+
+# Calculates the  
+class Oracle_Conditional_Mahalanobis_OOD
         
 
 

@@ -24,7 +24,7 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloa
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_fpr, get_pr_sklearn, get_roc_plot, get_roc_sklearn, table_saving
 
 
-
+# Calculates the improvement in the classification accuracy in a hierarchical manner
 class Oracle_Hierarchical(pl.Callback):
     def __init__(self, Datamodule, OOD_Datamodule,
         quick_callback:bool = True):
@@ -222,7 +222,7 @@ class Oracle_Hierarchical(pl.Callback):
         return dtest, dood, indices_dtest, indices_dood
 
 
-
+'''
 class Oracle_Hierarchical_OOD(Oracle_Hierarchical):
     def __init__(self, Datamodule, OOD_Datamodule,
         quick_callback:bool = True):
@@ -271,3 +271,51 @@ class Oracle_Hierarchical_OOD(Oracle_Hierarchical):
         
 
         auroc, aupr = get_roc_sklearn(dtest, dood)
+
+'''
+class Oracle_Hierarchical_OOD(Oracle_Hierarchical):
+    def __init__(self, Datamodule, OOD_Datamodule,
+        quick_callback:bool = True):
+
+        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
+
+
+    # Performs all the computation in the callback
+    def forward_callback(self, trainer, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}}  
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+        
+        # Obtain representations of the data
+        features_train_coarse, labels_train_coarse = self.get_features(pl_module, train_loader,'coarse')
+        features_train_fine, labels_train_fine = self.get_features(pl_module, train_loader,'fine')
+
+        features_test_coarse, labels_test_coarse = self.get_features(pl_module, test_loader,'coarse')
+        features_test_fine, labels_test_fine = self.get_features(pl_module, test_loader,'fine')
+
+        features_ood_coarse, labels_ood_coarse = self.get_features(pl_module, ood_loader, 'coarse')
+        features_ood_fine, labels_ood_fine = self.get_features(pl_module, ood_loader, 'fine')
+        
+        dtest_coarse, dood_coarse, indices_dtest_coarse, indices_dood_coarse = self.get_eval_results(
+            np.copy(features_train_coarse),
+            np.copy(features_test_coarse),
+            np.copy(features_ood_coarse),
+            np.copy(labels_train_coarse))
+
+        dtest_fine, dood_fine, indices_dtest_fine, indices_dood_fine = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_fine))
+
+
+        dtest_conditional_fine, _, indices_dtest_conditional_fine, _ = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_fine),
+            # Additional used for conditioning on the true coarse labels to see if it improves the results 
+            np.copy(labels_test_coarse))
+        

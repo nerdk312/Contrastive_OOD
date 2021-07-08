@@ -22,7 +22,6 @@ label_level = ['fine','fine','coarse'],
 #label_level = ['coarse'],
 
 
-
 #callbacks = ['Dataset_distances','classification'],
 #callbacks = ['Subsample'],
 #callbacks = ['Oracle'],
@@ -31,7 +30,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Hierarchical Relative'],
 #callbacks = ['Practice Hierarchical scores'],
 #callbacks = ['Mahalanobis'],
-callbacks = ['Typicality General Point Updated'],
+#callbacks = ['Typicality General Point Updated'],
+callbacks = ['Class Mahalanobis'],
 #callbacks = ['General Scores'],
 #callbacks = ['Visualisation','Metrics','Mahalanobis Distance', 'Hierarchical Mahalanobis', 'Hierarchical Scores','Oracle Hierarchical', 'General Scores'],
 #callbacks = ['Typicality_OVR'],
