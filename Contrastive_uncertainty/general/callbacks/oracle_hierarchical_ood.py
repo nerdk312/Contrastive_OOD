@@ -1,3 +1,4 @@
+from numpy.core.numeric import indices
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -229,6 +230,8 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
 
         super().__init__(Datamodule,OOD_Datamodule,quick_callback)
 
+    def on_validation_epoch_end(self, trainer, pl_module):
+        pass
 
     # Performs all the computation in the callback
     def forward_callback(self, trainer, pl_module):
@@ -263,16 +266,16 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
             # Additional used for conditioning on the true coarse labels to see if it improves the results 
             np.copy(labels_test_coarse))
         
-        self.data_saving(dtest_fine,indices_dtest_fine,
+        self.data_saving(dtest_fine,indices_dtest_fine,labels_test_fine,
             dtest_conditional_fine,indices_dtest_conditional_fine,
-            dood_fine,indices_dood_fine,labels_test_fine,
+            dood_fine,indices_dood_fine,
             f'Hierarchical Oracle Metrics OOD {self.OOD_dataname}',f'Hierarchical Oracle Metrics OOD {self.OOD_dataname} Table')
 
         #auroc, aupr = get_roc_sklearn(dtest, dood)
     
-    def data_saving(self,ID_scores,indices_ID, 
+    def data_saving(self,ID_scores,indices_ID,labels, 
         ID_conditional_scores,indices_conditional_ID,
-        OOD_scores,indices_OOD,labels, wandb_name,table_name):
+        OOD_scores,indices_OOD, wandb_name,table_name):
         
         # Metrics should be all the different class AUROC, the general AUROC as well as the classification accuracy
         table_data = {'Metric':[], 'Oracle': [], 'Oracle Improvement':[], 'ID Samples Fraction':[],'Conditional ID Samples Fraction':[], 'OOD Samples Fraction':[]}
@@ -284,12 +287,7 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
 
         # Class AUROC values
         for class_num in range(len(din_class)):
-            # Calculate AUROC for the normal class case as well as the Oracle class case
-            class_AUROC = self.calculate_class_ROC(din_class[class_num],dood_class[class_num])
-            oracle_class_AUROC = self.calculate_class_ROC(din_conditional_class[class_num],dood_class[class_num])
-            #import ipdb; ipdb.set_trace()
-            # Calculate the difference in the values
-            oracle_class_improvement = oracle_class_AUROC - class_AUROC
+            class_AUROC,oracle_class_AUROC,oracle_class_improvement =  self.calculate_class_ROC_oracle(din_class[class_num],din_conditional_class[class_num],dood_class[class_num])
 
             # Calculate fraction of datapoints in particular class 
             class_ID_fraction = len(din_class[class_num])/len(ID_scores)
@@ -298,32 +296,31 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
 
 
             table_data['Metric'].append(f'Class {class_num} AUROC')
-            table_data['Oracle'].append(oracle_class_AUROC)
-            table_data['Oracle Improvement'].append(oracle_class_improvement)
+            table_data['Oracle'].append(round(oracle_class_AUROC,2))
+            table_data['Oracle Improvement'].append(round(oracle_class_improvement,2))
             table_data['ID Samples Fraction'].append(round(class_ID_fraction,2))
             table_data['Conditional ID Samples Fraction'].append(round(class_conditional_ID_fraction,2))
             table_data['OOD Samples Fraction'].append(round(class_OOD_fraction,2))
         
-        # Non class specific metrics
+        # Non class specific metrics - AUROC
         table_data['Metric'].append('AUROC')
         # Calculate general scores
         auroc = get_roc_sklearn(ID_scores,OOD_scores)
         oracle_auroc = get_roc_sklearn(ID_conditional_scores,OOD_scores)
         oracle_auroc_improvement = oracle_auroc - auroc
-        table_data['Oracle'] = oracle_auroc
-        table_data['Oracle Improvement'] = oracle_auroc_improvement
-        
+
+        table_data['Oracle'].append(round(oracle_auroc,2))
+        table_data['Oracle Improvement'].append(round(oracle_auroc_improvement,2))        
         table_data['ID Samples Fraction'].append(1.0)
         table_data['Conditional ID Samples Fraction'].append(1.0)
         table_data['OOD Samples Fraction'].append(1.0)
 
-
+        # Non class specific metrics - Classification
         table_data['Metric'].append('Classification Accuracy')
-        classification = self.mahalanobis_classification(indices_ID,labels).item()
-        oracle_classification = self.mahalanobis_classification(indices_conditional_ID,labels).item()
-        oracle_classification_improvement = oracle_auroc - auroc
-        table_data['Oracle'] = oracle_classification
-        table_data['Oracle Improvement'] = oracle_classification_improvement
+        classification, oracle_classification, oracle_classification_improvement = self.calculate_classification_oracle(indices_ID,indices_conditional_ID,labels)
+        
+        table_data['Oracle'].append(round(oracle_classification,2))
+        table_data['Oracle Improvement'].append(round(oracle_classification_improvement,2))
         table_data['ID Samples Fraction'].append(1.0)
         table_data['Conditional ID Samples Fraction'].append(1.0)
         table_data['OOD Samples Fraction'].append(0.0)
@@ -343,9 +340,29 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
             class_AUROC = -1.0
         else:
             class_AUROC = get_roc_sklearn(class_ID_scores, class_OOD_scores)
+            
         return class_AUROC
+    
+    def calculate_class_ROC_oracle(self, class_ID_scores,class_condtional_ID_scores, class_OOD_scores):
+        class_AUROC = self.calculate_class_ROC(class_ID_scores,class_OOD_scores)
+        oracle_class_AUROC = self.calculate_class_ROC(class_condtional_ID_scores,class_OOD_scores)
+        # Calculate the difference in the values
+        oracle_class_improvement = oracle_class_AUROC - class_AUROC
+        #print('class AUROC', class_AUROC)
+        #print('oracle class AUROC', oracle_class_AUROC)
+        #print('oracle_class_improvement', oracle_class_improvement)
+        return class_AUROC, oracle_class_AUROC, oracle_class_improvement
+    
+    def calculate_classification_oracle(self,indices_ID,indices_conditional_ID,labels):
+        #import ipdb; ipdb.set_trace()
+        classification = self.mahalanobis_classification(indices_ID,labels).item()
+        oracle_classification = self.mahalanobis_classification(indices_conditional_ID,labels).item()
+        oracle_classification_improvement = oracle_classification - classification
 
-
+        #print('Classification',classification)
+        #print('oracle classification',oracle_classification)
+        #print('oracle classification improvement', oracle_classification_improvement)
+        return classification, oracle_classification, oracle_classification_improvement
 
 
 
