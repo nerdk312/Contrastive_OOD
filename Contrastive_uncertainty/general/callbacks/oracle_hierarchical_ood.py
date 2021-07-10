@@ -504,11 +504,14 @@ class Hierarchical_Random_Coarse(Oracle_Hierarchical_Metrics):
 
 class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
     def __init__(self, Datamodule, OOD_Datamodule,
-        quick_callback:bool = True,num_clusters =3):
+        quick_callback:bool = True,num_clusters =10,
+        vector_level = 'fine',label_level = 'fine'):
     
         super().__init__(Datamodule,OOD_Datamodule,quick_callback)
         self.num_clusters = num_clusters 
-        
+        self.vector_level = vector_level
+        self.label_level = label_level
+
     def forward_callback(self, trainer, pl_module):
         self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
         'label_level':{'fine':0,'coarse':1}}  
@@ -518,56 +521,49 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         ood_loader = self.OOD_Datamodule.test_dataloader()
 
         # Obtain representations of the data
-        features_train_fine, labels_train_fine = self.get_features(pl_module, train_loader,'fine')
-        features_test_fine, labels_test_fine = self.get_features(pl_module, test_loader,'fine')
-        features_ood_fine, labels_ood_fine = self.get_features(pl_module, ood_loader, 'fine')
+        features_train, labels_train = self.get_features(pl_module, train_loader,self.vector_level)
+        features_test, labels_test = self.get_features(pl_module, test_loader,self.vector_level)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader, self.vector_level)
 
         # Obtain scores for the fine case
-        dtest_fine, dood_fine, indices_dtest_fine, indices_dood_fine = self.get_eval_results(
-            np.copy(features_train_fine),
-            np.copy(features_test_fine),
-            np.copy(features_ood_fine),
-            np.copy(labels_train_fine))
-
+        dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train))
 
 
         ############### Part of code specific to the subclustering ####################
-        # Look at the OOD classes and look at the class which has the largest value
+        OOD_mode_class, mode_class_features_train, mode_class_features_test, mode_class_features_ood, train_subcluster_labels= self.get_subcluster_data(features_train,labels_train,
+            features_test, indices_dtest,
+            features_ood, indices_dood)
+
+        # Obtain scores for the subcluster case
+        dtest_subcluster, dood_subcluster, indices_dtest_subcluster, indices_dood_subcluster = self.get_eval_results(
+            np.copy(mode_class_features_train),
+            np.copy(mode_class_features_test),
+            np.copy(mode_class_features_ood),
+            np.copy(train_subcluster_labels))
+
+        self.data_saving(dtest,dtest_subcluster,indices_dtest_subcluster,
+        train_subcluster_labels,
+        dood,dood_subcluster, indices_dood_subcluster,
+        f'Class {OOD_mode_class} {self.vector_level} {self.label_level} Subcluster AUROC OOD {self.OOD_dataname}', f'Class {OOD_mode_class} {self.vector_level} {self.label_level} Subcluster AUROC OOD {self.OOD_dataname} Table')
+    
+    # Gets the mode class of all the data points
+    def get_OOD_mode(self,indices_dood,labels_train):
         OOD_fraction = 0
         OOD_mode_class = 0
         # Find class which the OOD data is most assigned to
-        for class_num in range(len(np.unique(labels_train_fine))):
-            OOD_class_fraction = len(indices_dood_fine[indices_dood_fine==class_num])/len(indices_dood_fine)  # Look at all data points which have the specific class fraction
+        for class_num in range(len(np.unique(labels_train))):
+            OOD_class_fraction = len(indices_dood[indices_dood==class_num])/len(indices_dood)  # Look at all data points which have the specific class fraction
             if OOD_class_fraction >= OOD_fraction:
                 OOD_fraction = OOD_class_fraction
                 OOD_mode_class = class_num
-        
-
-        # From the indices which are the most common in the OOD dataset, sub cluster this class using the training data
-        fine_class_features_train = features_train_fine[labels_train_fine == OOD_mode_class]
-
-        # Obtain the test features which were predicted to belong to this case, may not actually belong to the class (conditioning the prediction)
-        fine_class_features_test = features_test_fine[indices_dtest_fine == OOD_mode_class]
-        fine_class_features_ood = features_ood_fine[indices_dood_fine == OOD_mode_class]
-
-        # Perform clustering on the training features which belong to the class
-        train_sub_labels = self.get_clusters(fine_class_features_train,3)
-        
-        # Obtain scores for the subcluster  case
-        dtest_subcluster_fine, dood_subcluster_fine, indices_dtest_subcluster_fine, indices_dood_subcluster_fine = self.get_eval_results(
-            np.copy(fine_class_features_train),
-            np.copy(fine_class_features_test),
-            np.copy(fine_class_features_ood),
-            np.copy(train_sub_labels))
-
-        self.data_saving(dtest_fine,dtest_subcluster_fine,indices_dtest_subcluster_fine,
-        train_sub_labels,
-        dood_fine,dood_subcluster_fine, indices_dood_subcluster_fine,
-        f'Practice_table {self.OOD_dataname}')
-        # Obtain the scores which belong to each particular subcluster
-        # Obtain the general score using the subclusters
-        # Obtain the scores for the case where there are different values present
-
+            
+        return OOD_mode_class
+    
+    
     def get_clusters(self, ftrain, nclusters):
         kmeans = faiss.Kmeans(
             ftrain.shape[1], nclusters, niter=100, verbose=False, gpu=True
@@ -578,7 +574,7 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
 
     #ID scores is the subclass in this case
     def data_saving(self,non_subclustered_ID_scores,ID_scores,indices_ID,labels,
-        non_subclustered_OOD_scores, OOD_scores,indices_OOD,wandb_name):
+        non_subclustered_OOD_scores, OOD_scores,indices_OOD,wandb_name,table_name):
 
         table_data = {'Class':[], 'AUROC':[], 'ID Samples Fraction':[],'OOD Samples Fraction':[]}
         
@@ -606,7 +602,6 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         table_data['ID Samples Fraction'].append(1.0)
         table_data['OOD Samples Fraction'].append(1.0)
 
-
         # Obtain the AUROC score for the case where the data is not subclustered
         non_subcluster_AUROC = get_roc_sklearn(non_subclustered_ID_scores, non_subclustered_OOD_scores)
         table_data['Class'].append('All No Subclusters')
@@ -618,6 +613,29 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         table_df = pd.DataFrame(table_data)
         table = wandb.Table(dataframe=table_df)
         wandb.log({wandb_name:table})
+        table_saving(table_df,table_name)
+
+    
+    def get_subcluster_data(self,features_train,labels_train, features_test, indices_dtest,
+        features_ood, indices_dood):
+        # Look at the OOD classes and look at the class which has the largest value
+        OOD_mode_class = self.get_OOD_mode(indices_dood, labels_train)
+
+        # From the indices which are the most common in the OOD dataset, sub cluster this class using the training data
+        mode_class_features_train = features_train[labels_train == OOD_mode_class]
+        # Obtain the test features which were predicted to belong to this case, may not actually belong to the class (conditioning the prediction)
+        mode_class_features_test = features_test[indices_dtest == OOD_mode_class]
+        mode_class_features_ood = features_ood[indices_dood == OOD_mode_class]
+
+        # Perform clustering on the training features which belong to the class
+        train_subcluster_labels = self.get_clusters(mode_class_features_train,self.num_clusters)
+        return OOD_mode_class, mode_class_features_train, mode_class_features_test, mode_class_features_ood, train_subcluster_labels
+
+    
+
+
+
+
 
 
         # Save the columns of the data for the distribution
