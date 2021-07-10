@@ -8,7 +8,7 @@ from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Ty
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
 from Contrastive_uncertainty.general.callbacks.relative_mahalanobis_callback import One_Dim_Mahalanobis, Relative_Mahalanobis
-from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Oracle_Hierarchical_Metrics
+from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Oracle_Hierarchical_Metrics, Hierarchical_Random_Coarse, Hierarchical_Subclusters_OOD
 
 
 def train_run_name(model_name, config, group=None):
@@ -66,13 +66,14 @@ def callback_dictionary(Datamodule,config,data_dict):
                                 
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
-               
+
                 f'One Dimensional Mahalanobis {ood_dataset}': One_Dim_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'Relative Mahalanobis {ood_dataset}': Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'Mahalanobis Distance {ood_dataset}': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
                 f'Class Mahalanobis {ood_dataset}': Class_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
-                f'Oracle Hierarchical Metrics {ood_dataset}':Oracle_Hierarchical_Metrics(Datamodule, OOD_Datamodule,quick_callback=quick_callback)}
-
+                f'Oracle Hierarchical Metrics {ood_dataset}':Oracle_Hierarchical_Metrics(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
+                f'Hierarchical_Random_Coarse {ood_dataset}' : Hierarchical_Random_Coarse(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
+                f'Hierarchical Subclusters {ood_dataset}' : Hierarchical_Subclusters_OOD(Datamodule, OOD_Datamodule,quick_callback=quick_callback)}
 
         #import ipdb; ipdb.set_trace()
         callback_dict.update(OOD_callback)

@@ -14,12 +14,16 @@ typicality_bootstrap = 50,
 typicality_batch = 25,
 
 # Used to update callback dict
-vector_level = ['fine'],
-label_level =['coarse'],
+vector_level = ['instance', 'fine', 'coarse'],
+label_level = ['fine','fine','coarse'],
+#vector_level = ['coarse'],
+#label_level =['fine'],
 #vector_level = ['fine'],
 #label_level = ['coarse'],
 
-callbacks = ['General Scores','Visualisation'],
+callbacks = ['Hierarchical_Random_Coarse'],
+
+
 )
 
 
@@ -39,12 +43,16 @@ typicality_bootstrap = 50,
 typicality_batch = 25,
 
 # Used to update callback dict
-vector_level = ['fine'],
-label_level =['coarse'],
+vector_level = ['instance', 'fine', 'coarse'],
+label_level = ['fine','fine','coarse'],
+#vector_level = ['coarse'],
+#label_level =['fine'],
+#vector_level = ['fine'],
+#label_level = ['coarse'],
 
+callbacks = ['Hierarchical_Random_Coarse'],
 
-callbacks = ['General Scores','Visualisation'],
 )
 
 
-batch_trainer_hparams = {'Practice group 1':group1_hparams, 'Practice group 2':group2_hparams}
+batch_trainer_hparams = {'OOD hierarchy baselines':group1_hparams, 'OOD detection at different scales experiment':group2_hparams}

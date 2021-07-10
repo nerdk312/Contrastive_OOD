@@ -1,6 +1,6 @@
 from Contrastive_uncertainty.general.callbacks.practice.practice_hierarchical_callback import Practice_Hierarchical
 from Contrastive_uncertainty.general.callbacks.general_callbacks import  ModelSaving, MMD_distance
-from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR, Mahalanobis_Subsample
+from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR, Mahalanobis_Subsample, Class_Mahalanobis_OOD 
 from Contrastive_uncertainty.general.callbacks.experimental_ood_callbacks import  Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD 
 from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO, Typicality_General_Point
@@ -13,6 +13,7 @@ from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Or
 from Contrastive_uncertainty.general.callbacks.practice.practice_hierarchical_callback import Practice_Hierarchical, Practice_Hierarchical_scores
 from Contrastive_uncertainty.general.run.general_run_setup import Datamodule_selection, specific_callbacks
 from Contrastive_uncertainty.general.callbacks.relative_mahalanobis_callback import One_Dim_Mahalanobis, Relative_Mahalanobis
+from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Oracle_Hierarchical_Metrics, Hierarchical_Random_Coarse 
 
 
 # Run name which includes the branch weights
@@ -65,9 +66,11 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Subsample': Hierarchical_Subsample(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
 
                 # Callbacks related to relative mahalanobis
+                f'Class Mahalanobis {ood_dataset}': Class_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='coarse', label_level='coarse'),
                 f'One Dimensional Mahalanobis {ood_dataset}': One_Dim_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
-                f'Hierarchical Relative Mahalanobis {ood_dataset}': Hierarchical_Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback)}
-        
+                f'Hierarchical Relative Mahalanobis {ood_dataset}': Hierarchical_Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+                f'Hierarchical_Random_Coarse {ood_dataset}' : Hierarchical_Random_Coarse(Datamodule, OOD_Datamodule,quick_callback=quick_callback)}
+                
         # Callbacks which use different feature vectors for the task
         for i in range(len(config['vector_level'])):
             mahalanobis_callback = {f'Mahalanobis Distance {vector_level[i]} {label_level[i]} {ood_dataset}':Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level=vector_level[i], label_level=label_level[i]),

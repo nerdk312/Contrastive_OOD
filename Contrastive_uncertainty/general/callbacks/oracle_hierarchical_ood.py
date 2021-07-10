@@ -278,7 +278,7 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
         OOD_scores,indices_OOD, wandb_name,table_name):
         
         # Metrics should be all the different class AUROC, the general AUROC as well as the classification accuracy
-        table_data = {'Metric':[], 'Oracle': [], 'Oracle Improvement':[], 'ID Samples Fraction':[],'Conditional ID Samples Fraction':[], 'OOD Samples Fraction':[]}
+        table_data = {'Metric':[],'Unconditional':[], 'Oracle': [], 'Oracle Improvement':[], 'ID Samples Fraction':[],'Conditional ID Samples Fraction':[], 'OOD Samples Fraction':[]}
         
         # class scores for the ID, conditional ID and OOD data
         din_class = [ID_scores[indices_ID==i] for i in np.unique(labels)]
@@ -296,6 +296,7 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
 
 
             table_data['Metric'].append(f'Class {class_num} AUROC')
+            table_data['Unconditional'].append(round(class_AUROC,2))
             table_data['Oracle'].append(round(oracle_class_AUROC,2))
             table_data['Oracle Improvement'].append(round(oracle_class_improvement,2))
             table_data['ID Samples Fraction'].append(round(class_ID_fraction,2))
@@ -309,6 +310,7 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
         oracle_auroc = get_roc_sklearn(ID_conditional_scores,OOD_scores)
         oracle_auroc_improvement = oracle_auroc - auroc
 
+        table_data['Unconditional'].append(round(auroc,2))
         table_data['Oracle'].append(round(oracle_auroc,2))
         table_data['Oracle Improvement'].append(round(oracle_auroc_improvement,2))        
         table_data['ID Samples Fraction'].append(1.0)
@@ -319,6 +321,7 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
         table_data['Metric'].append('Classification Accuracy')
         classification, oracle_classification, oracle_classification_improvement = self.calculate_classification_oracle(indices_ID,indices_conditional_ID,labels)
         
+        table_data['Unconditional'].append(round(classification,2))
         table_data['Oracle'].append(round(oracle_classification,2))
         table_data['Oracle Improvement'].append(round(oracle_classification_improvement,2))
         table_data['ID Samples Fraction'].append(1.0)
@@ -327,6 +330,7 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
 
         # Table saving
         table_df = pd.DataFrame(table_data)
+        #print(table_df)
         #import ipdb; ipdb.set_trace()
         table = wandb.Table(dataframe=table_df)
         wandb.log({wandb_name:table})
@@ -348,9 +352,7 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
         oracle_class_AUROC = self.calculate_class_ROC(class_condtional_ID_scores,class_OOD_scores)
         # Calculate the difference in the values
         oracle_class_improvement = oracle_class_AUROC - class_AUROC
-        #print('class AUROC', class_AUROC)
-        #print('oracle class AUROC', oracle_class_AUROC)
-        #print('oracle_class_improvement', oracle_class_improvement)
+        
         return class_AUROC, oracle_class_AUROC, oracle_class_improvement
     
     def calculate_classification_oracle(self,indices_ID,indices_conditional_ID,labels):
@@ -365,16 +367,12 @@ class Oracle_Hierarchical_Metrics(Oracle_Hierarchical):
         return classification, oracle_classification, oracle_classification_improvement
 
 
-
-
-
-'''
-class Oracle_Hierarchical_OOD(Oracle_Hierarchical):
+# Data which uses a random coarse representation for the OOD representation
+class Hierarchical_Random_Coarse(Oracle_Hierarchical_Metrics):
     def __init__(self, Datamodule, OOD_Datamodule,
         quick_callback:bool = True):
 
         super().__init__(Datamodule,OOD_Datamodule,quick_callback)
-
 
     # Performs all the computation in the callback
     def forward_callback(self, trainer, pl_module):
@@ -387,19 +385,144 @@ class Oracle_Hierarchical_OOD(Oracle_Hierarchical):
         # Obtain representations of the data
         features_train_coarse, labels_train_coarse = self.get_features(pl_module, train_loader,'coarse')
         features_train_fine, labels_train_fine = self.get_features(pl_module, train_loader,'fine')
-
+        
+        # Coarse test labels required for conditioning
         features_test_coarse, labels_test_coarse = self.get_features(pl_module, test_loader,'coarse')
         features_test_fine, labels_test_fine = self.get_features(pl_module, test_loader,'fine')
 
         features_ood_coarse, labels_ood_coarse = self.get_features(pl_module, ood_loader, 'coarse')
         features_ood_fine, labels_ood_fine = self.get_features(pl_module, ood_loader, 'fine')
+
         
+        random_coarse_ood_labels = np.random.randint(len(np.unique(labels_test_coarse)),size = len(labels_ood_fine)) 
+        
+        # Coarse scores
         dtest_coarse, dood_coarse, indices_dtest_coarse, indices_dood_coarse = self.get_eval_results(
             np.copy(features_train_coarse),
             np.copy(features_test_coarse),
             np.copy(features_ood_coarse),
             np.copy(labels_train_coarse))
 
+        # Unconditional scores
+        dtest_fine, dood_fine, indices_dtest_fine, indices_dood_fine = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_fine),
+            None,
+            np.copy(random_coarse_ood_labels))
+
+        # Condition on the true test labels
+        dtest_oracle_fine, _, indices_dtest_oracle_fine, _ = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_fine),
+            # Additional used for conditioning on the true coarse labels to see if it improves the results 
+            np.copy(labels_test_coarse),
+            np.copy(random_coarse_ood_labels))
+
+        # Condition on predictions from model
+        dtest_conditional_fine, _, indices_dtest_condtional_fine, _ = self.get_eval_results(
+            np.copy(features_train_fine),
+            np.copy(features_test_fine),
+            np.copy(features_ood_fine),
+            np.copy(labels_train_fine),
+            # Additional used for conditioning on the true coarse labels to see if it improves the results 
+            np.copy(indices_dtest_coarse),
+            np.copy(random_coarse_ood_labels))
+        
+        self.data_saving(labels_test_fine,dtest_fine,indices_dtest_fine,
+            dtest_oracle_fine, indices_dtest_oracle_fine,
+            dtest_coarse, indices_dtest_condtional_fine,
+            dood_fine, indices_dood_fine,f'Hierarchical Random OOD {self.OOD_dataname}')
+
+        
+    def data_saving(self,labels,ID_scores,indices_ID, 
+        ID_oracle_scores,indices_oracle_ID,
+        ID_conditional_scores,indices_conditional_ID,
+        OOD_scores, indices_OOD, wandb_name):
+
+        # Metrics should be all the different class AUROC, the general AUROC as well as the classification accuracy
+        table_data = {'Metric':[],'Unconditional':[], 'Oracle': [], 'Conditional':[], 
+        'ID Samples Fraction':[], 'Oracle ID Samples Fraction':[], 'Conditional ID Samples Fraction':[], 'OOD Samples Fraction':[]}
+
+        din_class = [ID_scores[indices_ID==i] for i in np.unique(labels)]
+        din_oracle_class = [ID_oracle_scores[indices_oracle_ID==i] for i in np.unique(labels)]
+        din_conditional_class = [ID_conditional_scores[indices_conditional_ID==i] for i in np.unique(labels)]
+        dood_class = [OOD_scores[indices_OOD ==i] for i in np.unique(labels)]
+
+        # Class AUROC values
+        for class_num in range(len(din_class)):
+            class_AUROC,oracle_class_AUROC, conditional_class_AUROC =  self.calculate_class_ROC_batch(din_class[class_num], din_oracle_class[class_num], din_conditional_class[class_num], dood_class[class_num])
+
+            # Calculate fraction of datapoints in particular class 
+            class_ID_fraction = len(din_class[class_num])/len(ID_scores)
+            class_Oracle_ID_fraction = len(din_oracle_class[class_num])/len(ID_scores)
+            class_conditional_ID_fraction =  len(din_conditional_class[class_num])/len(ID_conditional_scores)
+            class_OOD_fraction = len(dood_class[class_num])/len(OOD_scores)
+
+            table_data['Metric'].append(f'Class {class_num} AUROC')
+            table_data['Unconditional'].append(round(class_AUROC,2))
+            table_data['Oracle'].append(round(oracle_class_AUROC,2))
+            table_data['Conditional'].append(round(conditional_class_AUROC,2))
+            
+            table_data['ID Samples Fraction'].append(round(class_ID_fraction,2))
+            table_data['Oracle ID Samples Fraction'].append(round(class_Oracle_ID_fraction,2))
+            table_data['Conditional ID Samples Fraction'].append(round(class_conditional_ID_fraction,2))
+            table_data['OOD Samples Fraction'].append(round(class_OOD_fraction,2))
+
+
+        # Non class specific metrics - AUROC
+        table_data['Metric'].append('AUROC')
+        # Calculate general scores
+        auroc = get_roc_sklearn(ID_scores,OOD_scores)
+        oracle_auroc = get_roc_sklearn(ID_oracle_scores,OOD_scores)
+        conditional_auroc = get_roc_sklearn(ID_conditional_scores,OOD_scores)
+
+        table_data['Unconditional'].append(round(auroc,2))
+        table_data['Oracle'].append(round(oracle_auroc,2))
+        table_data['Conditional'].append(round(conditional_auroc,2))        
+        table_data['ID Samples Fraction'].append(1.0)
+        table_data['Oracle ID Samples Fraction'].append(1.0)
+        table_data['Conditional ID Samples Fraction'].append(1.0)
+        table_data['OOD Samples Fraction'].append(1.0)
+
+        table_df = pd.DataFrame(table_data)
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({wandb_name:table})
+
+
+    def calculate_class_ROC_batch(self, class_ID_scores,classs_oracle_ID_scores,class_condtional_ID_scores, class_OOD_scores):
+        class_AUROC = self.calculate_class_ROC(class_ID_scores,class_OOD_scores)
+        oracle_class_AUROC = self.calculate_class_ROC(classs_oracle_ID_scores,class_OOD_scores)
+        conditional_class_AUROC = self.calculate_class_ROC(class_condtional_ID_scores,class_OOD_scores)
+        # Calculate the difference in the values
+        
+        return class_AUROC, oracle_class_AUROC, conditional_class_AUROC
+        
+
+class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
+    def __init__(self, Datamodule, OOD_Datamodule,
+        quick_callback:bool = True,num_clusters =3):
+    
+        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
+        self.num_clusters = num_clusters 
+        
+    def forward_callback(self, trainer, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}}  
+        
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        # Obtain representations of the data
+        features_train_fine, labels_train_fine = self.get_features(pl_module, train_loader,'fine')
+        features_test_fine, labels_test_fine = self.get_features(pl_module, test_loader,'fine')
+        features_ood_fine, labels_ood_fine = self.get_features(pl_module, ood_loader, 'fine')
+
+        # Obtain scores for the fine case
         dtest_fine, dood_fine, indices_dtest_fine, indices_dood_fine = self.get_eval_results(
             np.copy(features_train_fine),
             np.copy(features_test_fine),
@@ -407,11 +530,107 @@ class Oracle_Hierarchical_OOD(Oracle_Hierarchical):
             np.copy(labels_train_fine))
 
 
-        dtest_conditional_fine, _, indices_dtest_conditional_fine, _ = self.get_eval_results(
-            np.copy(features_train_fine),
-            np.copy(features_test_fine),
-            np.copy(features_ood_fine),
-            np.copy(labels_train_fine),
-            # Additional used for conditioning on the true coarse labels to see if it improves the results 
-            np.copy(labels_test_coarse))
-'''       
+
+        ############### Part of code specific to the subclustering ####################
+        # Look at the OOD classes and look at the class which has the largest value
+        OOD_fraction = 0
+        OOD_mode_class = 0
+        # Find class which the OOD data is most assigned to
+        for class_num in range(len(np.unique(labels_train_fine))):
+            OOD_class_fraction = len(indices_dood_fine[indices_dood_fine==class_num])/len(indices_dood_fine)  # Look at all data points which have the specific class fraction
+            if OOD_class_fraction >= OOD_fraction:
+                OOD_fraction = OOD_class_fraction
+                OOD_mode_class = class_num
+        
+
+        # From the indices which are the most common in the OOD dataset, sub cluster this class using the training data
+        fine_class_features_train = features_train_fine[labels_train_fine == OOD_mode_class]
+
+        # Obtain the test features which were predicted to belong to this case, may not actually belong to the class (conditioning the prediction)
+        fine_class_features_test = features_test_fine[indices_dtest_fine == OOD_mode_class]
+        fine_class_features_ood = features_ood_fine[indices_dood_fine == OOD_mode_class]
+
+        # Perform clustering on the training features which belong to the class
+        train_sub_labels = self.get_clusters(fine_class_features_train,3)
+        
+        # Obtain scores for the subcluster  case
+        dtest_subcluster_fine, dood_subcluster_fine, indices_dtest_subcluster_fine, indices_dood_subcluster_fine = self.get_eval_results(
+            np.copy(fine_class_features_train),
+            np.copy(fine_class_features_test),
+            np.copy(fine_class_features_ood),
+            np.copy(train_sub_labels))
+
+        self.data_saving(dtest_fine,dtest_subcluster_fine,indices_dtest_subcluster_fine,
+        train_sub_labels,
+        dood_fine,dood_subcluster_fine, indices_dood_subcluster_fine,
+        f'Practice_table {self.OOD_dataname}')
+        # Obtain the scores which belong to each particular subcluster
+        # Obtain the general score using the subclusters
+        # Obtain the scores for the case where there are different values present
+
+    def get_clusters(self, ftrain, nclusters):
+        kmeans = faiss.Kmeans(
+            ftrain.shape[1], nclusters, niter=100, verbose=False, gpu=True
+        )
+        kmeans.train(np.random.permutation(ftrain))
+        _, ypred = kmeans.assign(ftrain)
+        return ypred
+
+    #ID scores is the subclass in this case
+    def data_saving(self,non_subclustered_ID_scores,ID_scores,indices_ID,labels,
+        non_subclustered_OOD_scores, OOD_scores,indices_OOD,wandb_name):
+
+        table_data = {'Class':[], 'AUROC':[], 'ID Samples Fraction':[],'OOD Samples Fraction':[]}
+        
+        # Scores for the subclusters for the ID and OOD data
+        din_subclusters = [ID_scores[indices_ID==i] for i in np.unique(labels)]
+        dood_subclusters = [OOD_scores[indices_OOD ==i] for i in np.unique(labels)] 
+        
+        # Calculate AUROC score for each subcluster of the class
+        for subcluster in range(len(din_subclusters)):
+            subcluster_AUROC = self.calculate_class_ROC(din_subclusters[subcluster],dood_subclusters[subcluster])
+            
+            subcluster_ID_fraction = len(din_subclusters[subcluster])/len(ID_scores)
+            #import ipdb; ipdb.set_trace()
+            subcluster_OOD_fraction = len(dood_subclusters[subcluster])/len(OOD_scores)
+            
+            table_data['Class'].append(f'Subcluster {subcluster}')
+            table_data['AUROC'].append(round(subcluster_AUROC,2))
+            table_data['ID Samples Fraction'].append(round(subcluster_ID_fraction,2))
+            table_data['OOD Samples Fraction'].append(round(subcluster_OOD_fraction,2))
+        
+        # Obtain the AUROC for all the subclusters together rather than individually
+        all_subcluster_AUROC = get_roc_sklearn(ID_scores,OOD_scores)
+        table_data['Class'].append('All Subclusters')
+        table_data['AUROC'].append(round(all_subcluster_AUROC,2))
+        table_data['ID Samples Fraction'].append(1.0)
+        table_data['OOD Samples Fraction'].append(1.0)
+
+
+        # Obtain the AUROC score for the case where the data is not subclustered
+        non_subcluster_AUROC = get_roc_sklearn(non_subclustered_ID_scores, non_subclustered_OOD_scores)
+        table_data['Class'].append('All No Subclusters')
+        table_data['AUROC'].append(round(non_subcluster_AUROC ,2))
+        table_data['ID Samples Fraction'].append(1.0)
+        table_data['OOD Samples Fraction'].append(1.0)
+
+        # Table saving
+        table_df = pd.DataFrame(table_data)
+        table = wandb.Table(dataframe=table_df)
+        wandb.log({wandb_name:table})
+
+
+        # Save the columns of the data for the distribution
+
+
+
+
+
+
+
+
+
+
+
+        
+        
