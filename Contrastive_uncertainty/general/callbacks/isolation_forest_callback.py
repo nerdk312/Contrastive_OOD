@@ -21,6 +21,7 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import IsolationForest
+import eif as iso
 
 from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloading
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_fpr, get_pr_sklearn, get_roc_plot, get_roc_sklearn, table_saving, calculate_class_ROC
@@ -185,13 +186,25 @@ class IForest(pl.Callback):
         # Normalise the data       
         ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest,food)
         # Nawid - obtain the scores for the test data and the OOD data
-        non_class_clf = IsolationForest(contamination=0.0).fit(ftrain_norm)
+        '''
+        non_class_clf = IsolationForest().fit(ftrain_norm)
         non_class_dtest = non_class_clf.predict(ftest_norm)
         non_class_dood = non_class_clf.predict(food_norm)
-        
-        
-        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm,labelstrain)
+        '''
+        #import ipdb; ipdb.set_trace()
+        ftrain_norm = np.array(ftrain_norm, dtype='float64')
+        ftest_norm = np.array(ftest_norm, dtype='float64')
+        food_norm = np.array(food_norm, dtype='float64')
+        F = iso.iForest(ftrain_norm,ntrees=200, sample_size=256, ExtensionLevel=0) # Train the isolation forest on indomain dat
+        non_class_dtest = F.compute_paths(X_in=ftest_norm) # Nawid - compute the paths for the nominal datapoints
+        non_class_dood = F.compute_paths(X_in=food_norm)
+        #non_class_AUROC = get_roc_sklearn(non_class_dtest,non_class_dood)
+        #print('non classs AUROC', non_class_AUROC)
+        #print(' non class dtest', non_class_dtest)
+        #print('non class dood', non_class_dood)
 
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm,labelstrain)
+        
         return non_class_dtest,non_class_dood, dtest, dood, indices_dtest, indices_dood
 
     
@@ -203,11 +216,14 @@ class IForest(pl.Callback):
         # Obtain the mahalanobis distance scores for the different classes on the train data
 
         # Fit several classifiers for the different classes
-        clfs = [IsolationForest(contamination=0.0).fit(x) for x in xc]
+        #clfs = [IsolationForest().fit(x) for x in xc]
+        clfs = [iso.iForest(x,ntrees=200, sample_size=256, ExtensionLevel=0) for x in xc]
         # Make predictions using each of the class specific classifiers
 
-        din = [clf.predict(ftest) for clf in clfs]
-        dood = [clf.predict(food) for clf in clfs]
+        din = [clf.compute_paths(X_in = ftest) for clf in clfs]
+        dood = [clf.compute_paths(X_in = food) for clf in clfs]
+        #din = [clf.predict(ftest) for clf in clfs]
+        #dood = [clf.predict(food) for clf in clfs]
 
         # Find out which class the data is present
         indices_din = np.argmax(din,axis=0)
