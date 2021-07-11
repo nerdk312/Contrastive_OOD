@@ -503,6 +503,11 @@ class Hierarchical_Random_Coarse(Oracle_Hierarchical_Metrics):
         return class_AUROC, oracle_class_AUROC, conditional_class_AUROC
         
 
+
+
+
+
+
 class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
     def __init__(self, Datamodule, OOD_Datamodule,
         quick_callback:bool = True,num_clusters =3,
@@ -545,12 +550,17 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
             np.copy(mode_class_features_ood),
             np.copy(train_subcluster_labels))
 
-        self.AUROC_saving(dtest,dtest_subcluster,indices_dtest_subcluster,
+        # Nonclustered scores for a particular class
+        dtest_nonclustered = dtest[indices_dtest== OOD_mode_class]
+        dood_nonclustered = dood[indices_dood== OOD_mode_class]
+
+        self.AUROC_saving(dtest_nonclustered,dtest_subcluster,indices_dtest_subcluster,
         train_subcluster_labels,
-        dood,dood_subcluster, indices_dood_subcluster,
+        dood_nonclustered,dood_subcluster, indices_dood_subcluster,
         f'Class {OOD_mode_class} {self.vector_level} {self.label_level} Subcluster AUROC OOD {self.OOD_dataname}', f'Class {OOD_mode_class} {self.vector_level} {self.label_level} Subcluster AUROC OOD {self.OOD_dataname} Table')
 
-        self.scores_saving(dtest_subcluster,indices_dtest_subcluster,'Subcluster practice')
+        #self.scores_saving(dtest_subcluster,indices_dtest_subcluster,'Subcluster practice')
+
     # Gets the mode class of all the data points
     def get_OOD_mode(self,indices_dood,labels_train):
         OOD_fraction = 0
@@ -591,8 +601,16 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
 
 
     #ID scores is the subclass in this case
+
     def AUROC_saving(self,non_subclustered_ID_scores,ID_scores,indices_ID,labels,
         non_subclustered_OOD_scores, OOD_scores,indices_OOD,wandb_name,table_name):
+        '''
+        args:
+            non_subclustered_ID_Scores : Non clustered score for a particular class
+            ID scores : scores for the subclusters of a particular class
+            indices ID: indices for the subcluster assignment for the ID dataset
+            labels : labels for the different number of subclusters
+        '''
 
         table_data = {'Class':[], 'AUROC':[], 'ID Samples Fraction':[],'OOD Samples Fraction':[]}
         
@@ -621,6 +639,7 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         table_data['OOD Samples Fraction'].append(1.0)
 
         # Obtain the AUROC score for the case where the data is not subclustered
+        #import ipdb; ipdb.set_trace()
         non_subcluster_AUROC = get_roc_sklearn(non_subclustered_ID_scores, non_subclustered_OOD_scores)
         table_data['Class'].append('All No Subclusters')
         table_data['AUROC'].append(round(non_subcluster_AUROC ,2))
@@ -634,15 +653,13 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         table_saving(table_df,table_name)
     
     # Saving the scores for the subclusters of the data
-    def scores_saving(self,ddata_class, indices,subcluster_data_name):
+    def scores_saving(self,ddata_class, labels,non_subclustered_ddata_class,subcluster_data_name):
         # obtain the data score for the subclusters
-        ddata_subclusters = [pd.DataFrame(ddata_class[indices == i]) for i in np.unique(indices)] # Nawid - training data which have been predicted to belong to a particular class
+        ddata_subclusters = [pd.DataFrame(ddata_class[labels == i]) for i in np.unique(labels)] # Nawid - training data which have been predicted to belong to a particular class
         ddata_subclusters.append(pd.DataFrame(ddata_class)) # Values for the original class
+        ddata_subclusters.append(pd.DataFrame(non_subclustered_ddata_class))
 
         
-
-
-
         # Concatenate all the dataframes (which places nans in situations where the columns have different lengths)
         subcluster_table_df = pd.concat(ddata_subclusters,axis=1)
         
@@ -651,7 +668,7 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         
         #class_table_df = class_table_df.fillna(-1) # replace nans with -1
         columns = [f'{self.vector_level} {self.label_level} class {i}' for i in np.unique(indices)]
-        subcluster_table_df.columns =  columns + ['Total']
+        subcluster_table_df.columns =  columns + ['All Subcluster'] +['All Non Subclustered ']
 
 
         #import ipdb; ipdb.set_trace()
