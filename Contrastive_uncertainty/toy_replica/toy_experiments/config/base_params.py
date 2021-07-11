@@ -72,7 +72,10 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Class Mahalanobis'],
 #callbacks = ['Oracle Hierarchical Metrics'],
 #callbacks = ['Hierarchical_Random_Coarse'],
-callbacks = ['Hierarchical Subclusters'],
+#callbacks = ['Hierarchical Subclusters'],
+callbacks = ['IForest'],
+
+
 #callbacks = ['Visualisation','Metrics','Mahalanobis Distance', 'Hierarchical Mahalanobis', 'Hierarchical Scores','Oracle Hierarchical', 'General Scores'],
 #callbacks = ['Model_saving'],
 #callbacks = ['General Scores','Visualisation'],

@@ -549,6 +549,7 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
             np.copy(mode_class_features_test),
             np.copy(mode_class_features_ood),
             np.copy(train_subcluster_labels))
+       
 
         # Nonclustered scores for a particular class
         dtest_nonclustered = dtest[indices_dtest== OOD_mode_class]
@@ -562,7 +563,7 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         self.scores_saving(dtest_nonclustered,dtest_subcluster,indices_dtest_subcluster,train_subcluster_labels,
                         f'Class {OOD_mode_class} ID {self.vector_level} {self.label_level} {self.num_clusters} Subclusters')
         self.scores_saving(dood_nonclustered,dood_subcluster,indices_dood_subcluster,train_subcluster_labels,
-                        f'Class {OOD_mode_class} OOD {self.vector_level} {self.label_level} {self.num_clusters} Subclusters')
+                        f'Class {OOD_mode_class} OOD {self.OOD_dataname} {self.vector_level} {self.label_level} {self.num_clusters} Subclusters')
 
     # Gets the mode class of all the data points
     def get_OOD_mode(self,indices_dood,labels_train):
@@ -624,8 +625,10 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         # Calculate AUROC score for each subcluster of the class
         for subcluster in range(len(din_subclusters)):
             subcluster_AUROC = self.calculate_class_ROC(din_subclusters[subcluster],dood_subclusters[subcluster])
-            
+            #print('ID scores',len(ID_scores))
+            #print(ID_scores)
             subcluster_ID_fraction = len(din_subclusters[subcluster])/len(ID_scores)
+            
             #import ipdb; ipdb.set_trace()
             subcluster_OOD_fraction = len(dood_subclusters[subcluster])/len(OOD_scores)
             

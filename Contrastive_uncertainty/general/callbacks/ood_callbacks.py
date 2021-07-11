@@ -1015,3 +1015,11 @@ def table_saving(table_dataframe,name):
     #import ipdb; ipdb.set_trace()
     wandb.log({wandb_title:wandb.Image(filename)})
 
+
+def calculate_class_ROC( class_ID_scores, class_OOD_scores):
+    if len(class_ID_scores) ==0 or len(class_OOD_scores)==0:
+        class_AUROC = -1.0
+    else:
+        class_AUROC = get_roc_sklearn(class_ID_scores, class_OOD_scores)
+            
+    return class_AUROC
