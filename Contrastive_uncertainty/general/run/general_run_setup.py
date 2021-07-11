@@ -73,7 +73,8 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Class Mahalanobis {ood_dataset}': Class_Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
                 f'Oracle Hierarchical Metrics {ood_dataset}':Oracle_Hierarchical_Metrics(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
                 f'Hierarchical_Random_Coarse {ood_dataset}' : Hierarchical_Random_Coarse(Datamodule, OOD_Datamodule,quick_callback=quick_callback),
-                f'Hierarchical Subclusters {ood_dataset}' : Hierarchical_Subclusters_OOD(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine',num_clusters=3)}
+                f'Hierarchical Subclusters 3 {ood_dataset}' : Hierarchical_Subclusters_OOD(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine',num_clusters=3),
+                f'Hierarchical Subclusters 10 {ood_dataset}' : Hierarchical_Subclusters_OOD(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine',num_clusters=10)}
 
         #import ipdb; ipdb.set_trace()
         callback_dict.update(OOD_callback)
