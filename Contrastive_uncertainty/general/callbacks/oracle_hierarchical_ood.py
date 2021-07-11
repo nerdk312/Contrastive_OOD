@@ -14,7 +14,8 @@ import pandas as pd
 import wandb
 import sklearn.metrics as skm
 import faiss
-import statistics 
+import statistics
+import random 
 
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
@@ -504,7 +505,7 @@ class Hierarchical_Random_Coarse(Oracle_Hierarchical_Metrics):
 
 class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
     def __init__(self, Datamodule, OOD_Datamodule,
-        quick_callback:bool = True,num_clusters =10,
+        quick_callback:bool = True,num_clusters =3,
         vector_level = 'fine',label_level = 'fine'):
     
         super().__init__(Datamodule,OOD_Datamodule,quick_callback)
@@ -532,7 +533,6 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
             np.copy(features_ood),
             np.copy(labels_train))
 
-
         ############### Part of code specific to the subclustering ####################
         OOD_mode_class, mode_class_features_train, mode_class_features_test, mode_class_features_ood, train_subcluster_labels= self.get_subcluster_data(features_train,labels_train,
             features_test, indices_dtest,
@@ -545,11 +545,12 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
             np.copy(mode_class_features_ood),
             np.copy(train_subcluster_labels))
 
-        self.data_saving(dtest,dtest_subcluster,indices_dtest_subcluster,
+        self.AUROC_saving(dtest,dtest_subcluster,indices_dtest_subcluster,
         train_subcluster_labels,
         dood,dood_subcluster, indices_dood_subcluster,
         f'Class {OOD_mode_class} {self.vector_level} {self.label_level} Subcluster AUROC OOD {self.OOD_dataname}', f'Class {OOD_mode_class} {self.vector_level} {self.label_level} Subcluster AUROC OOD {self.OOD_dataname} Table')
-    
+
+        self.scores_saving(dtest_subcluster,indices_dtest_subcluster,'Subcluster practice')
     # Gets the mode class of all the data points
     def get_OOD_mode(self,indices_dood,labels_train):
         OOD_fraction = 0
@@ -563,7 +564,6 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
             
         return OOD_mode_class
     
-    
     def get_clusters(self, ftrain, nclusters):
         kmeans = faiss.Kmeans(
             ftrain.shape[1], nclusters, niter=100, verbose=False, gpu=True
@@ -572,8 +572,26 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         _, ypred = kmeans.assign(ftrain)
         return ypred
 
+    def get_subcluster_data(self,features_train,labels_train, features_test, indices_dtest,
+        features_ood, indices_dood):
+        # Look at the OOD classes and look at the class which has the largest value
+        OOD_mode_class = self.get_OOD_mode(indices_dood, labels_train)
+
+        # From the indices which are the most common in the OOD dataset, sub cluster this class using the training data
+        mode_class_features_train = features_train[labels_train == OOD_mode_class]
+        # Obtain the test features which were predicted to belong to this case, may not actually belong to the class (conditioning the prediction)
+        mode_class_features_test = features_test[indices_dtest == OOD_mode_class]
+        mode_class_features_ood = features_ood[indices_dood == OOD_mode_class]
+
+        # Perform clustering on the training features which belong to the class
+        train_subcluster_labels = self.get_clusters(mode_class_features_train,self.num_clusters)
+        return OOD_mode_class, mode_class_features_train, mode_class_features_test, mode_class_features_ood, train_subcluster_labels
+
+        # Save the columns of the data for the distribution
+
+
     #ID scores is the subclass in this case
-    def data_saving(self,non_subclustered_ID_scores,ID_scores,indices_ID,labels,
+    def AUROC_saving(self,non_subclustered_ID_scores,ID_scores,indices_ID,labels,
         non_subclustered_OOD_scores, OOD_scores,indices_OOD,wandb_name,table_name):
 
         table_data = {'Class':[], 'AUROC':[], 'ID Samples Fraction':[],'OOD Samples Fraction':[]}
@@ -614,31 +632,32 @@ class Hierarchical_Subclusters_OOD(Oracle_Hierarchical_Metrics):
         table = wandb.Table(dataframe=table_df)
         wandb.log({wandb_name:table})
         table_saving(table_df,table_name)
-
     
-    def get_subcluster_data(self,features_train,labels_train, features_test, indices_dtest,
-        features_ood, indices_dood):
-        # Look at the OOD classes and look at the class which has the largest value
-        OOD_mode_class = self.get_OOD_mode(indices_dood, labels_train)
+    # Saving the scores for the subclusters of the data
+    def scores_saving(self,ddata_class, indices,subcluster_data_name):
+        # obtain the data score for the subclusters
+        ddata_subclusters = [pd.DataFrame(ddata_class[indices == i]) for i in np.unique(indices)] # Nawid - training data which have been predicted to belong to a particular class
+        ddata_subclusters.append(pd.DataFrame(ddata_class)) # Values for the original class
 
-        # From the indices which are the most common in the OOD dataset, sub cluster this class using the training data
-        mode_class_features_train = features_train[labels_train == OOD_mode_class]
-        # Obtain the test features which were predicted to belong to this case, may not actually belong to the class (conditioning the prediction)
-        mode_class_features_test = features_test[indices_dtest == OOD_mode_class]
-        mode_class_features_ood = features_ood[indices_dood == OOD_mode_class]
-
-        # Perform clustering on the training features which belong to the class
-        train_subcluster_labels = self.get_clusters(mode_class_features_train,self.num_clusters)
-        return OOD_mode_class, mode_class_features_train, mode_class_features_test, mode_class_features_ood, train_subcluster_labels
-
-    
+        
 
 
 
+        # Concatenate all the dataframes (which places nans in situations where the columns have different lengths)
+        subcluster_table_df = pd.concat(ddata_subclusters,axis=1)
+        
+        #https://stackoverflow.com/questions/30647247/replace-nan-in-a-dataframe-with-random-values
+        subcluster_table_df = subcluster_table_df.applymap(lambda l: l if not np.isnan(l) else random.uniform(-2,-1))
+        
+        #class_table_df = class_table_df.fillna(-1) # replace nans with -1
+        columns = [f'{self.vector_level} {self.label_level} class {i}' for i in np.unique(indices)]
+        subcluster_table_df.columns =  columns + ['Total']
 
 
+        #import ipdb; ipdb.set_trace()
+        subcluster_table = wandb.Table(data=subcluster_table_df)
+        wandb.log({subcluster_data_name:subcluster_table})
 
-        # Save the columns of the data for the distribution
 
 
 
