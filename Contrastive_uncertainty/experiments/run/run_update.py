@@ -25,12 +25,9 @@ for i in range(len(runs)):
 #"OOD hierarchy baselines"
 '''
 
-run_paths = ['nerdk312/evaluation/1r5iu5j5',
-            'nerdk312/evaluation/23z052sj',
-            'nerdk312/evaluation/24i7kk0f',
-            'nerdk312/evaluation/bdw3yqb8',
-            'nerdk312/evaluation/3m3vyk1p',
-            'nerdk312/evaluation/339rxusg'
+run_paths = ['nerdk312/evaluation/325cu61i',
+            'nerdk312/evaluation/29ck9osj',
+            'nerdk312/evaluation/fzl1buh6'
             ]
 
 

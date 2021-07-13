@@ -203,3 +203,58 @@ class Dataset_class_radii(Dataset_class_variance):
         wandb.log({wandb_name:table})
         table_saving(table_df,table_name)
 
+
+class Centroid_distances(Dataset_class_variance):
+    def __init__(self, Datamodule, OOD_Datamodule,
+        quick_callback:bool = True, vector_level='fine',label_level='fine'):
+        
+        super().__init__(Datamodule, OOD_Datamodule,
+            quick_callback, vector_level,label_level)
+    
+    def forward_callback(self, trainer, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}}  
+        
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+
+        features_train, labels_train = self.get_features(pl_module, train_loader,self.vector_level)
+        self.get_eval_results(features_train, labels_train)
+
+
+    def get_cluster_centroids(self,ftrain,ypred):
+        centroids = []
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        centroids = np.array([np.mean(x, axis=0) for x in xc])
+        return centroids
+
+
+    def centroid_distances(self,ftrain,ypred):
+        # Makes barchart of deviations from the average vector of the training set
+        avg_vector = np.mean(ftrain, axis=0)
+        avg_vector = np.reshape(avg_vector, (1, -1))
+        centroids = self.get_cluster_centroids(ftrain,ypred)
+        #import ipdb; ipdb.set_trace()
+        #diff = np.abs(centroids - avg_vector) # Calculates the absolute difference element wise to ensure that the mean does not cancel out
+        #total_diff = np.mean(diff, axis=1)
+
+        
+        diff = centroids - avg_vector
+        centroid_dist = np.linalg.norm(diff,axis=1) # shape (num_classes,)
+        
+        labels = [i for i in np.unique(ypred)] 
+        #data =[[label, val] for (label ,val) in zip(labels,total_diff)] # iterates through the different labels as well as the different values for the labels
+        data = [[label, val] for (label ,val) in zip(labels,centroid_dist)] # iterates through the different labels as well as the different values for the labels
+        table = wandb.Table(data=data, columns = ["Label", "Distance"])
+        wandb.log({"Centroid Distances Average vector" : wandb.plot.bar(table, "Label", "Distance",
+                               title="Centroid Distances Average vector")})
+
+        
+    def get_eval_results(self,ftrain,labelstrain):
+        ftrain_norm = self.normalise(ftrain)
+        self.centroid_distances(ftrain_norm,labelstrain)
+
+
+
