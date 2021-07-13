@@ -10,7 +10,7 @@ from Contrastive_uncertainty.general.callbacks.variational_callback import Varia
 from Contrastive_uncertainty.general.callbacks.relative_mahalanobis_callback import One_Dim_Mahalanobis, Relative_Mahalanobis
 from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Oracle_Hierarchical_Metrics, Hierarchical_Random_Coarse, Hierarchical_Subclusters_OOD
 from Contrastive_uncertainty.general.callbacks.isolation_forest_callback import IForest
-from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_class_variance, Dataset_class_radii, Centroid_distances
+from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_class_variance, Dataset_class_radii, Centroid_distances, Class_Radii_histograms
 
 
 def train_run_name(model_name, config, group=None):
@@ -70,6 +70,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Class Variance': Dataset_class_variance(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
                 f'Class Radii': Dataset_class_radii(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
                 f'Centroid Distances': Centroid_distances(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
+                f'Class Radii Histograms {ood_dataset}': Class_Radii_histograms(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
 
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),

@@ -14,6 +14,7 @@ import wandb
 import sklearn.metrics as skm
 import faiss
 import statistics 
+import random
 
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
@@ -22,6 +23,7 @@ from sklearn.metrics import roc_auc_score
 
 from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloading
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_fpr, get_pr_sklearn, get_roc_plot, get_roc_sklearn, table_saving
+
 
 
 
@@ -52,11 +54,9 @@ class Dataset_class_variance(pl.Callback):
         self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
         'label_level':{'fine':0,'coarse':1}}  
         train_loader = self.Datamodule.deterministic_train_dataloader()
-        test_loader = self.Datamodule.test_dataloader()
-        ood_loader = self.OOD_Datamodule.test_dataloader()
 
         features_train, labels_train = self.get_features(pl_module, train_loader,self.vector_level)
-        self.get_eval_results(features_train,labels_train)
+        self.get_eval_results(features_train, labels_train)
 
     
     def get_features(self, pl_module, dataloader, level):
@@ -157,9 +157,6 @@ class Dataset_class_radii(Dataset_class_variance):
         'label_level':{'fine':0,'coarse':1}}  
         
         train_loader = self.Datamodule.deterministic_train_dataloader()
-        test_loader = self.Datamodule.test_dataloader()
-        ood_loader = self.OOD_Datamodule.test_dataloader()
-
 
         features_train, labels_train = self.get_features(pl_module, train_loader,self.vector_level)
         self.get_eval_results(features_train, labels_train)
@@ -257,4 +254,125 @@ class Centroid_distances(Dataset_class_variance):
         self.centroid_distances(ftrain_norm,labelstrain)
 
 
+class Class_Radii_histograms(Dataset_class_variance):
+    def __init__(self, Datamodule, OOD_Datamodule,
+        quick_callback:bool = True, vector_level='fine',label_level='fine'):
+    
+        super().__init__(Datamodule, OOD_Datamodule,
+        quick_callback, vector_level,label_level)
 
+    def forward_callback(self, trainer, pl_module):
+
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}}  
+        
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        features_train, labels_train = self.get_features(pl_module, train_loader,self.vector_level)
+        features_test, labels_test = self.get_features(pl_module, test_loader,self.vector_level)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader, self.vector_level)
+
+        in_class_radii_scores, ood_class_radii_scores = self.get_eval_results(features_train,features_test, features_ood, labels_train)
+        self.data_saving(in_class_radii_scores, ood_class_radii_scores,labels_train,f'Class Radii Scores {self.vector_level} {self.label_level} {self.OOD_dataname}')
+
+
+    def get_scores(self,ftrain, ftest, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        
+        din = [
+            np.sum(
+                (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (ftest - np.mean(x, axis=0, keepdims=True)).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid - done for all the different classes
+        ]
+        
+        dood = [
+            np.sum(
+                (food - np.mean(x, axis=0, keepdims=True))
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (food - np.mean(x, axis=0, keepdims=True)).T
+                    )
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid- this calculates the score for all the OOD examples 
+        ]
+        # Calculate the indices corresponding to the values
+        indices_din = np.argmin(din,axis = 0)
+        indices_dood = np.argmin(dood, axis=0)
+
+        din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
+        dood = np.min(dood, axis=0)
+
+        return din, dood, indices_din, indices_dood
+
+    def normalise(self,ftrain,ftest,food):
+        # Nawid -normalise the featues for the training, test and ood data
+        # standardize data
+        
+        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
+        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
+        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
+        # Nawid - calculate the mean and std of the traiing features
+        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
+        # Nawid - normalise data using the mean and std
+        ftrain = (ftrain - m) / (s + 1e-10)
+        ftest = (ftest - m) / (s + 1e-10)
+        food = (food - m) / (s + 1e-10)
+        
+        return ftrain, ftest,food
+    
+    def get_centroids(self,ftrain, ypred):
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        class_centroids = [np.mean(x,axis=0,keepdims=True) for x in xc]
+        return class_centroids # List of class centroids
+
+    def class_radii(self, centroids, fdata, indices_data, labels):
+        xc = [fdata[indices_data == class_num] for class_num in np.unique(labels)] # Get all the data for the specific labesl
+        class_radii = [np.around(np.linalg.norm(centroids[class_num] - xc[class_num],axis=1),decimals=3) for class_num in np.unique(labels)] # if len(xc[class_num])> 0 else np.nan]
+        #import ipdb; ipdb.set_trace()
+        for class_num in range(len(class_radii)):
+            if len(class_radii[class_num]) == 0: 
+                class_radii[class_num] = np.array([-1.1]) 
+
+        return class_radii
+        
+    def get_eval_results(self, ftrain, ftest, food, labelstrain):
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
+        dtest, dood, indices_dtest, indices_dood= self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        
+        class_centroids = self.get_centroids(ftrain_norm, labelstrain)
+        test_class_radii_scores = self.class_radii(class_centroids, ftest_norm, indices_dtest, labelstrain)
+        ood_class_radii_scores = self.class_radii(class_centroids, food_norm, indices_dood, labelstrain)
+        return test_class_radii_scores, ood_class_radii_scores
+        #import ipdb; ipdb.set_trace()
+    
+    def data_saving(self, in_class_radii_scores, ood_class_radii_scores, labels, wandb_dataname):
+        # obtain the data score for the subclusters
+        in_radii  = [pd.DataFrame(in_class_radii_scores[class_num]) for class_num in np.unique(labels)] # Nawid - training data which have been predicted to belong to a particular class
+        ood_radii  = [pd.DataFrame(ood_class_radii_scores[class_num]) for class_num in np.unique(labels)]
+        collated_radii = [*in_radii, *ood_radii] #[in_radii] + [ood_radii]
+        #import ipdb; ipdb.set_trace()
+        # Concatenate all the dataframes (which places nans in situations where the columns have different lengths)
+        radii_df = pd.concat(collated_radii,axis =1 )
+        #https://stackoverflow.com/questions/30647247/replace-nan-in-a-dataframe-with-random-values
+        radii_df = radii_df.applymap(lambda l: l if not np.isnan(l) else random.uniform(-2,-1))
+        
+        
+        in_columns = [f'Class {i} ID Radii scores' for i in np.unique(labels)]
+        ood_columns = [f'Class {i} OOD Radii scores' for i in np.unique(labels)]
+        radii_df.columns = [*in_columns, *ood_columns]
+        columns1 = [*in_columns, *ood_columns]
+        columns2 = [in_columns] + [ood_columns]
+        radii_table = wandb.Table(data=radii_df)
+        wandb.log({wandb_dataname:radii_table})
