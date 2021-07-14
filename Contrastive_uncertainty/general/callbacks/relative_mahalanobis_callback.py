@@ -1,3 +1,4 @@
+from numpy.lib.financial import _ipmt_dispatcher
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -110,10 +111,12 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         
         eigvalues = []
         eigvectors = []
+        #import ipdb; ipdb.set_trace()
         for class_cov in cov:
-            class_eigvals, class_eigvectors =  np.linalg.eigh(class_cov) # Each column is a normalised eigenvector of
+            class_eigvals, class_eigvectors = np.linalg.eigh(class_cov) # Each column is a normalised eigenvector of
+            
             # Reverse order as the eigenvalues and eigenvectors are in ascending order (lowest value first), therefore it would be beneficial to get them in descending order
-            class_eigvals, class_eigvectors = np.flip(class_eigvals, axis=0), np.flip(class_eigvectors,axis=0)
+            #class_eigvals, class_eigvectors = np.flip(class_eigvals, axis=0), np.flip(class_eigvectors,axis=0)
             eigvalues.append(np.expand_dims(class_eigvals,axis=1))
             eigvectors.append(class_eigvectors)
         
@@ -121,10 +124,11 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         # Vector of datapoints(embdim,num_eigenvectors) (each column is eigenvector so the different columns is the number of eigenvectors)
         # data - means is shape (B, emb_dim), therefore the matrix multiplication needs to be (num_eigenvectors, embdim), (embdim,batch) to give (num eigenvectors, Batch) and then this is divided by (num eigenvectors,1) 
         # to give (num eigen vectors, batch) different values for 1 dimensional mahalanobis distances 
-
+        # import ipdb; ipdb.set_trace()
+        # I believe the first din is the list of size class, where each entry is a vector of size (emb dim, batch) where each entry of the embed dim is the 1 dimensional mahalanobis distance along that dimension, so a vector of (embdim,1) represents the mahalanobis distance of each of the n dimensions for that particular data point
         din = [np.abs(np.matmul(eigvectors[class_num].T,(ftest - means[class_num]).T)**2/eigvalues[class_num]) for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present 
-        din = np.min(din,axis=0) # Find min along the class dimension
-        din = np.mean(din, axis=1) # Find the mean of all the data points, din per dimension
+        din = np.min(din,axis=0) # Find min along the class dimension, so this finds the lowest 1 dimensional mahalanobis distance among the different classes for the different data points
+        din = np.mean(din, axis=1) # Find the mean of all the data points for that particular dimension, din per dimension 
 
         dood = [np.abs(np.matmul(eigvectors[class_num].T,(food - means[class_num]).T)**2/eigvalues[class_num]) for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present
         dood = np.min(dood,axis=0) # Find min along the class dimension
@@ -152,6 +156,88 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         return dtest, dood
 
 
+class One_Dim_Relative_Mahalanobis(One_Dim_Mahalanobis):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        vector_level:str = 'instance',
+        label_level:str = 'fine',
+        quick_callback:bool = True):
+
+        super().__init__(Datamodule,OOD_Datamodule,vector_level,label_level,quick_callback)
+
+    def forward_callback(self, trainer, pl_module):
+        #print('General scores being used') 
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}}  
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader,self.vector_level, self.label_level)
+        features_test, labels_test = self.get_features(pl_module, test_loader,self.vector_level, self.label_level)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader, self.vector_level, self.label_level)
+
+        dtest, dood = self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train))
+
+        #import ipdb; ipdb.set_trace()
+        xs = np.arange(len(dtest))
+        #baseline = np.zeros_like(dtest)
+        ys = [dtest, dood]
+
+        # Plots multiple lines for the mahalanobis distance of the data # https://wandb.ai/wandb/plots/reports/Custom-Multi-Line-Plots--VmlldzozOTMwMjU
+        wandb.log({f"1D Relative Mahalanobis {self.OOD_dataname}" : wandb.plot.line_series(
+                       xs=xs,
+                       ys=ys,
+                       keys= ["ID data Relative Mahalanobis per dim", f"{self.OOD_dataname} OOD data Relative Mahalanobis per dim"],
+                       title= f"1-Dimensional Relative Mahalanobis Distances - {self.OOD_dataname} OOD data",
+                       xname= "Dimension")})
+    
+    def get_scores(self, ftrain, ftest, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        
+        cov = [np.cov(x.T, bias=True) for x in xc] # Cov and means part should be fine
+        means = [np.mean(x,axis=0,keepdims=True) for x in xc] # Calculates mean from (B,embdim) to (1,embdim)
+        
+        eigvalues = []
+        eigvectors = []
+        #import ipdb; ipdb.set_trace()
+        for class_cov in cov:
+            class_eigvals, class_eigvectors = np.linalg.eigh(class_cov) # Each column is a normalised eigenvector of
+            
+            # Reverse order as the eigenvalues and eigenvectors are in ascending order (lowest value first), therefore it would be beneficial to get them in descending order
+            #class_eigvals, class_eigvectors = np.flip(class_eigvals, axis=0), np.flip(class_eigvectors,axis=0)
+            eigvalues.append(np.expand_dims(class_eigvals,axis=1))
+            eigvectors.append(class_eigvectors)
+        
+        ####### Specific to relative mahalanobis #############
+        background_cov = np.cov(ftrain.T, bias=True)
+        background_mean = np.mean(ftrain,axis=0,keepdims=True)
+        background_eigvals, background_eigvectors = np.linalg.eigh(background_cov)
+        background_eigvals =  np.expand_dims(background_eigvals,axis=1)
+        #import ipdb; ipdb.set_trace()
+        background_din = np.abs(np.matmul(background_eigvectors.T,(ftest - background_mean).T)**2/background_eigvals)
+        background_dood = np.abs(np.matmul(background_eigvectors.T,(food - background_mean).T)**2/background_eigvals)
+
+        
+        # Value for a particular class
+        # Vector of datapoints(embdim,num_eigenvectors) (each column is eigenvector so the different columns is the number of eigenvectors)
+        # data - means is shape (B, emb_dim), therefore the matrix multiplication needs to be (num_eigenvectors, embdim), (embdim,batch) to give (num eigenvectors, Batch) and then this is divided by (num eigenvectors,1) 
+        # to give (num eigen vectors, batch) different values for 1 dimensional mahalanobis distances 
+        # I believe the first din is the list of size class, where each entry is a vector of size (emb dim, batch) where each entry of the embed dim is the 1 dimensional mahalanobis distance along that dimension, so a vector of (embdim,1) represents the mahalanobis distance of each of the n dimensions for that particular data point
+        din = [np.abs(np.matmul(eigvectors[class_num].T,(ftest - means[class_num]).T)**2/eigvalues[class_num]) - background_din for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present 
+        din = np.min(din,axis=0) # Find min along the class dimension, so this finds the lowest 1 dimensional mahalanobis distance among the different classes for the different data points
+        din = np.mean(din, axis=1) # Find the mean of all the data points for that particular dimension, din per dimension 
+
+        dood = [np.abs(np.matmul(eigvectors[class_num].T,(food - means[class_num]).T)**2/eigvalues[class_num]) - background_dood for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present
+        dood = np.min(dood,axis=0) # Find min along the class dimension
+        dood = np.mean(dood, axis=1) # Find the mean of all the data points, dood per dimension
+        
+        return din, dood
 
 class Relative_Mahalanobis(Mahalanobis_OOD):
     def __init__(self, Datamodule,OOD_Datamodule,
@@ -160,7 +246,7 @@ class Relative_Mahalanobis(Mahalanobis_OOD):
         quick_callback:bool = True):
     
         super().__init__(Datamodule,OOD_Datamodule,vector_level, label_level, quick_callback)
-    
+        
     def on_validation_epoch_end(self, trainer, pl_module):
         # Skip if fast testing as this can lead to issues with the code
         pass
