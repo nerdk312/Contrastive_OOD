@@ -93,9 +93,10 @@ class Dataset_class_variance(pl.Callback):
         class_centroids = [np.mean(x,axis=0,keepdims=True) for x in xc]
         diff = [np.abs(xc[class_num] - class_centroids[class_num]) for class_num in range(len(class_centroids))]
         class_variance_approach1 = [np.mean(val**2) for val in diff]
-        
+        #print('variance 1',class_variance_approach1)
 
         class_variance_approach2 = [np.var(ftrain[ypred==i]) for i in np.unique(ypred)]
+        #print('variance 2',class_variance_approach2)
         return class_variance_approach1, class_variance_approach2
     
     def normalise(self,ftrain):
@@ -123,12 +124,14 @@ class Dataset_class_variance(pl.Callback):
         # Save variance score for the
         for class_num in range(len(class_variance_scores1)):    
             table_data['Class'].append(f'Class {class_num}')
-            score1,score2 =  round(class_variance_scores1[class_num],3), round(class_variance_scores2[class_num],3)
+            score1,score2 =  class_variance_scores1[class_num], class_variance_scores2[class_num]
             table_data['Variance Approach 1'].append(score1)
             table_data['Variance Approach 2'].append(score2)        
 
+        table_data
         # Table saving
         table_df = pd.DataFrame(table_data)
+        table_df = table_df.round(3)
         table = wandb.Table(dataframe=table_df)
         wandb.log({wandb_name:table})
         table_saving(table_df,table_name)
@@ -372,7 +375,7 @@ class Class_Radii_histograms(Dataset_class_variance):
         in_columns = [f'Class {i} ID Radii scores' for i in np.unique(labels)]
         ood_columns = [f'Class {i} OOD Radii scores' for i in np.unique(labels)]
         radii_df.columns = [*in_columns, *ood_columns]
-        columns1 = [*in_columns, *ood_columns]
-        columns2 = [in_columns] + [ood_columns]
+        #columns1 = [*in_columns, *ood_columns]
+        #columns2 = [in_columns] + [ood_columns]
         radii_table = wandb.Table(data=radii_df)
         wandb.log({wandb_dataname:radii_table})
