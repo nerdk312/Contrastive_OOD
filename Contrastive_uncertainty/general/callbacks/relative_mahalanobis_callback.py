@@ -154,7 +154,7 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
 
         return dtest, dood
 
-
+# Get scores function uses the background statistics in the results also
 class One_Dim_Relative_Mahalanobis(One_Dim_Mahalanobis):
     def __init__(self, Datamodule,OOD_Datamodule,
         vector_level:str = 'instance',
@@ -229,7 +229,7 @@ class One_Dim_Relative_Mahalanobis(One_Dim_Mahalanobis):
                        xname= "Dimension")})
 
         return dtest, dood
-
+# get scores function uses a shared covariance matrix 
 class One_Dim_Shared_Mahalanobis(One_Dim_Mahalanobis):
     def __init__(self, Datamodule,OOD_Datamodule,
         vector_level:str = 'instance',
@@ -296,7 +296,7 @@ class One_Dim_Shared_Mahalanobis(One_Dim_Mahalanobis):
                        xname= "Dimension")})
 
         return dtest, dood
-
+# get scores function uses a background information as well as uses a shared covariance matrix in the data
 class One_Dim_Shared_Relative_Mahalanobis(One_Dim_Mahalanobis):
     def __init__(self, Datamodule,OOD_Datamodule,
         vector_level:str = 'instance',
@@ -373,6 +373,133 @@ class One_Dim_Shared_Relative_Mahalanobis(One_Dim_Mahalanobis):
                        xname= "Dimension")})
 
         return dtest, dood
+
+
+class Class_One_Dim_Mahalanobis(One_Dim_Mahalanobis):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        vector_level:str = 'instance',
+        label_level:str = 'fine',
+        quick_callback:bool = True):
+        super().__init__(Datamodule, OOD_Datamodule, vector_level=vector_level, label_level=label_level, quick_callback=quick_callback)
+
+    def on_test_epoch_end(self, trainer, pl_module):
+        # Only perform classwise calculation when there is less than 10 classes in the dataset
+        if self.Datamodule.num_classes > 10:
+            pass
+        else:
+            self.forward_callback(trainer=trainer, pl_module=pl_module) 
+
+    def forward_callback(self, trainer, pl_module):
+        return super().forward_callback(trainer, pl_module)
+
+    def get_predictions(self,ftrain, ftest, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        
+        din = [
+            np.sum(
+                (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (ftest - np.mean(x, axis=0, keepdims=True)).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid - done for all the different classes
+        ]
+        
+        dood = [
+            np.sum(
+                (food - np.mean(x, axis=0, keepdims=True))
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (food - np.mean(x, axis=0, keepdims=True)).T
+                    )
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid- this calculates the score for all the OOD examples 
+        ]
+        # Calculate the indices corresponding to the values
+        indices_din = np.argmin(din,axis = 0)
+        indices_dood = np.argmin(dood, axis=0)
+
+        return indices_din, indices_dood
+
+    def get_scores(self, ftrain, ftest, food, ypred, indices_test, indices_ood):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        
+        cov = [np.cov(x.T, bias=True) for x in xc] # Cov and means part should be fine
+        means = [np.mean(x,axis=0,keepdims=True) for x in xc] # Calculates mean from (B,embdim) to (1,embdim)
+        
+        eigvalues = []
+        eigvectors = []
+        for class_cov in cov:
+            class_eigvals, class_eigvectors = np.linalg.eigh(class_cov) # Each column is a normalised eigenvector of
+            
+            # Reverse order as the eigenvalues and eigenvectors are in ascending order (lowest value first), therefore it would be beneficial to get them in descending order
+            #class_eigvals, class_eigvectors = np.flip(class_eigvals, axis=0), np.flip(class_eigvectors,axis=0)
+            eigvalues.append(np.expand_dims(class_eigvals,axis=1))
+            eigvectors.append(class_eigvectors)
+        
+        # Value for a particular class
+        # Vector of datapoints(embdim,num_eigenvectors) (each column is eigenvector so the different columns is the number of eigenvectors)
+        # data - means is shape (B, emb_dim), therefore the matrix multiplication needs to be (num_eigenvectors, embdim), (embdim,batch) to give (num eigenvectors, Batch) and then this is divided by (num eigenvectors,1) 
+        # to give (num eigen vectors, batch) different values for 1 dimensional mahalanobis distances 
+       
+        # I believe the first din is the list of size class, where each entry is a vector of size (emb dim, batch) where each entry of the embed dim is the 1 dimensional mahalanobis distance along that dimension, so a vector of (embdim,1) represents the mahalanobis distance of each of the n dimensions for that particular data point
+        din = [np.abs(np.matmul(eigvectors[class_num].T,(ftest - means[class_num]).T)**2/eigvalues[class_num]) for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present 
+        dood = [np.abs(np.matmul(eigvectors[class_num].T,(food - means[class_num]).T)**2/eigvalues[class_num]) for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present
+        
+        # Go through the different classes in the true labels
+        collated_din_class = []
+        collated_dood_class = []
+        for i in np.unique(ypred):
+            din_class = din[i].T # change from shape (Embdim, B) to shape (B, embemdim)
+            din_class = din_class[indices_test==i] # obtain all the indices which are predicted as this class , shape (class_batch, embdim)
+            din_class = np.mean(din_class,axis=0) # Mean of all the data points in the class
+            
+            dood_class = dood[i].T
+            dood_class = dood_class[indices_ood ==i]
+            dood_class = np.mean(dood_class,axis=0)
+            
+            
+            collated_din_class.append(din_class)
+            collated_dood_class.append(dood_class)
+        
+
+        # Change to values of 0 as this would not have any diffe
+        collated_din_class = np.nan_to_num(collated_din_class,nan=0.0)
+        collated_dood_class = np.nan_to_num(collated_dood_class,nan =0.0)
+        return collated_din_class, collated_dood_class
+    
+
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        indices_dtest, indices_dood = self.get_predictions(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        collated_class_dtest, collated_class_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain, indices_dtest, indices_dood)
+        
+        #import ipdb; ipdb.set_trace()
+        #xs = np.arange(len(dtest))
+        #baseline = np.zeros_like(dtest)
+        
+        for class_num in np.unique(labelstrain):
+            xs = np.arange(len(collated_class_dtest[class_num]))
+            ys = [collated_class_dtest[class_num],collated_class_dood[class_num]]
+            # Plots multiple lines for the mahalanobis distance of the data # https://wandb.ai/wandb/plots/reports/Custom-Multi-Line-Plots--VmlldzozOTMwMjU
+            wandb.log({f"Class {class_num} 1D Mahalanobis {self.OOD_dataname}" : wandb.plot.line_series(
+                           xs=xs,
+                           ys=ys,
+                           keys= ["ID data Mahalanobis per dim", f"{self.OOD_dataname} OOD data Mahalanobis per dim"],
+                           title= f"Class {class_num} 1-Dimensional Mahalanobis Distances - {self.OOD_dataname} OOD data",
+                           xname= "Dimension")})
+
+        return collated_class_dtest, collated_class_dood
+    
+    
 
 
 class Relative_Mahalanobis(Mahalanobis_OOD):

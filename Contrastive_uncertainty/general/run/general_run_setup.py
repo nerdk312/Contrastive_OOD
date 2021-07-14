@@ -7,7 +7,7 @@ from Contrastive_uncertainty.general.callbacks.visualisation_callback import Vis
 from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO, Typicality_OVR_diff_bsz, Typicality_General_Point, Typicality_General_Point_updated
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
-from Contrastive_uncertainty.general.callbacks.relative_mahalanobis_callback import One_Dim_Mahalanobis,One_Dim_Relative_Mahalanobis, Relative_Mahalanobis, One_Dim_Shared_Mahalanobis, One_Dim_Shared_Relative_Mahalanobis
+from Contrastive_uncertainty.general.callbacks.relative_mahalanobis_callback import One_Dim_Mahalanobis,One_Dim_Relative_Mahalanobis, Relative_Mahalanobis, One_Dim_Shared_Mahalanobis, One_Dim_Shared_Relative_Mahalanobis, Class_One_Dim_Mahalanobis
 from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Oracle_Hierarchical_Metrics, Hierarchical_Random_Coarse, Hierarchical_Subclusters_OOD
 from Contrastive_uncertainty.general.callbacks.isolation_forest_callback import IForest
 from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_class_variance, Dataset_class_radii, Centroid_distances, Class_Radii_histograms
@@ -79,6 +79,8 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'One Dimensional Shared Mahalanobis {ood_dataset}': One_Dim_Shared_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'One Dimensional Relative Mahalanobis {ood_dataset}': One_Dim_Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'One Dimensional Shared Relative Mahalanobis {ood_dataset}': One_Dim_Shared_Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+                f'Class One Dimensional Mahalanobis {ood_dataset}': Class_One_Dim_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+                
 
                 f'Relative Mahalanobis {ood_dataset}': Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'Mahalanobis Distance {ood_dataset}': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
