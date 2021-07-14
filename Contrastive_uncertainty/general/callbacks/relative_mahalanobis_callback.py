@@ -59,20 +59,6 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
             np.copy(features_test),
             np.copy(features_ood),
             np.copy(labels_train))
-
-        #import ipdb; ipdb.set_trace()
-        xs = np.arange(len(dtest))
-        #baseline = np.zeros_like(dtest)
-        ys = [dtest, dood]
-
-        # Plots multiple lines for the mahalanobis distance of the data # https://wandb.ai/wandb/plots/reports/Custom-Multi-Line-Plots--VmlldzozOTMwMjU
-        wandb.log({f"1D Mahalanobis {self.OOD_dataname}" : wandb.plot.line_series(
-                       xs=xs,
-                       ys=ys,
-                       keys= ["ID data Mahalanobis per dim", f"{self.OOD_dataname} OOD data Mahalanobis per dim"],
-                       title= f"1-Dimensional Mahalanobis Distances - {self.OOD_dataname} OOD data",
-                       xname= "Dimension")})
-
         
 
     def get_features(self, pl_module, dataloader, vector_level, label_level):
@@ -153,6 +139,19 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         # Nawid - obtain the scores for the test data and the OOD data
         dtest, dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
         
+        #import ipdb; ipdb.set_trace()
+        xs = np.arange(len(dtest))
+        #baseline = np.zeros_like(dtest)
+        ys = [dtest, dood]
+
+        # Plots multiple lines for the mahalanobis distance of the data # https://wandb.ai/wandb/plots/reports/Custom-Multi-Line-Plots--VmlldzozOTMwMjU
+        wandb.log({f"1D Mahalanobis {self.OOD_dataname}" : wandb.plot.line_series(
+                       xs=xs,
+                       ys=ys,
+                       keys= ["ID data Mahalanobis per dim", f"{self.OOD_dataname} OOD data Mahalanobis per dim"],
+                       title= f"1-Dimensional Mahalanobis Distances - {self.OOD_dataname} OOD data",
+                       xname= "Dimension")})
+
         return dtest, dood
 
 
@@ -165,36 +164,7 @@ class One_Dim_Relative_Mahalanobis(One_Dim_Mahalanobis):
         super().__init__(Datamodule,OOD_Datamodule,vector_level,label_level,quick_callback)
 
     def forward_callback(self, trainer, pl_module):
-        #print('General scores being used') 
-        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
-        'label_level':{'fine':0,'coarse':1}}  
-        train_loader = self.Datamodule.deterministic_train_dataloader()
-        test_loader = self.Datamodule.test_dataloader()
-        ood_loader = self.OOD_Datamodule.test_dataloader()
-
-        # Obtain representations of the data
-        features_train, labels_train = self.get_features(pl_module, train_loader,self.vector_level, self.label_level)
-        features_test, labels_test = self.get_features(pl_module, test_loader,self.vector_level, self.label_level)
-        features_ood, labels_ood = self.get_features(pl_module, ood_loader, self.vector_level, self.label_level)
-
-        dtest, dood = self.get_eval_results(
-            np.copy(features_train),
-            np.copy(features_test),
-            np.copy(features_ood),
-            np.copy(labels_train))
-
-        #import ipdb; ipdb.set_trace()
-        xs = np.arange(len(dtest))
-        #baseline = np.zeros_like(dtest)
-        ys = [dtest, dood]
-
-        # Plots multiple lines for the mahalanobis distance of the data # https://wandb.ai/wandb/plots/reports/Custom-Multi-Line-Plots--VmlldzozOTMwMjU
-        wandb.log({f"1D Relative Mahalanobis {self.OOD_dataname}" : wandb.plot.line_series(
-                       xs=xs,
-                       ys=ys,
-                       keys= ["ID data Relative Mahalanobis per dim", f"{self.OOD_dataname} OOD data Relative Mahalanobis per dim"],
-                       title= f"1-Dimensional Relative Mahalanobis Distances - {self.OOD_dataname} OOD data",
-                       xname= "Dimension")})
+        return super().forward_callback(trainer, pl_module)
     
     def get_scores(self, ftrain, ftest, food, ypred):
         # Nawid - get all the features which belong to each of the different classes
@@ -238,6 +208,172 @@ class One_Dim_Relative_Mahalanobis(One_Dim_Mahalanobis):
         dood = np.mean(dood, axis=1) # Find the mean of all the data points, dood per dimension
         
         return din, dood
+    
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtest, dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        
+        #import ipdb; ipdb.set_trace()
+        xs = np.arange(len(dtest))
+        #baseline = np.zeros_like(dtest)
+        ys = [dtest, dood]
+
+        # Plots multiple lines for the mahalanobis distance of the data # https://wandb.ai/wandb/plots/reports/Custom-Multi-Line-Plots--VmlldzozOTMwMjU
+        wandb.log({f"1D Relative Mahalanobis {self.OOD_dataname}" : wandb.plot.line_series(
+                       xs=xs,
+                       ys=ys,
+                       keys= ["ID data Relative Mahalanobis per dim", f"{self.OOD_dataname} OOD data Relative Mahalanobis per dim"],
+                       title= f"1-Dimensional Relative Mahalanobis Distances - {self.OOD_dataname} OOD data",
+                       xname= "Dimension")})
+
+        return dtest, dood
+
+class One_Dim_Shared_Mahalanobis(One_Dim_Mahalanobis):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        vector_level:str = 'instance',
+        label_level:str = 'fine',
+        quick_callback:bool = True):
+        super().__init__(Datamodule, OOD_Datamodule, vector_level=vector_level, label_level=label_level, quick_callback=quick_callback)
+    
+    def forward_callback(self, trainer, pl_module):
+        return super().forward_callback(trainer, pl_module)
+
+    def get_scores(self, ftrain, ftest, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        
+
+        #cov = [np.cov(x.T, bias=True) for x in xc] # Cov and means part should be fine
+        means = [np.mean(x,axis=0,keepdims=True) for x in xc] # Calculates mean from (B,embdim) to (1,embdim)
+
+        # Calculation as specified in pseudocoode A for the shared covariance matrix https://arxiv.org/pdf/2106.09022.pdf
+        shared_cov = [np.matmul((xc[class_num]- means[class_num]).T, (xc[class_num]- means[class_num])) for class_num in range(len(means))]
+        # Elementwise sum of the covariance matrices in the list followed by division by all the elements present 
+        shared_cov = np.sum(shared_cov,axis=0)/(len(ftrain))
+
+        #shared_cov[0][0,1] + shared_cov[1][0,1] + shared_cov[2][0,1] + shared_cov[3][0,1] + shared_cov[4][0,1]+shared_cov[5][0,1]+shared_cov[6][0,1]+shared_cov[7][0,1]+shared_cov[8][0,1] +shared_cov[9][0,1]
+        # Output should be 128 by 128
+
+        eigvalues, eigvectors = np.linalg.eigh(shared_cov)
+        eigvalues = np.expand_dims(eigvalues,axis=1)
+        
+        # Value for a particular class
+        # Vector of datapoints(embdim,num_eigenvectors) (each column is eigenvector so the different columns is the number of eigenvectors)
+        # data - means is shape (B, emb_dim), therefore the matrix multiplication needs to be (num_eigenvectors, embdim), (embdim,batch) to give (num eigenvectors, Batch) and then this is divided by (num eigenvectors,1) 
+        # to give (num eigen vectors, batch) different values for 1 dimensional mahalanobis distances 
+        # import ipdb; ipdb.set_trace()
+        # I believe the first din is the list of size class, where each entry is a vector of size (emb dim, batch) where each entry of the embed dim is the 1 dimensional mahalanobis distance along that dimension, so a vector of (embdim,1) represents the mahalanobis distance of each of the n dimensions for that particular data point
+        din = [np.abs(np.matmul(eigvectors.T,(ftest - means[class_num]).T)**2/eigvalues) for class_num in range(len(means))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present 
+        din = np.min(din,axis=0) # Find min along the class dimension, so this finds the lowest 1 dimensional mahalanobis distance among the different classes for the different data points
+        din = np.mean(din, axis=1) # Find the mean of all the data points for that particular dimension, din per dimension 
+
+        dood = [np.abs(np.matmul(eigvectors.T,(food - means[class_num]).T)**2/eigvalues) for class_num in range(len(means))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present
+        dood = np.min(dood,axis=0) # Find min along the class dimension
+        dood = np.mean(dood, axis=1) # Find the mean of all the data points, dood per dimension
+        
+        
+        return din, dood
+    
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtest, dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        
+        #import ipdb; ipdb.set_trace()
+        xs = np.arange(len(dtest))
+        #baseline = np.zeros_like(dtest)
+        ys = [dtest, dood]
+
+        # Plots multiple lines for the mahalanobis distance of the data # https://wandb.ai/wandb/plots/reports/Custom-Multi-Line-Plots--VmlldzozOTMwMjU
+        wandb.log({f"1D Mahalanobis Shared Covariance {self.OOD_dataname}" : wandb.plot.line_series(
+                       xs=xs,
+                       ys=ys,
+                       keys= ["ID data Mahalanobis Shared Covariance per dim", f"{self.OOD_dataname} OOD data Mahalanobis Shared Covariance per dim"],
+                       title= f"1-Dimensional Mahalanobis Shared Covariance Distances - {self.OOD_dataname} OOD data",
+                       xname= "Dimension")})
+
+        return dtest, dood
+
+class One_Dim_Shared_Relative_Mahalanobis(One_Dim_Mahalanobis):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        vector_level:str = 'instance',
+        label_level:str = 'fine',
+        quick_callback:bool = True):
+        super().__init__(Datamodule, OOD_Datamodule, vector_level=vector_level, label_level=label_level, quick_callback=quick_callback)
+    
+    def forward_callback(self, trainer, pl_module):
+        return super().forward_callback(trainer, pl_module)
+
+    def get_scores(self, ftrain, ftest, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        
+
+        #cov = [np.cov(x.T, bias=True) for x in xc] # Cov and means part should be fine
+        means = [np.mean(x,axis=0,keepdims=True) for x in xc] # Calculates mean from (B,embdim) to (1,embdim)
+
+        # Calculation as specified in pseudocoode A for the shared covariance matrix https://arxiv.org/pdf/2106.09022.pdf
+        shared_cov = [np.matmul((xc[class_num]- means[class_num]).T, (xc[class_num]- means[class_num])) for class_num in range(len(means))]
+        # Elementwise sum of the covariance matrices in the list followed by division by all the elements present 
+        shared_cov = np.sum(shared_cov,axis=0)/(len(ftrain))
+
+        #shared_cov[0][0,1] + shared_cov[1][0,1] + shared_cov[2][0,1] + shared_cov[3][0,1] + shared_cov[4][0,1]+shared_cov[5][0,1]+shared_cov[6][0,1]+shared_cov[7][0,1]+shared_cov[8][0,1] +shared_cov[9][0,1]
+        # Output should be 128 by 128
+
+        eigvalues, eigvectors = np.linalg.eigh(shared_cov)
+        eigvalues = np.expand_dims(eigvalues,axis=1)
+
+
+        ####### Specific to relative mahalanobis #############
+        background_cov = np.cov(ftrain.T, bias=True)
+        background_mean = np.mean(ftrain,axis=0,keepdims=True)
+        background_eigvals, background_eigvectors = np.linalg.eigh(background_cov)
+        background_eigvals =  np.expand_dims(background_eigvals,axis=1)
+        #import ipdb; ipdb.set_trace()
+        background_din = np.abs(np.matmul(background_eigvectors.T,(ftest - background_mean).T)**2/background_eigvals)
+        background_dood = np.abs(np.matmul(background_eigvectors.T,(food - background_mean).T)**2/background_eigvals)
+
+        
+        # Value for a particular class
+        # Vector of datapoints(embdim,num_eigenvectors) (each column is eigenvector so the different columns is the number of eigenvectors)
+        # data - means is shape (B, emb_dim), therefore the matrix multiplication needs to be (num_eigenvectors, embdim), (embdim,batch) to give (num eigenvectors, Batch) and then this is divided by (num eigenvectors,1) 
+        # to give (num eigen vectors, batch) different values for 1 dimensional mahalanobis distances 
+        # import ipdb; ipdb.set_trace()
+        # I believe the first din is the list of size class, where each entry is a vector of size (emb dim, batch) where each entry of the embed dim is the 1 dimensional mahalanobis distance along that dimension, so a vector of (embdim,1) represents the mahalanobis distance of each of the n dimensions for that particular data point
+        din = [np.abs(np.matmul(eigvectors.T,(ftest - means[class_num]).T)**2/eigvalues) - background_din for class_num in range(len(means))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present 
+        din = np.min(din,axis=0) # Find min along the class dimension, so this finds the lowest 1 dimensional mahalanobis distance among the different classes for the different data points
+        din = np.mean(din, axis=1) # Find the mean of all the data points for that particular dimension, din per dimension 
+
+        dood = [np.abs(np.matmul(eigvectors.T,(food - means[class_num]).T)**2/eigvalues) - background_dood for class_num in range(len(means))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present
+        dood = np.min(dood,axis=0) # Find min along the class dimension
+        dood = np.mean(dood, axis=1) # Find the mean of all the data points, dood per dimension
+                
+        return din, dood
+    
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        dtest, dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        
+        #import ipdb; ipdb.set_trace()
+        xs = np.arange(len(dtest))
+        #baseline = np.zeros_like(dtest)
+        ys = [dtest, dood]
+
+        # Plots multiple lines for the mahalanobis distance of the data # https://wandb.ai/wandb/plots/reports/Custom-Multi-Line-Plots--VmlldzozOTMwMjU
+        wandb.log({f"1D Relative Mahalanobis Shared Covariance {self.OOD_dataname}" : wandb.plot.line_series(
+                       xs=xs,
+                       ys=ys,
+                       keys= ["ID data Relative Mahalanobis Shared Covariance per dim", f"{self.OOD_dataname} OOD data Relative Mahalanobis Shared Covariance per dim"],
+                       title= f"1-Dimensional Relative Mahalanobis Shared Covariance Distances - {self.OOD_dataname} OOD data",
+                       xname= "Dimension")})
+
+        return dtest, dood
+
 
 class Relative_Mahalanobis(Mahalanobis_OOD):
     def __init__(self, Datamodule,OOD_Datamodule,
