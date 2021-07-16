@@ -297,3 +297,5 @@ class CIFAR100DataModule(LightningDataModule):
             cifar100_normalization()
         ])
         return cf100_transforms
+
+
