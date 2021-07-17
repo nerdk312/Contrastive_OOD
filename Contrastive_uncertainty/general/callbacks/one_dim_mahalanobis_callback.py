@@ -19,7 +19,7 @@ import statistics
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score
-
+import scipy
 
 from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloading
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, get_fpr, get_pr_sklearn, get_roc_plot, get_roc_sklearn, table_saving
@@ -97,15 +97,18 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         
         eigvalues = []
         eigvectors = []
-        #import ipdb; ipdb.set_trace()
+        
         for class_cov in cov:
             class_eigvals, class_eigvectors = np.linalg.eigh(class_cov) # Each column is a normalised eigenvector of
-            
+            #eigvals, eigvectors = np.linalg.eigh(class_cov) #scipy.linalg.eigh(class_cov)
+            #import ipdb; ipdb.set_trace()
+
             # Reverse order as the eigenvalues and eigenvectors are in ascending order (lowest value first), therefore it would be beneficial to get them in descending order
             #class_eigvals, class_eigvectors = np.flip(class_eigvals, axis=0), np.flip(class_eigvectors,axis=0)
-            eigvalues.append(np.expand_dims(class_eigvals,axis=1))
+            eigvalues.append(np.expand_dims(class_eigvals, axis=1))
             eigvectors.append(class_eigvectors)
         
+        #import ipdb; ipdb.set_trace()
         # Value for a particular class
         # Vector of datapoints(embdim,num_eigenvectors) (each column is eigenvector so the different columns is the number of eigenvectors)
         # data - means is shape (B, emb_dim), therefore the matrix multiplication needs to be (num_eigenvectors, embdim), (embdim,batch) to give (num eigenvectors, Batch) and then this is divided by (num eigenvectors,1) 
@@ -113,6 +116,7 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         # import ipdb; ipdb.set_trace()
         # I believe the first din is the list of size class, where each entry is a vector of size (emb dim, batch) where each entry of the embed dim is the 1 dimensional mahalanobis distance along that dimension, so a vector of (embdim,1) represents the mahalanobis distance of each of the n dimensions for that particular data point
         din = [np.abs(np.matmul(eigvectors[class_num].T,(ftest - means[class_num]).T)**2/eigvalues[class_num]) for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present 
+        # eigenvalues has shape  (128,1) whilst the matrix multiplication term as shape (128,B), therefore the eigenvaleus are broadcast to 128,B
         din = np.min(din,axis=0) # Find min along the class dimension, so this finds the lowest 1 dimensional mahalanobis distance among the different classes for the different data points
         din = np.mean(din, axis=1) # Find the mean of all the data points for that particular dimension, din per dimension 
 
