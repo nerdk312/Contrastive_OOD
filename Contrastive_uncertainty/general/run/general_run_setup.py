@@ -12,7 +12,7 @@ from Contrastive_uncertainty.general.callbacks.one_dim_mahalanobis_callback impo
     Class_One_Dim_Relative_Mahalanobis, One_Dim_Background_Mahalanobis
     
 from Contrastive_uncertainty.general.callbacks.one_dim_mahalanobis_variance_callback import One_Dim_Mahalanobis_Variance, One_Dim_Relative_Mahalanobis_Variance, Class_One_Dim_Relative_Mahalanobis_Variance
-from Contrastive_uncertainty.general.callbacks.one_dim_mahalanobis_similarity_callback import One_Dim_Mahalanobis_Similarity
+from Contrastive_uncertainty.general.callbacks.one_dim_mahalanobis_similarity_callback import One_Dim_Mahalanobis_Similarity, Class_One_Dim_Mahalanobis_OOD_Similarity
 
 from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Oracle_Hierarchical_Metrics, Hierarchical_Random_Coarse, Hierarchical_Subclusters_OOD
 from Contrastive_uncertainty.general.callbacks.isolation_forest_callback import IForest
@@ -98,6 +98,8 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Class One Dimensional Relative Mahalanobis {ood_dataset}': Class_One_Dim_Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
 
                 f'One Dimensional Mahalanobis Similarity': One_Dim_Mahalanobis_Similarity(Datamodule, quick_callback=quick_callback),
+                f'Class One Dimensional Mahalanobis OOD Similarity {ood_dataset}': Class_One_Dim_Mahalanobis_OOD_Similarity(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+
 
                 f'Relative Mahalanobis {ood_dataset}': Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'Mahalanobis Distance {ood_dataset}': Mahalanobis_OOD(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),

@@ -111,7 +111,7 @@ class Dataset_class_variance(pl.Callback):
         return ftrain
     
 
-    def data_saving(self,class_variance_scores1,class_variance_scores2, wandb_name,table_name):
+    def data_saving(self,class_variance_scores1, class_variance_scores2, wandb_name,table_name):
         '''
         args:
             class_variance_scores : List which contains the class variance for the different classes
