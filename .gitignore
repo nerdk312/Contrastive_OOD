@@ -12,6 +12,7 @@
 *.tar.gz
 *.rar
 *pyc
+*.csv
 .vscode
 wandb
 cifar-10-batches-py

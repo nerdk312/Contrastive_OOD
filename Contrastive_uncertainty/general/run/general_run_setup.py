@@ -5,6 +5,9 @@ from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_
 from Contrastive_uncertainty.general.callbacks.experimental_ood_callbacks import Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD
 from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO, Typicality_OVR_diff_bsz, Typicality_General_Point, Typicality_General_Point_updated
+from Contrastive_uncertainty.general.callbacks.marginal_typicality_ood_callback import Marginal_Typicality_OOD_detection
+
+
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
 from Contrastive_uncertainty.general.callbacks.variational_callback import Variational
 from Contrastive_uncertainty.general.callbacks.relative_mahalanobis_callback import Relative_Mahalanobis, Class_Relative_Mahalanobis, Class_Inverted_Relative_Mahalanobis
@@ -72,6 +75,9 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Typicality General Point {ood_dataset}': Typicality_General_Point(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'Typicality General Point Updated {ood_dataset}': Typicality_General_Point_updated(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
 
+                f'Marginal Typicality OOD {ood_dataset}': Marginal_Typicality_OOD_detection(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,typicality_bsz=typicality_batch),
+
+                
                 f'IForest {ood_dataset}': IForest(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
                 f'Class Variance': Dataset_class_variance(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
                 f'Class Radii': Dataset_class_radii(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
