@@ -80,8 +80,10 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Class Relative Mahalanobis', 'Class Inverted Relative Mahalanobis'],
 #callbacks = ['One Dimensional Relative Mahalanobis Variance','One Dimensional Mahalanobis Variance'],
 #callbacks = ['Class One Dimensional Relative Mahalanobis Variance'],
-callbacks = ['One Dimensional Mahalanobis Similarity'],
+#callbacks = ['One Dimensional Mahalanobis Similarity'],
 #callbacks = ['Class One Dimensional Mahalanobis OOD Similarity'],
+
+callbacks = ['Marginal Typicality OOD'],
 
 #callbacks = ['Class Inverted Relative Mahalanobis'],
 #callbacks = ['One Dimensional Relative Mahalanobis'],
