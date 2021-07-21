@@ -5,6 +5,7 @@ from Contrastive_uncertainty.toy_replica.sup_con.config.sup_con_params import su
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.config.hsup_con_bu_params import hsup_con_bu_hparams
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.config.hsup_con_td_params import hsup_con_td_hparams
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.config.hsup_con_bu_centroid_params import hsup_con_bu_centroid_hparams
+from Contrastive_uncertainty.toy_replica.ensemble.config.cross_entropy_ensemble_params import cross_entropy_ensemble_hparams
 
 
 # Importing the different lightning modules for the baselines
@@ -14,6 +15,7 @@ from Contrastive_uncertainty.toy_replica.sup_con.models.sup_con_module import Su
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_module import HSupConBUToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_module import HSupConTDToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroidToy
+from Contrastive_uncertainty.toy_replica.ensemble.models.cross_entropy_ensemble_module import CrossEntropyEnsembleToy
 
 
 # Model instances for the different methods
@@ -23,6 +25,8 @@ from Contrastive_uncertainty.toy_replica.sup_con.models.sup_con_model_instance i
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_model_instance import ModelInstance as HSupConBUModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_model_instance import ModelInstance as HSupConTDModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_model_instance import ModelInstance as HSupConBUCentroidModelInstance
+from Contrastive_uncertainty.toy_replica.ensemble.models.cross_entropy_ensemble_model_instance import ModelInstance as CEEnsembleModelInstance
+
 
 # Import datamodule info
 from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict import dataset_dict as general_dataset_dict
@@ -35,7 +39,7 @@ from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy imp
 def train(base_dict):   
     # Actively choose which modeles to choose in the acceptable models 
     acceptable_single_models = ['Baselines',
-    'CE',
+    #'CE',
     #'Moco',
     #'SupCon',
     # 'PCL',
@@ -45,6 +49,7 @@ def train(base_dict):
     #'HSupConBU',
     # 'HSupConBUCentroid',
     #'HSupConTD'
+    'CEEnsemble'
     ]
 
     # Dict for the model name, parameters and specific training loop
@@ -61,7 +66,10 @@ def train(base_dict):
                     'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training,'data_dict': general_dataset_dict},
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDToy, 
-                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training, 'data_dict': general_dataset_dict},         
+                    'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training, 'data_dict': general_dataset_dict},
+
+                    'CEEnsemble': {'params':cross_entropy_ensemble_hparams,'model_module':CrossEntropyEnsembleToy, 
+                    'model_instance':CEEnsembleModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},        
     }
     
 
