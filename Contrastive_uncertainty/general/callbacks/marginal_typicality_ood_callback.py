@@ -45,6 +45,7 @@ class Marginal_Typicality_OOD_detection(pl.Callback):
         self.Datamodule = Datamodule
         self.OOD_Datamodule = OOD_Datamodule
         self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
+        #import ipdb; ipdb.set_trace()
         self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
         
@@ -57,8 +58,6 @@ class Marginal_Typicality_OOD_detection(pl.Callback):
         self.typicality_bsz = typicality_bsz
 
         
-
-
     def on_test_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer=trainer, pl_module=pl_module)
 

@@ -34,7 +34,7 @@ from Contrastive_uncertainty.toy_replica.toy_general.datamodules.datamodule_dict
 # Import training methods 
 from Contrastive_uncertainty.general.train.train_general import train as general_training
 from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
-
+from Contrastive_uncertainty.general.train.train_general_confusion import train as general_confusion_training
 
 def train(base_dict):   
     # Actively choose which modeles to choose in the acceptable models 
@@ -67,9 +67,9 @@ def train(base_dict):
 
                     'HSupConTD':{'params':hsup_con_td_hparams,'model_module':HSupConTDToy, 
                     'model_instance':HSupConTDModelInstance,'train':general_hierarchy_training, 'data_dict': general_dataset_dict},
-
+                    # Modules for confusion 
                     'CEEnsemble': {'params':cross_entropy_ensemble_hparams,'model_module':CrossEntropyEnsembleToy, 
-                    'model_instance':CEEnsembleModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},        
+                    'model_instance':CEEnsembleModelInstance, 'train':general_confusion_training, 'data_dict':general_dataset_dict},        
     }
     
 

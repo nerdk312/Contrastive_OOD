@@ -81,7 +81,9 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Typicality'],
 #callbacks = ['Subsample'],
 #callbacks = ['Practice'],
-callbacks = ['General Scores'],
+#callbacks = ['General Scores'],
+callbacks = ['Marginal Typicality OOD'],
+
 #callbacks = ['Practice Hierarchical scores'],
 # Either goes through all the models or goes through baselines
 

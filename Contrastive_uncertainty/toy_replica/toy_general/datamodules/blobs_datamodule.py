@@ -31,6 +31,7 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
         self.test_transforms = test_transforms
         self.centers = centers  # Number of different classes
         self.seed = seed
+    
     @property
     def num_classes(self):
         """
@@ -46,6 +47,7 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
             classes//2
         '''
         return self.centers//2
+
     @property
     def num_hierarchy(self):
         '''
@@ -53,6 +55,7 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
             number of layers in hierarchy
         '''
         return 2 
+    
     @property
     def num_channels(self):
         """

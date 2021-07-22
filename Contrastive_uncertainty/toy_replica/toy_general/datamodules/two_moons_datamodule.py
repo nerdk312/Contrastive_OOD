@@ -30,6 +30,15 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         self.seed = seed
         self.name = 'TwoMoons'
 
+    
+    @property
+    def num_classes(self):
+        """
+        Return:
+            classes
+        """
+        return 2
+
 
     def setup(self, stage=None):
         '''called one each GPU separately - stage defines if we are at fit or test step'''

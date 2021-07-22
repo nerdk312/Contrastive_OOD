@@ -37,7 +37,7 @@ dataset_dict = {'MNIST':{'module':MNISTDataModule,'train_transform':Moco2TrainMN
                 'STL10':{'module': STL10DataModule,'train_transform':Moco2TrainSTL10Transforms(),
                 'val_transform':Moco2EvalSTL10Transforms(),'test_transform':Moco2EvalSTL10Transforms()},
 
-                 'SVHN':{'module':SVHNDataModule,'train_transform':Moco2TrainSVHNTransforms(),
+                'SVHN':{'module':SVHNDataModule,'train_transform':Moco2TrainSVHNTransforms(),
                 'val_transform':Moco2EvalSVHNTransforms(),'test_transform':Moco2EvalSVHNTransforms()}
                 
                 }

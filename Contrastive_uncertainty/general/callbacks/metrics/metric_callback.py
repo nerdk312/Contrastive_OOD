@@ -94,6 +94,7 @@ class MetricLogger(pl.Callback):
         self.num_coarse_classes = self.datamodule.num_coarse_classes
         self.dataloader = self.datamodule.val_dataloader()
         # Separate the val loader into two separate parts
+        
         if len(self.dataloader)> 1:
             _, self.dataloader = self.dataloader
         #import ipdb; ipdb.set_trace()
