@@ -68,7 +68,7 @@ class ConfusionDatamodule(LightningDataModule):
             number of layers in hierarchy
         '''
         return self.ID_Datamodule.num_hierarchy
-        
+
     @property
     def num_channels(self):
         """
@@ -92,9 +92,11 @@ class ConfusionDatamodule(LightningDataModule):
         self.setup_train()
         self.setup_val()
         self.setup_test()
-        
-        
+        self.setup_ood_test()
 
+        import ipdb; ipdb.set_trace()
+
+        
     def setup_train(self):
         
         self.train_dataset = self.concatenate_data(self.ID_Datamodule.train_dataset, self.OOD_Datamodule.train_dataset)
@@ -112,10 +114,21 @@ class ConfusionDatamodule(LightningDataModule):
         
         self.val_dataset = self.concatenate_data(ID_dataset, OOD_dataset)
         
-
-
     def setup_test(self):
         self.test_dataset = self.concatenate_data(self.ID_Datamodule.test_dataset,self.OOD_Datamodule.test_dataset)
+
+    
+    def setup_ood_test(self):
+        OOD_data, *OOD_labels, OOD_indices = self.OOD_Datamodule.test_dataset[:]
+        if isinstance(OOD_labels, tuple) or isinstance(OOD_labels, list):
+            OOD_labels, *_ = OOD_labels
+
+        # Combines the data from the different approaches present 
+        import ipdb; ipdb.set_trace()
+        OOD_labels = self.ID_Datamodule.num_classes + OOD_labels
+        ood_dataset = [OOD_data[i] for i in range(len(OOD_data))] + [OOD_labels]
+        
+        self.ood_dataset = CustomTensorDataset(tuple(ood_dataset))
 
 
     # Function used to combine the data
@@ -130,12 +143,6 @@ class ConfusionDatamodule(LightningDataModule):
             OOD_labels, *_ = OOD_labels
 
         # Combines the data from the different approaches present 
-        '''
-        data = [ID_data,OOD_data]
-        print(ID_data[0].shape)
-        print(OOD_data[0].shape)
-        '''
-        
         #confusion_data =tuple(map(torch.cat, zip(*data)))
 
         
@@ -144,16 +151,16 @@ class ConfusionDatamodule(LightningDataModule):
         else:
             confusion_data = torch.cat((ID_data, OOD_data))
         
-        max_ID_label = max(ID_labels)
-        OOD_labels = max_ID_label +1 + OOD_labels # Need to add since it starts at zero
+        #max_ID_label = max(ID_labels)
+        OOD_labels = self.ID_Datamodule.num_classes + OOD_labels
+        #import ipdb; ipdb.set_trace()
+        #OOD_labels = max_ID_label +1 + OOD_labels # Need to add since it starts at zero
         confusion_labels = torch.cat((ID_labels ,OOD_labels))
         
         # confusion_dataset , made from the different values in the confusion data list as well as the confusion labels
         confusion_dataset = [confusion_data[i] for i in range(len(confusion_data))] + [confusion_labels]
         
         dataset = CustomTensorDataset(tuple(confusion_dataset))
-
-
         
         return dataset
 
@@ -181,6 +188,8 @@ class ConfusionDatamodule(LightningDataModule):
         
         test_loader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
         return test_loader
+    
+    
     
 
 
