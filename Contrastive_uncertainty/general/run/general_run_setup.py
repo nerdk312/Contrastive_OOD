@@ -1,5 +1,7 @@
 from re import search
 
+from pytorch_lightning.core import datamodule
+
 from Contrastive_uncertainty.general.callbacks.general_callbacks import  ModelSaving,MMD_distance
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR, Class_Mahalanobis_OOD  #Euclidean_OOD, IsoForest
 from Contrastive_uncertainty.general.callbacks.experimental_ood_callbacks import Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD
@@ -21,6 +23,7 @@ from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Or
 from Contrastive_uncertainty.general.callbacks.isolation_forest_callback import IForest
 from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_class_variance, Dataset_class_radii, Centroid_distances, Class_Radii_histograms
 
+from Contrastive_uncertainty.general.callbacks.confusion_log_probability_callback import ConfusionLogProbability
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -105,6 +108,8 @@ def callback_dictionary(Datamodule,config,data_dict):
 
                 f'One Dimensional Mahalanobis Similarity': One_Dim_Mahalanobis_Similarity(Datamodule, quick_callback=quick_callback),
                 f'Class One Dimensional Mahalanobis OOD Similarity {ood_dataset}': Class_One_Dim_Mahalanobis_OOD_Similarity(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+
+                f'Confusion Log Probability': ConfusionLogProbability(Datamodule,quick_callback),
 
 
                 f'Relative Mahalanobis {ood_dataset}': Relative_Mahalanobis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),

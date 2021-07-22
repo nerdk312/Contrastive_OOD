@@ -94,8 +94,6 @@ class ConfusionDatamodule(LightningDataModule):
         self.setup_test()
         self.setup_ood_test()
 
-        import ipdb; ipdb.set_trace()
-
         
     def setup_train(self):
         
@@ -117,14 +115,14 @@ class ConfusionDatamodule(LightningDataModule):
     def setup_test(self):
         self.test_dataset = self.concatenate_data(self.ID_Datamodule.test_dataset,self.OOD_Datamodule.test_dataset)
 
-    
+    # OOD dataset with labels which are changed in order to calculate the confusion log probability
     def setup_ood_test(self):
         OOD_data, *OOD_labels, OOD_indices = self.OOD_Datamodule.test_dataset[:]
         if isinstance(OOD_labels, tuple) or isinstance(OOD_labels, list):
             OOD_labels, *_ = OOD_labels
 
         # Combines the data from the different approaches present 
-        import ipdb; ipdb.set_trace()
+        
         OOD_labels = self.ID_Datamodule.num_classes + OOD_labels
         ood_dataset = [OOD_data[i] for i in range(len(OOD_data))] + [OOD_labels]
         
@@ -189,10 +187,13 @@ class ConfusionDatamodule(LightningDataModule):
         test_loader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
         return test_loader
     
+    def ood_dataloader(self):
+        '''returns ood dataloader'''
+        
+        ood_loader = DataLoader(self.ood_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
+        return ood_loader
     
     
-
-
 '''
 ID_datamodule = BlobsDataModule()
 OOD_datamodule = TwoMoonsDataModule()
