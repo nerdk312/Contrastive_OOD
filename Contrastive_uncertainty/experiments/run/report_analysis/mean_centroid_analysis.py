@@ -7,6 +7,7 @@ from Contrastive_uncertainty.experiments.train.evaluate_experiments import evalu
 from Contrastive_uncertainty.experiments.config.trainer_params import trainer_hparams
 import json
 
+# Calculates the mean vector distance from the individual classes distances
 def mean_vector_calculation(json_data):
     data = np.array(json_data['data'])
     # Obtain the distances only for the different classes
@@ -34,6 +35,7 @@ data_array = np.zeros((3,5)) # potentially could make the shape (5,3)
 # Dict to map distances of specific datasets and model types to the data array
 key_dict = {'dataset':{'MNIST':0, 'FashionMNIST':1,'KMNIST':2, 'CIFAR10':3, 'CIFAR100':4},
             'model_type':{'CE':0, 'Moco':1, 'SupCon':2}}
+
 
 for i, run in enumerate(runs): 
     #import ipdb; ipdb.set_trace()
