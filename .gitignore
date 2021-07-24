@@ -22,3 +22,6 @@ KMNIST
 Images
 stl10_binary
 cifar-100-python
+
+*.json
+media

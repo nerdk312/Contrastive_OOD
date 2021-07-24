@@ -9,6 +9,7 @@ from Contrastive_uncertainty.hierarchical_models.HSupConTD.config.hsup_con_td_pa
 from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.config.hsup_con_bu_centroid_params import hsup_con_bu_centroid_hparams
 from Contrastive_uncertainty.multi_PCL.config.multi_pcl_params import multi_pcl_hparams
 from Contrastive_uncertainty.unsup_con_memory.config.unsup_con_memory_params import unsup_con_memory_hparams
+from Contrastive_uncertainty.ensemble.config.cross_entropy_ensemble_params import cross_entropy_ensemble_hparams
 
 
 from Contrastive_uncertainty.vae_models.vae.config.vae_params import vae_hparams
@@ -28,6 +29,7 @@ from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_mo
 from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroidModule
 from Contrastive_uncertainty.multi_PCL.models.multi_pcl_module import MultiPCLModule
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_module import UnSupConMemoryModule
+from Contrastive_uncertainty.ensemble.models.cross_entropy_ensemble_module import CrossEntropyEnsembleModule
 
 
 from Contrastive_uncertainty.vae_models.vae.models.vae_module import VAEModule
@@ -47,7 +49,7 @@ from Contrastive_uncertainty.hierarchical_models.hsup_con_bu_centroid.models.hsu
 from Contrastive_uncertainty.hierarchical_models.HSupConTD.models.hsup_con_td_model_instance import ModelInstance as HSupConTDModelInstance
 from Contrastive_uncertainty.multi_PCL.models.multi_pcl_model_instance import ModelInstance as MultiPCLModelInstance
 from Contrastive_uncertainty.unsup_con_memory.models.unsup_con_memory_model_instance import ModelInstance as UnSupConMemoryModelInstance
-
+from Contrastive_uncertainty.ensemble.models.cross_entropy_ensemble_model_instance import ModelInstance as CEEnsembleModelInstance
 
 from Contrastive_uncertainty.vae_models.vae.models.vae_model_instance import ModelInstance as VAEModelInstance
 from Contrastive_uncertainty.vae_models.cross_entropy_vae.models.cross_entropy_vae_model_instance import ModelInstance as CrossEntropyVAEModelInstance
@@ -62,6 +64,7 @@ from Contrastive_uncertainty.general.datamodules.datamodule_dict import dataset_
 from Contrastive_uncertainty.general.train.train_general import train as general_training
 from Contrastive_uncertainty.general_clustering.train.train_general_clustering import train as general_clustering_training
 from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
+from Contrastive_uncertainty.general.train.train_general_confusion import train as general_confusion_training
 
 def train(base_dict):    
     acceptable_single_models = ['Baselines',
@@ -78,7 +81,8 @@ def train(base_dict):
     # 'VAE',
     # 'CEVAE',
     # 'MocoVAE',
-    # 'SupConVAE'
+    # 'SupConVAE',
+    #'CEEnsemble'
     ]
 
     # Dict for the model name, parameters and specific training loop
@@ -113,7 +117,10 @@ def train(base_dict):
 
                     'VAE':{'params':vae_hparams,'model_module':VAEModule,
                     'model_instance':VAEModelInstance,'train':general_training, 'data_dict':general_dataset_dict},
-     
+                    
+                    # 'CEEnsemble': {'params':cross_entropy_ensemble_hparams,'model_module':CrossEntropyEnsembleModule, 
+                    # 'model_instance':CEEnsembleModelInstance, 'train':general_confusion_training, 'data_dict':general_dataset_dict},
+                    
     }
     
     # Update the parameters of each model

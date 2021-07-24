@@ -9,6 +9,7 @@ from Contrastive_uncertainty.general.datamodules.dataset_normalizations import c
 
 from PIL import ImageFilter
 from torchvision import transforms
+from torch.utils.data import DataLoader, random_split,  Dataset, Subset
 
 
 # CIFAR100 Coarse labels
@@ -476,4 +477,36 @@ def dataset_with_indices_emnist(cls):
     bases: tupe of clases from which corresponds to the __bases__ attribute
     '''
 
+
+
+# Use to apply transforms to the tensordataset  https://stackoverflow.com/questions/55588201/pytorch-transforms-on-tensordataset
+class CustomTensorDataset(Dataset):
+    """TensorDataset with support of transforms.
+    """
+    def __init__(self, tensors, transform=None):
+        assert all(tensors[0].size(0) == tensor.size(0) for tensor in tensors)
+        self.tensors = tensors
+        self.transform = transform
+
+    def __getitem__(self, index):
+        x = self.tensors[0][index]
+
+        if self.transform:
+            x = self.transform(x)
+        
+        # y is from the 1st value to the last value to be able to deal with the coarse values which are present for the task
+        
+
+        if len(self.tensors) ==3:
+            y = self.tensors[1][index]
+            coarse_y = self.tensors[2][index]
+            return x, y, coarse_y, index # Added the return of index for the purpose of PCL
+            
+        else:
+            y = self.tensors[1][index]
+
+            return x, y, index # Added the return of index for the purpose of PCL
+
+    def __len__(self):
+        return self.tensors[0].size(0)
 

@@ -24,6 +24,7 @@ from Contrastive_uncertainty.general.callbacks.isolation_forest_callback import 
 from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_class_variance, Dataset_class_radii, Centroid_distances, Class_Radii_histograms
 
 from Contrastive_uncertainty.general.callbacks.confusion_log_probability_callback import ConfusionLogProbability
+from Contrastive_uncertainty.general.callbacks.bottom_k_mahalanobis_callback import Bottom_K_Mahalanobis
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -109,6 +110,8 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'One Dimensional Mahalanobis Similarity': One_Dim_Mahalanobis_Similarity(Datamodule, quick_callback=quick_callback),
                 f'Class One Dimensional Mahalanobis OOD Similarity {ood_dataset}': Class_One_Dim_Mahalanobis_OOD_Similarity(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
 
+
+                f'Bottom K Mahalanobis OOD {ood_dataset}': Bottom_K_Mahalanobis(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,k_values = 3),
                 f'Confusion Log Probability': ConfusionLogProbability(Datamodule,quick_callback),
 
 

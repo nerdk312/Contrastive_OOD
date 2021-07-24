@@ -148,11 +148,13 @@ class MNISTDataModule(LightningDataModule):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
         dataset = self.DATASET_with_indices(self.data_dir, train=True, download=False, transform=train_transforms, **self.extra_args)
         train_length = len(dataset)
+        
         self.train_dataset, _ = random_split(
             dataset,
             [train_length - self.val_split, self.val_split],
             generator=torch.Generator().manual_seed(self.seed)
         )
+        #import ipdb; ipdb.set_trace()
 
     def setup_val(self):
 
@@ -184,6 +186,7 @@ class MNISTDataModule(LightningDataModule):
             [train_length - self.val_split, self.val_split],
             generator=torch.Generator().manual_seed(self.seed)
         )
+        import ipdb; ipdb.set_trace()
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms

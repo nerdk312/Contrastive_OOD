@@ -44,7 +44,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['One Dimensional Relative Mahalanobis Variance','One Dimensional Mahalanobis Variance'],
 #callbacks = ['One Dimensional Mahalanobis Similarity'],
 
-callbacks = ['Marginal Typicality OOD'],
+#callbacks = ['Marginal Typicality OOD'],
+callbacks = ['Bottom K Mahalanobis'],
 
 #callbacks = ['Class One Dimensional Mahalanobis OOD Similarity'],
 
