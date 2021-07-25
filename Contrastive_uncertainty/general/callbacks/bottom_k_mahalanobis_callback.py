@@ -19,6 +19,7 @@ import sklearn.metrics as skm
 import faiss
 import statistics
 import math
+import random
 
 
 import plotly.graph_objs as go
@@ -213,8 +214,17 @@ class Bottom_K_Mahalanobis(pl.Callback):
         return ftrain, ftest, food
 
     def data_saving(self,bottom_k_din, bottom_k_dood,wandb_dataname):
+        bottom_k_din_df = pd.DataFrame(bottom_k_din.T)
+        bottom_k_dood_df = pd.DataFrame(bottom_k_dood.T)
+        k_min_df = pd.concat((bottom_k_din_df,bottom_k_dood_df),axis=1)
+        #https://stackoverflow.com/questions/30647247/replace-nan-in-a-dataframe-with-random-values
+        k_min_df = k_min_df.applymap(lambda l: l if not np.isnan(l) else random.uniform(-2,-1))
+        
+        '''
         k_min_values = np.concatenate((bottom_k_din.T, bottom_k_dood.T),axis=1) # transpose and concatenate to get shape (batch, k din + k dood)
         k_min_df = pd.DataFrame(k_min_values)        
+        '''
+
         in_columns = [f'Bottom {i+1} ID Mahalanobis Distances' for i in range(self.k_values)]
         ood_columns = [f'Bottom {i+1} OOD Mahalanobis Distances' for i in range(self.k_values)]
         k_min_df.columns = [*in_columns, *ood_columns]

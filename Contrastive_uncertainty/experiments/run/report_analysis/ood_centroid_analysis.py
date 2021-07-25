@@ -1,10 +1,10 @@
+# Script used to get the fraction of OOD samples in the K classes closest to the total training centroid
+
 import wandb
 import pandas as pd
 import numpy as np
 
 # Import general params
-from Contrastive_uncertainty.experiments.train.evaluate_experiments import evaluate
-from Contrastive_uncertainty.experiments.config.trainer_params import trainer_hparams
 import json
 import math
 
