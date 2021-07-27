@@ -19,7 +19,6 @@ def accuracy(preds, labels):
 def precision_at_k(output, target, top_k=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
     with torch.no_grad():
-        #import ipdb; ipdb.set_trace()
         maxk = max(top_k)
         batch_size = target.size(0)
 

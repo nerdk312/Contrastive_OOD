@@ -52,7 +52,6 @@ def finetune(params):
     '''
     backbone.encoder_loading('pretrained_network.pt')
     print('model loaded')
-    import ipdb; ipdb.set_trace()
     num_filters = backbone.fc.in_features
     '''
     

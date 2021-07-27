@@ -51,7 +51,7 @@ for run in runs:
     # .name is the human-readable name of the run.dir
     name_list.append(run.name)
     
-    import ipdb; ipdb.set_trace()
+    #import ipdb; ipdb.set_trace()
 
 runs_df = pd.DataFrame({
     "summary": summary_list,

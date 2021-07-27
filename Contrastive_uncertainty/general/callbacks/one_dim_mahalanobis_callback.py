@@ -132,7 +132,6 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         array.append(array1)
         array.append(array2)
         array.append(array3)
-        import ipdb; ipdb.set_trace()
         '''
         
         return din, dood
@@ -143,7 +142,6 @@ class One_Dim_Mahalanobis(Mahalanobis_OOD):
         # Nawid - obtain the scores for the test data and the OOD data
         dtest, dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
         
-        #import ipdb; ipdb.set_trace()
         xs = np.arange(len(dtest))
         #baseline = np.zeros_like(dtest)
         ys = [dtest, dood]

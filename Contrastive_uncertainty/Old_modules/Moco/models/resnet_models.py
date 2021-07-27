@@ -212,7 +212,6 @@ class ResNet(nn.Module):
 
     def _forward_impl(self, x: Tensor) -> Tensor:
         # See note [TorchScript super()]
-        #import ipdb; ipdb.set_trace()
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)

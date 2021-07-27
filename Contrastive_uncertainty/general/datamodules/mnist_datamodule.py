@@ -186,7 +186,6 @@ class MNISTDataModule(LightningDataModule):
             [train_length - self.val_split, self.val_split],
             generator=torch.Generator().manual_seed(self.seed)
         )
-        import ipdb; ipdb.set_trace()
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
