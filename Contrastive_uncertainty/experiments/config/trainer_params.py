@@ -45,7 +45,7 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['One Dimensional Mahalanobis Similarity'],
 
 #callbacks = ['Marginal Typicality OOD'],
-callbacks = ['Bottom K Mahalanobis'],
+callbacks = ['Bottom K Mahalanobis Difference'],
 
 #callbacks = ['Class One Dimensional Mahalanobis OOD Similarity'],
 

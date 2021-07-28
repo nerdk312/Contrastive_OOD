@@ -1,4 +1,3 @@
-#import ipdb
 from numpy.lib.function_base import quantile
 from pandas.io.formats.format import DataFrameFormatter
 import torch
@@ -45,7 +44,7 @@ class Bottom_K_Mahalanobis(pl.Callback):
         self.Datamodule = Datamodule
         self.OOD_Datamodule = OOD_Datamodule
         self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
-        #import ipdb; ipdb.set_trace()
+        
         self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
         
@@ -156,7 +155,7 @@ class Bottom_K_Mahalanobis(pl.Callback):
         masked_din = din
         masked_dood = dood 
         for k in range(self.k_values):
-            #import ipdb; ipdb.set_trace()
+            
             # Change values which are equal to the lowest values to infinity
             masked_din = np.where(masked_din != kth_din_min,masked_din, math.inf)
             masked_dood = np.where(masked_dood != kth_dood_min,masked_dood, math.inf)
@@ -188,12 +187,16 @@ class Bottom_K_Mahalanobis(pl.Callback):
         """
             None.
         """
-        #import ipdb; ipdb.set_trace()
+        
+    
         
         # Nawid - obtain the scores for the test data and the OOD data
         ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
         bottom_k_din, bottom_k_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
-        self.data_saving(bottom_k_din, bottom_k_dood,f'Bottom K Mahalanobis Distances OOD {self.OOD_dataname}')
+        in_columns = [f'Bottom {i+1} ID Mahalanobis Distances' for i in range(self.k_values)]
+        ood_columns = [f'Bottom {i+1} OOD Mahalanobis Distances' for i in range(self.k_values)]
+        
+        self.data_saving(bottom_k_din, bottom_k_dood,in_columns, ood_columns, f'Bottom K Mahalanobis Distances OOD {self.OOD_dataname}')
     
     
     # Normalises the data
@@ -213,7 +216,7 @@ class Bottom_K_Mahalanobis(pl.Callback):
         
         return ftrain, ftest, food
 
-    def data_saving(self,bottom_k_din, bottom_k_dood,wandb_dataname):
+    def data_saving(self,bottom_k_din, bottom_k_dood,in_columns, ood_columns, wandb_dataname):
         bottom_k_din_df = pd.DataFrame(bottom_k_din.T)
         bottom_k_dood_df = pd.DataFrame(bottom_k_dood.T)
         k_min_df = pd.concat((bottom_k_din_df,bottom_k_dood_df),axis=1)
@@ -225,8 +228,7 @@ class Bottom_K_Mahalanobis(pl.Callback):
         k_min_df = pd.DataFrame(k_min_values)        
         '''
 
-        in_columns = [f'Bottom {i+1} ID Mahalanobis Distances' for i in range(self.k_values)]
-        ood_columns = [f'Bottom {i+1} OOD Mahalanobis Distances' for i in range(self.k_values)]
+        
         k_min_df.columns = [*in_columns, *ood_columns]
 
         table_data = wandb.Table(data=k_min_df)
@@ -234,4 +236,96 @@ class Bottom_K_Mahalanobis(pl.Callback):
 
     
     
-    
+# Calculate the difference between the first and the second for a particular datapoint
+class Bottom_K_Mahalanobis_Difference(Bottom_K_Mahalanobis):
+    def __init__(self, Datamodule, OOD_Datamodule, vector_level: str, label_level: str, quick_callback: bool, k_values: int):
+        super().__init__(Datamodule, OOD_Datamodule, vector_level=vector_level, label_level=label_level, quick_callback=quick_callback, k_values=k_values)
+
+    def get_scores(self,ftrain, ftest, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+
+        din = [
+            np.sum(
+                (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (ftest - np.mean(x, axis=0, keepdims=True)).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid - done for all the different classes
+        ]
+
+
+        dood = [
+            np.sum(
+                (food - np.mean(x, axis=0, keepdims=True))
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (food - np.mean(x, axis=0, keepdims=True)).T
+                    )
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid- this calculates the score for all the OOD examples 
+        ]
+
+        # Change to numpy array
+        din, dood = np.array(din), np.array(dood)
+
+
+        bottom_k_din_diff = []
+        bottom_k_dood_diff = []
+        
+        # iterate through the values
+        masked_din = din
+        masked_dood = dood 
+        
+        # initial values to mask , -1 chosen as this will not be the case
+        previous_k_bottom_din = -1
+        previous_k_bottom_dood = -1
+
+        for k in range(self.k_values):
+            # Change values which are equal to the lowest values to infinity
+            masked_din = np.where(masked_din != previous_k_bottom_din, masked_din, math.inf)
+            masked_dood = np.where(masked_dood != previous_k_bottom_dood, masked_dood, math.inf)
+            
+            # Obtain lowest values
+            kth_bottom_din = np.min(masked_din,axis=0)
+            kth_bottom_dood = np.min(masked_dood, axis=0)
+
+            # Add the difference to the list
+            if k >0:
+                din_diff = kth_bottom_din - previous_k_bottom_din
+                dood_diff = kth_bottom_dood - previous_k_bottom_dood
+                bottom_k_din_diff.append(din_diff)
+                bottom_k_dood_diff.append(dood_diff)
+            
+            # Update the previous lowest values with the current lowest
+            previous_k_bottom_din = kth_bottom_din
+            previous_k_bottom_dood = kth_bottom_dood
+
+
+        # Change to numpy array , shape (k_values, batch), the lowest k value is the smallest value
+        bottom_k_din_diff = np.array(bottom_k_din_diff) 
+        bottom_k_dood_diff = np.array(bottom_k_dood_diff)
+        return bottom_k_din_diff, bottom_k_dood_diff 
+
+
+    def get_eval_results(self, ftrain, ftest, food, labelstrain):
+        
+        """
+            None.
+        """
+        # Nawid - obtain the scores for the test data and the OOD data
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
+        bottom_k_din_diff, bottom_k_dood_diff = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        in_columns = [f'Bottom {i+1} ID Mahalanobis Distances Differences' for i in range(self.k_values-1)]
+        ood_columns = [f'Bottom {i+1} OOD Mahalanobis Distances Differences' for i in range(self.k_values-1)]
+
+        self.data_saving(bottom_k_din_diff, bottom_k_dood_diff, in_columns, ood_columns, f'Bottom K Mahalanobis Distances Differences OOD {self.OOD_dataname}')
+
+        
+

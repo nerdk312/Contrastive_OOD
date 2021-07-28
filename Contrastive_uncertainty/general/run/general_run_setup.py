@@ -21,10 +21,10 @@ from Contrastive_uncertainty.general.callbacks.one_dim_mahalanobis_similarity_ca
 
 from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Oracle_Hierarchical_Metrics, Hierarchical_Random_Coarse, Hierarchical_Subclusters_OOD
 from Contrastive_uncertainty.general.callbacks.isolation_forest_callback import IForest
-from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_class_variance, Dataset_class_radii, Centroid_distances, Class_Radii_histograms
+from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_class_variance, Dataset_class_radii, Centroid_distances, Centroid_relative_distances, Class_Radii_histograms
 
 from Contrastive_uncertainty.general.callbacks.confusion_log_probability_callback import ConfusionLogProbability
-from Contrastive_uncertainty.general.callbacks.bottom_k_mahalanobis_callback import Bottom_K_Mahalanobis
+from Contrastive_uncertainty.general.callbacks.bottom_k_mahalanobis_callback import Bottom_K_Mahalanobis, Bottom_K_Mahalanobis_Difference
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -85,7 +85,10 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'IForest {ood_dataset}': IForest(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
                 f'Class Variance': Dataset_class_variance(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
                 f'Class Radii': Dataset_class_radii(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
+                
                 f'Centroid Distances': Centroid_distances(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
+                f'Centroid Relative Distances': Centroid_relative_distances(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
+
                 f'Class Radii Histograms {ood_dataset}': Class_Radii_histograms(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
 
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
@@ -112,6 +115,9 @@ def callback_dictionary(Datamodule,config,data_dict):
 
 
                 f'Bottom K Mahalanobis OOD {ood_dataset}': Bottom_K_Mahalanobis(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,k_values = 3),
+                f'Bottom K Mahalanobis Difference OOD {ood_dataset}': Bottom_K_Mahalanobis_Difference(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,k_values = 3),
+                
+
                 f'Confusion Log Probability': ConfusionLogProbability(Datamodule,quick_callback),
 
 

@@ -15,6 +15,7 @@ import sklearn.metrics as skm
 import faiss
 import statistics 
 import random
+import scipy
 
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
@@ -358,14 +359,13 @@ class Class_Radii_histograms(Dataset_class_variance):
         test_class_radii_scores = self.class_radii(class_centroids, ftest_norm, indices_dtest, labelstrain)
         ood_class_radii_scores = self.class_radii(class_centroids, food_norm, indices_dood, labelstrain)
         return test_class_radii_scores, ood_class_radii_scores
-        #import ipdb; ipdb.set_trace()
+        
     
     def data_saving(self, in_class_radii_scores, ood_class_radii_scores, labels, wandb_dataname):
         # obtain the data score for the subclusters
         in_radii  = [pd.DataFrame(in_class_radii_scores[class_num]) for class_num in np.unique(labels)] # Nawid - training data which have been predicted to belong to a particular class
         ood_radii  = [pd.DataFrame(ood_class_radii_scores[class_num]) for class_num in np.unique(labels)]
         collated_radii = [*in_radii, *ood_radii] #[in_radii] + [ood_radii]
-        #import ipdb; ipdb.set_trace()
         # Concatenate all the dataframes (which places nans in situations where the columns have different lengths)
         radii_df = pd.concat(collated_radii,axis =1 )
         #https://stackoverflow.com/questions/30647247/replace-nan-in-a-dataframe-with-random-values
@@ -379,3 +379,40 @@ class Class_Radii_histograms(Dataset_class_variance):
         #columns2 = [in_columns] + [ood_columns]
         radii_table = wandb.Table(data=radii_df)
         wandb.log({wandb_dataname:radii_table})
+
+
+
+
+
+
+
+# Alternative approach of calculating the centroid distance, where the distance of a centroid is based on the distance to other centroids of the data
+class Centroid_relative_distances(Centroid_distances):
+    def __init__(self, Datamodule, OOD_Datamodule,
+        quick_callback:bool = True, vector_level='fine',label_level='fine'):
+        
+        super().__init__(Datamodule, OOD_Datamodule,
+            quick_callback, vector_level,label_level)
+
+    def centroid_distances(self,ftrain,ypred):
+        # Makes barchart of deviations from the average vector of the training set
+        centroids = self.get_cluster_centroids(ftrain,ypred) # shape (num classes, embeding size)
+        dist_matrix = scipy.spatial.distance.cdist(centroids, centroids) # shape (num_class,num_class) where for each i and j, the the metric dist(u=XA[i], v=XB[j]) is computed and stored in the  ij th entry, computes distance between centroid i and centroid j
+        average_centroid_distances = np.mean(dist_matrix,axis=1) # calculates the average of the distances of each centroid to all the other centroids
+        return average_centroid_distances
+
+        
+
+    def data_saving(self,average_centroids_distaces,ypred):
+        labels = [i for i in np.unique(ypred)] 
+        #data =[[label, val] for (label ,val) in zip(labels,total_diff)] # iterates through the different labels as well as the different values for the labels
+        data = [[label, val] for (label ,val) in zip(labels,average_centroids_distaces)] # iterates through the different labels as well as the different values for the labels
+        table = wandb.Table(data=data, columns = ["Label", "Distance"])
+        wandb.log({"Class Centroid Relative Distances" : wandb.plot.bar(table, "Label", "Distance",
+                               title="Class Centroid Relative Distances")})
+    
+        
+    def get_eval_results(self,ftrain,labelstrain):
+        ftrain_norm = self.normalise(ftrain)
+        average_centroid_distances = self.centroid_distances(ftrain_norm,labelstrain)
+        self.data_saving(average_centroid_distances,labelstrain)
