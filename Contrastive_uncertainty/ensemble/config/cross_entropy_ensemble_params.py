@@ -36,7 +36,7 @@ num_models = 3,
 #callbacks = ['Model_saving'],
 callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
-model_type = 'CE',
+model_type = 'CEEnsemble',
 project = 'evaluation',# evaluation, Moco_training
 group = None,
 notes = None,

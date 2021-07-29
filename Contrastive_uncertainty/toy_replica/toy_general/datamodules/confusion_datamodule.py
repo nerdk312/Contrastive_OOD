@@ -143,7 +143,7 @@ class ConfusionDatamodule(LightningDataModule):
         # Combines the data from the different approaches present 
         #confusion_data =tuple(map(torch.cat, zip(*data)))
 
-        
+        # Combine the tuples related to the different data augmentations
         if isinstance(ID_data,tuple) or isinstance(ID_data, list):
             confusion_data = tuple([torch.cat((ID_data[i],OOD_data[i])) for i in range(len(ID_data))])
         else:

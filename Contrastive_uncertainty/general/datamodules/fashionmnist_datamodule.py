@@ -68,6 +68,7 @@ class FashionMNISTDataModule(LightningDataModule):
         self.dims = (1, 28, 28)
         self.DATASET = FashionMNIST
         self.DATASET_with_indices = dataset_with_indices_hierarchy(self.DATASET, FashionMNIST_coarse_labels)
+        #self.DATASET_with_indices = dataset_with_indices(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size

@@ -68,7 +68,7 @@ from Contrastive_uncertainty.general.train.train_general_confusion import train 
 
 def train(base_dict):    
     acceptable_single_models = ['Baselines',
-    'CE',
+    #'CE',
     #'Moco',
     #'SupCon'
     # 'PCL',
@@ -82,7 +82,7 @@ def train(base_dict):
     # 'CEVAE',
     # 'MocoVAE',
     # 'SupConVAE',
-    #'CEEnsemble'
+    'CEEnsemble'
     ]
 
     # Dict for the model name, parameters and specific training loop
@@ -118,8 +118,8 @@ def train(base_dict):
                     'VAE':{'params':vae_hparams,'model_module':VAEModule,
                     'model_instance':VAEModelInstance,'train':general_training, 'data_dict':general_dataset_dict},
                     
-                    # 'CEEnsemble': {'params':cross_entropy_ensemble_hparams,'model_module':CrossEntropyEnsembleModule, 
-                    # 'model_instance':CEEnsembleModelInstance, 'train':general_confusion_training, 'data_dict':general_dataset_dict},
+                    'CEEnsemble': {'params':cross_entropy_ensemble_hparams,'model_module':CrossEntropyEnsembleModule, 
+                    'model_instance':CEEnsembleModelInstance, 'train':general_confusion_training, 'data_dict':general_dataset_dict},
                     
     }
     

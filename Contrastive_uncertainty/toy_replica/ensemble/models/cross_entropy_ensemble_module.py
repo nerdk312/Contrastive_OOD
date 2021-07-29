@@ -42,7 +42,6 @@ class CrossEntropyEnsembleToy(pl.LightningModule):
         self.num_models = num_models
 
 
-
         self.datamodule = datamodule
         self.num_classes = datamodule.num_classes
         self.num_channels = datamodule.num_channels

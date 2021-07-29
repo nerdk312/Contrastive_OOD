@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split,  Dataset,Subset
 from torchvision import transforms
 from torchvision.datasets import MNIST, FashionMNIST
+import copy
 
 import os
 from scipy.io import loadmat
@@ -19,7 +20,9 @@ import sklearn.datasets
 import numpy as np
 from math import ceil, floor
 
+
 from Contrastive_uncertainty.general.datamodules.datamodule_transforms import CustomTensorDataset
+from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices
 
 from Contrastive_uncertainty.general.datamodules.mnist_datamodule import MNISTDataModule
 from Contrastive_uncertainty.general.datamodules.fashionmnist_datamodule import FashionMNISTDataModule
@@ -30,6 +33,8 @@ class ConfusionDatamodule(LightningDataModule):
         
         self.batch_size = batch_size
         self.ID_Datamodule = ID_Datamodule
+        # Remove the coarse labels
+        self.ID_Datamodule.DATASET_with_indices = dataset_with_indices(ID_Datamodule.DATASET)
         self.ID_Datamodule.setup()
         # Train and test transforms are defined in the datamodule dict 
         train_transforms = self.ID_Datamodule.train_transforms
@@ -37,6 +42,7 @@ class ConfusionDatamodule(LightningDataModule):
 
         # Update the OOD transforms with the transforms of the ID datamodule
         self.OOD_Datamodule = OOD_Datamodule
+        self.OOD_Datamodule.DATASET_with_indices = dataset_with_indices(OOD_Datamodule.DATASET)
         self.OOD_Datamodule.train_transforms = train_transforms
         self.OOD_Datamodule.test_transforms = test_transforms
         # Resets the OOD datamodules with the specific transforms of interest required
@@ -115,51 +121,30 @@ class ConfusionDatamodule(LightningDataModule):
 
     # OOD dataset with labels which are changed in order to calculate the confusion log probability
     def setup_ood_test(self):
-        OOD_data, *OOD_labels, OOD_indices = self.OOD_Datamodule.test_dataset[:]
-        if isinstance(OOD_labels, tuple) or isinstance(OOD_labels, list):
-            OOD_labels, *_ = OOD_labels
-
-        # Combines the data from the different approaches present 
+        self.ood_dataset = copy.deepcopy(self.OOD_Datamodule.test_dataset)
+        self.ood_dataset.targets = self.ood_dataset.targets + self.ID_Datamodule.num_classes 
         
-        OOD_labels = self.ID_Datamodule.num_classes + OOD_labels
-        ood_dataset = [OOD_data[i] for i in range(len(OOD_data))] + [OOD_labels]
-        
-        self.ood_dataset = CustomTensorDataset(tuple(ood_dataset))
 
 
     # Function used to combine the data
     def concatenate_data(self, ID_dataset, OOD_dataset):
         # data is a tuple for the different augmentations which are present 
-        import ipdb; ipdb.set_trace()
-        ID_data, *ID_labels, ID_indices = ID_dataset[:]
-        if isinstance(ID_labels, tuple) or isinstance(ID_labels, list):
-            ID_labels, *_ = ID_labels
         
-        OOD_data, *OOD_labels, OOD_indices = OOD_dataset[:]
-        if isinstance(OOD_labels, tuple) or isinstance(OOD_labels, list):
-            OOD_labels, *_ = OOD_labels
-
-        # Combines the data from the different approaches present 
-        #confusion_data =tuple(map(torch.cat, zip(*data)))
-
+        # Increase the value of the targets by the OOD data
         
-        if isinstance(ID_data, tuple) or isinstance(ID_data, list):
-            confusion_data = tuple([torch.cat((ID_data[i],OOD_data[i])) for i in range(len(ID_data))])
+        #OOD_dataset.targets = self.ID_Datamodule.num_classes + OOD_dataset.targets
+        ID_data = copy.deepcopy(ID_dataset)
+        OOD_data = copy.deepcopy(OOD_dataset)
+        if isinstance(OOD_dataset, Subset):
+            OOD_data.dataset.targets = self.ID_Datamodule.num_classes + OOD_data.dataset.targets  
         else:
-            confusion_data = torch.cat((ID_data, OOD_data))
+            OOD_data.targets = self.ID_Datamodule.num_classes + OOD_data.targets  
+
+        datasets = [ID_data, OOD_data]
+    
+        concat_datasets = torch.utils.data.ConcatDataset(datasets)
         
-        #max_ID_label = max(ID_labels)
-        OOD_labels = self.ID_Datamodule.num_classes + OOD_labels
-        #import ipdb; ipdb.set_trace()
-        #OOD_labels = max_ID_label +1 + OOD_labels # Need to add since it starts at zero
-        confusion_labels = torch.cat((ID_labels ,OOD_labels))
-        
-        # confusion_dataset , made from the different values in the confusion data list as well as the confusion labels
-        confusion_dataset = [confusion_data[i] for i in range(len(confusion_data))] + [confusion_labels]
-        
-        dataset = CustomTensorDataset(tuple(confusion_dataset))
-        
-        return dataset
+        return concat_datasets
 
     def train_dataloader(self):
         '''returns training dataloader'''
@@ -199,4 +184,6 @@ OOD_datamodule = FashionMNISTDataModule()
 
 confusion_module= ConfusionDatamodule(ID_datamodule,OOD_datamodule)
 confusion_module.setup()
+
+train_loader = confusion_module.train_dataloader()
 '''

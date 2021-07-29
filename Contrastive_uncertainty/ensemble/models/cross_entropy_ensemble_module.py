@@ -44,9 +44,10 @@ class CrossEntropyEnsembleModule(pl.LightningModule):
         self.datamodule = datamodule
         self.num_channels = datamodule.num_channels
         self.num_classes = datamodule.num_classes
+        print('num clases', self.num_classes)
         # create the encoders
         # num_classes is the output fc dimension
-        self.encoder = self.init_encoders()
+        self.encoders = nn.ModuleList(self.init_encoders())
         '''
         if self.hparams.pretrained_network is not None:
             self.encoder_loading(self.hparams.pretrained_network)
@@ -61,15 +62,18 @@ class CrossEntropyEnsembleModule(pl.LightningModule):
         """
         Override to add your own encoders
         """
-        if self.hparams.instance_encoder == 'resnet18':
+        if self.instance_encoder == 'resnet18':
             print('using resnet18')
-            encoder  = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes=self.num_classes)
+            encoders  = [custom_resnet18(latent_size = self.emb_dim,num_channels = self.num_channels,num_classes=self.num_classes) for i in range(self.num_models)]
             
         elif self.hparams.instance_encoder =='resnet50':
             print('using resnet50')
-            encoder = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes=self.num_classes)
+            encoders = [custom_resnet50(latent_size = self.emb_dim,num_channels = self.num_channels,num_classes=self.num_classes) for i in range(self.num_models)]
 
-        return encoder
+        for i in range(self.num_models):
+            encoders[i].class_fc2 = nn.Linear(self.emb_dim, self.num_classes)
+
+        return encoders
 
     
     
@@ -83,9 +87,8 @@ class CrossEntropyEnsembleModule(pl.LightningModule):
     def loss_function(self, batch):
         metrics = {}
         
-        #import ipdb; ipdb.set_trace()  
-            
-        img_1, img_2, *labels, indices= batch
+        
+        (img_1, img_2), *labels, indices= batch
         # Takes into account if it has coarse labels
         # Using * makes it into a list (so the length of the list is related to how many different labels types there are)
         if isinstance(labels, tuple) or isinstance(labels, list):
@@ -105,6 +108,7 @@ class CrossEntropyEnsembleModule(pl.LightningModule):
                 loss = LabelSmoothingCrossEntropy(ε=0.1, reduction='none')(logits.float(),labels.long()) 
                 loss = torch.mean(loss)
             else:
+                
                 loss = F.cross_entropy(logits.float(), labels.long())
             
             class_acc1, class_acc5 = precision_at_k(logits, labels, top_k=(1, 5))
