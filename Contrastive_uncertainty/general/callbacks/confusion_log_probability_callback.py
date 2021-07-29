@@ -78,7 +78,8 @@ class ConfusionLogProbability(pl.Callback):
             model_predictions = []
             for i in range(pl_module.num_models):
                 logits = pl_module.class_forward(img, i)
-                predictions = F.softmax(logits)
+                predictions = F.softmax(logits,dim=1)
+                
 
                 model_predictions.append(predictions)
                 
