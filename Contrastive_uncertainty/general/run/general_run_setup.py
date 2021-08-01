@@ -6,7 +6,7 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import  ModelSa
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR, Class_Mahalanobis_OOD  #Euclidean_OOD, IsoForest
 from Contrastive_uncertainty.general.callbacks.experimental_ood_callbacks import Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD
 from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation
-from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO, Typicality_OVR_diff_bsz, Typicality_General_Point, Typicality_General_Point_updated
+from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO, Typicality_OVR_diff_bsz, Typicality_General_Point, Typicality_General_Point_updated, Typicality_OVR_diff_batch_updated
 from Contrastive_uncertainty.general.callbacks.marginal_typicality_ood_callback import Marginal_Typicality_OOD_detection
 
 
@@ -76,6 +76,8 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Typicality_OVR_{ood_dataset}': Typicality_OVR(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'Typicality_OVO_{ood_dataset}': Typicality_OVO(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'Typicality_OVR_diff_bsz_{ood_dataset}': Typicality_OVR_diff_bsz(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
+                f'Typicality_OVR_diff_bsz_updated_{ood_dataset}': Typicality_OVR_diff_batch_updated(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
+                
                 f'Typicality General Point {ood_dataset}': Typicality_General_Point(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'Typicality General Point Updated {ood_dataset}': Typicality_General_Point_updated(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
 

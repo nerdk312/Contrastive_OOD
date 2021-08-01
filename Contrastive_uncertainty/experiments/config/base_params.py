@@ -14,9 +14,11 @@ weight_decay = 1e-4,
 
 # Training parameters in common
 emb_dim = 128,
-instance_encoder = 'resnet50',
+instance_encoder = 'resnet18',
 bsz = 256,
-dataset = 'CIFAR100',
+dataset = 'FashionMNIST',
+OOD_dataset = ['KMNIST'],
+#dataset = 'CIFAR100',
 #OOD_dataset = ['SVHN'],
 pretrained_network = None,
 
@@ -37,12 +39,12 @@ typicality_batch = 25,
 
 # Wandb parameters in common
 project = 'evaluation',
-#group = 'OOD detection at different scales experiment',
-#notes = 'Examining how OOD detection is different at the instance, fine and coarse level',  # Add notes to the specific models each time
 
+group = 'Confusion Log Probability Evaluation',
+notes = 'Training different models to calculate the confusion log probability to measure how OOD the data is',  # Add notes to the specific models each time
 
-group = 'Separate branch combinations',
-notes = 'Training different combinations of branches weights for the hierarchical network',  # Add notes to the specific models each time
+#group = 'Separate branch combinations',
+#notes = 'Training different combinations of branches weights for the hierarchical network',  # Add notes to the specific models each time
 
 # VAE specific params
 kl_coeff = 0.1,
@@ -79,7 +81,7 @@ branch_weights = [0.15, 0.30, 0.55],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
 #callbacks = ['Model_saving','Variational'],
-callbacks = ['Model_saving'],
+callbacks = ['Model_saving', 'Confusion Log Probability'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Aggregated','Differing'],
 

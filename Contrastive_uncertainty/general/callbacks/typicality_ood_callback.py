@@ -276,7 +276,6 @@ class Typicality_OVR(pl.Callback):
         """
             None.
         """
-        #import ipdb; ipdb.set_trace()
         
         # Nawid - obtain the scores for the test data and the OOD data
         ftrain_norm, fval_norm, ftest_norm, food_norm = self.normalise(ftrain, fval, ftest, food)
@@ -291,7 +290,7 @@ class Typicality_OVR(pl.Callback):
         
         
         
-        #import ipdb; ipdb.set_trace()
+        
         ######
         self.OVR_AUROC_saving(test_thresholds,ood_thresholds,f'Class vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname} Table')
         
@@ -433,6 +432,106 @@ class Typicality_OVR_diff_bsz(Typicality_OVR):
         table_df = pd.DataFrame(table_data)
         ood_table = wandb.Table(dataframe=table_df)
         wandb.log({wandb_name: ood_table})
+
+
+
+# Performs the typicality test in a one vs all manner, using the class specific information, updated version of code
+class Typicality_OVR_diff_batch_updated(Typicality_OVR):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        vector_level:str = 'instance',
+        label_level:str = 'fine',
+        quick_callback:bool = True,
+        bootstrap_num: int = 50,
+        typicality_bsz:int = 25):
+        
+        super().__init__(Datamodule, OOD_Datamodule, vector_level=vector_level,
+        label_level=label_level,
+        quick_callback=quick_callback,
+        bootstrap_num=bootstrap_num,
+        typicality_bsz=typicality_bsz)
+
+    
+    
+    # Code to calculate the thresholds in batch
+    def get_class_thresholds(self,fdata,class_means,class_cov,class_entropy,bsz):
+        class_thresholds = [] #  List of class threshold values
+        # obtain the num batches
+        num_batches = len(fdata)//bsz 
+        
+        for i in range(num_batches):
+            fdata_batch = fdata[(i*bsz):((i+1)*bsz)]
+            ddata = np.sum(
+            (fdata_batch - class_means) # Nawid - distance between the data point and the mean
+            * (
+                np.linalg.pinv(class_cov).dot(
+                    (fdata_batch - class_means).T
+                ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+            ).T,
+            axis=-1)
+
+            nll = - np.mean(0.5*(ddata**2))
+            threshold_k = np.abs(nll- class_entropy)
+            class_thresholds.append(threshold_k)
+        
+        return class_thresholds
+
+    # Gets the test statistic threshold for the case of the test indistribution data
+    def get_online_test_thresholds(self, means, cov, entropy, ftest, ytest,bsz):
+        test_thresholds = [] # List of all threshold values
+        # All the data for the different classes of the test features
+        xtest_c = [ftest[ytest == i] for i in np.unique(ytest)]
+        # Iterate through the classes
+        for class_num in range(len(np.unique(ytest))):
+            # Get data for a particular class
+            xtest_class = xtest_c[class_num] 
+            class_test_thresholds = self.get_class_thresholds(xtest_class, means[class_num], cov[class_num],entropy[class_num],bsz) # Get class thresholds for the particular class
+            test_thresholds.append(class_test_thresholds)
+
+        return test_thresholds
+
+    # Gets the test statistic for the OOD data
+    def get_online_ood_thresholds(self, means, cov, entropy, food,bsz):
+        # Treating other classes as OOD dataset for a particular class
+        ood_thresholds = [] # List of all threshold values
+
+        # Iterate through the classes
+        for class_num in range(len(means)):
+            class_ood_thresholds = self.get_class_thresholds(food,means[class_num], cov[class_num],entropy[class_num],bsz)
+            ood_thresholds.append(class_ood_thresholds)
+        
+        return ood_thresholds
+        
+    def get_eval_results(self, ftrain,fval, ftest, food, labelstrain, labelsval,labels_test):
+        """
+            None.
+        """
+        #import ipdb; ipdb.set_trace()
+        
+        # Nawid - obtain the scores for the test data and the OOD data
+        ftrain_norm, fval_norm, ftest_norm, food_norm = self.normalise(ftrain, fval, ftest, food)
+        class_means, class_cov,class_entropy, class_quantile_thresholds = self.get_offline_thresholds(ftrain_norm, fval_norm, labelstrain, labelsval)
+        # Class conditional thresholds for the correct class
+        
+        # Loop through the different values and calculate the different values
+        bszs = [10,15,20]
+        for bsz in bszs:
+            test_thresholds = self.get_online_test_thresholds(class_means,class_cov,class_entropy,ftest,labels_test,bsz)
+            ood_thresholds = self.get_online_ood_thresholds(class_means, class_cov,class_entropy, food,bsz)    
+            self.OVR_AUROC_saving(test_thresholds,ood_thresholds,f'Class vs OOD Rest {self.OOD_dataname}',f'Typicality One Vs OOD Rest {self.OOD_dataname} Batch Size {bsz}')
+        
+    def OVR_AUROC_saving(self,ftest_thresholds,food_thresholds,table_name,wandb_name):
+        table_data = {table_name: [],'AUROC': []}
+        for class_num in range(len(ftest_thresholds)):
+            table_data[table_name].append(class_num)
+            class_auroc = get_roc_sklearn(ftest_thresholds[class_num], food_thresholds[class_num])
+            table_data['AUROC'].append(round(class_auroc,2)) # Append the value rounded to 2 decimal places
+
+        table_df = pd.DataFrame(table_data)
+        ood_table = wandb.Table(dataframe=table_df)
+        # NEED TO Have different names for wandb.log (wandbname) and table saving as table saving also uses wandb.log which causes conflicting names being present
+        wandb.log({wandb_name: ood_table})
+
+
 
 # Performs the typicality test using single data point, and not using class specific information
 class Typicality_General_Point(Typicality_OVR_diff_bsz):

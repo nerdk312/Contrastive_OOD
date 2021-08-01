@@ -45,8 +45,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['One Dimensional Mahalanobis Similarity'],
 
 #callbacks = ['Marginal Typicality OOD'],
-callbacks = ['Centroid Relative Distances'],
-
+#callbacks = ['Centroid Relative Distances'],
+callbacks = ['Typicality_OVR_diff_bsz_updated'],
 
 #callbacks = ['Class One Dimensional Mahalanobis OOD Similarity'],
 
