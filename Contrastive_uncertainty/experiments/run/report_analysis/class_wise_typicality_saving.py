@@ -25,7 +25,7 @@ summary_list, config_list, name_list = [], [], []
 for i, run in enumerate(runs): 
     # .summary contains the output keys/values for metrics like accuracy.
     #  We call ._json_dict to omit large files 
-    values = run.summary
+    # values = run.summary
     summary_list.append(run.summary._json_dict)
     
     # .config contains the hyperparameters.
@@ -38,18 +38,23 @@ for i, run in enumerate(runs):
     name_list.append(run.name)
     # Obtain the keys which satisfy the requirement based on https://stackoverflow.com/questions/10484261/find-dictionary-items-whose-key-matches-a-substring/10484313
     # Need to have the key as lower case
-    keys = [key for key, value in summary_list[i].items() if 'class wise mahalanobis instance fine' in key.lower()]
+    
+    keys = [key for key, value in summary_list[i].items() if 'typicality one vs ood rest' in key.lower()]
     # Removes the keys related to the tables images, only retain the Json Files
     keys = [key for key in keys if 'table' not in key.lower()]
-    
+    keys = [key for key in keys if 'batch' not in key.lower()]
     # Iterate through the keys and save the data
     
+    # Current issue is with the name of the files
+    data_dirs = [summary_list[i][key]['path'] for key in keys]
+    print(data_dirs)
+    '''
     for key in keys:
         
         data_dir = summary_list[i][key]['path'] 
         #print('data dir',data_dir)
         file_data = json.load(run.file(data_dir).download()) 
-    
+    '''
     
     # Obtain the dataset and the model type
 

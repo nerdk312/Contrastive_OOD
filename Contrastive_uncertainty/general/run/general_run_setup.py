@@ -75,8 +75,8 @@ def callback_dictionary(Datamodule,config,data_dict):
                 #  # Callbacks related to typicality as well as OVR and OVO classification
                 f'Typicality_OVR_{ood_dataset}': Typicality_OVR(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'Typicality_OVO_{ood_dataset}': Typicality_OVO(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
-                f'Typicality_OVR_diff_bsz_{ood_dataset}': Typicality_OVR_diff_bsz(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
-                f'Typicality_OVR_diff_bsz_updated_{ood_dataset}': Typicality_OVR_diff_batch_updated(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
+                #f'Typicality_OVR_diff_bsz_{ood_dataset}': Typicality_OVR_diff_bsz(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
+                #f'Typicality_OVR_diff_bsz_updated_{ood_dataset}': Typicality_OVR_diff_batch_updated(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 
                 f'Typicality General Point {ood_dataset}': Typicality_General_Point(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
                 f'Typicality General Point Updated {ood_dataset}': Typicality_General_Point_updated(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),

@@ -61,4 +61,6 @@ column_names = [model for model in key_dict['model_type'].keys()]
 row_names = [dataset for dataset in key_dict['dataset'].keys()]
 data_df = pd.DataFrame(data_array, columns = column_names, index = row_names)
 ax =data_df.plot.bar()
-plt.savefig('absolute MMD distance.png')
+plt.tight_layout()
+plt.savefig('spectral_values.png')
+#plt.savefig('absolute MMD distance.png')

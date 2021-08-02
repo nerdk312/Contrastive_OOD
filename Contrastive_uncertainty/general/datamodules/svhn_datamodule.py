@@ -1,6 +1,7 @@
 import os
 from typing import Optional, Sequence
 import numpy as np
+from pytorch_lightning.core import datamodule
 import torch
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
@@ -106,7 +107,7 @@ class SVHNDataModule(LightningDataModule):
         Saves CIFAR10 files to data_dir
         """
         self.DATASET(self.data_dir, split ='train', download=True,transform=transform_lib.ToTensor())
-        self.DATASET(self.data_dir, split ='test', download=True,transform=transform_lib.ToTensor(),)
+        self.DATASET(self.data_dir, split ='test', download=True,transform=transform_lib.ToTensor())
     
     @property
     def input_height(self):
@@ -137,6 +138,15 @@ class SVHNDataModule(LightningDataModule):
     def setup_train(self):
         train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
         dataset = self.DATASET_with_indices(self.data_dir, split ='train', download=False, transform=train_transforms, **self.extra_args)
+        
+
+        if isinstance(dataset.labels, list):
+            dataset.labels = torch.Tensor(dataset.labels).type(torch.int64) # Need to change into int64 to use in test step 
+        elif isinstance(dataset.labels,np.ndarray):
+            dataset.labels = torch.from_numpy(dataset.labels).type(torch.int64)
+
+        dataset.targets = dataset.labels
+        
         train_length = len(dataset)
         self.train_dataset, _ = random_split(
             dataset,
@@ -145,7 +155,7 @@ class SVHNDataModule(LightningDataModule):
         )
 
     def setup_val(self):
-
+        
         '''
         val_transforms = self.default_transforms() if self.val_transforms is None else self.val_transforms
         dataset = self.DATASET(self.data_dir, train=True, download=False, transform=val_transforms, **self.extra_args)
@@ -158,7 +168,13 @@ class SVHNDataModule(LightningDataModule):
         '''
         val_train_transforms = self.default_transforms() if self.train_transforms is None else self.train_transforms
         val_train_dataset = self.DATASET_with_indices(self.data_dir, split ='train', download=False, transform=val_train_transforms, **self.extra_args)
-        
+
+        if isinstance(val_train_dataset.labels, list):
+            val_train_dataset.labels = torch.Tensor(val_train_dataset.labels).type(torch.int64) # Need to change into int64 to use in test step 
+        elif isinstance(val_train_dataset.labels,np.ndarray):
+            val_train_dataset.labels = torch.from_numpy(val_train_dataset.labels).type(torch.int64)
+
+        val_train_dataset.targets = val_train_dataset.labels
         train_length = len(val_train_dataset)
         _, self.val_train_dataset = random_split(
             val_train_dataset,
@@ -169,6 +185,14 @@ class SVHNDataModule(LightningDataModule):
         val_test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
         val_test_dataset = self.DATASET_with_indices(self.data_dir, split ='train', download=False, transform=val_test_transforms, **self.extra_args)
         
+        if isinstance(val_test_dataset.labels, list):
+            val_test_dataset.labels = torch.Tensor(val_test_dataset.labels).type(torch.int64) # Need to change into int64 to use in test step 
+        elif isinstance(val_test_dataset.labels,np.ndarray):
+            val_test_dataset.labels = torch.from_numpy(val_test_dataset.labels).type(torch.int64)
+
+        val_test_dataset.targets = val_test_dataset.labels
+
+
         _, self.val_test_dataset = random_split(
             val_test_dataset,
             [train_length - self.val_split, self.val_split],
@@ -271,3 +295,7 @@ class SVHNDataModule(LightningDataModule):
             svhn_normalization()
         ])
         return svhn_transforms
+
+
+datamodule = SVHNDataModule()
+datamodule.setup()
