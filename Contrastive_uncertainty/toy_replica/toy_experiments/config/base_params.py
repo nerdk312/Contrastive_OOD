@@ -13,7 +13,7 @@ emb_dim = 128,
 instance_encoder = 'resnet50',
 bsz = 256,
 dataset = 'Blobs',
-#OOD_dataset = ['TwoMoons'],
+OOD_dataset = ['TwoMoons'],
 # OOD_dataset = ['TwoMoons'],
 pretrained_network = None,
 
@@ -86,11 +86,14 @@ label_level = ['fine','fine','coarse'],
 
 #callbacks = ['Marginal Typicality OOD'],
 #callbacks = [],
-#callbacks = ['Confusion Log Probability'],
+callbacks = ['Confusion Log Probability'],
 #callbacks = ['Bottom K Mahalanobis Difference'],
 #callbacks = ['Centroid Relative Distances'],
 #callbacks = ['Typicality_OVR_diff_bsz_updated'],
-callbacks = ['Typicality_OVR'],
+#callbacks = ['Typicality_OVR'],
+
+
+
 #callbacks = ['Model_saving'],
 #callbacks = ['Class Inverted Relative Mahalanobis'],
 #callbacks = ['One Dimensional Relative Mahalanobis'],

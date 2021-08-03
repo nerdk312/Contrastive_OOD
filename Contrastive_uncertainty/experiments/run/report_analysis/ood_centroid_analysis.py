@@ -12,7 +12,7 @@ import math
 def OOD_fraction_calculation(centroid_json,auroc_json):
     centroid_data = np.array(centroid_json['data'])
     # k controls how many values I choose
-    k_values = 3
+    k_values = 2
     bottom_k = bottom_k_values(centroid_data,k_values)    
     auroc_data = np.array(auroc_json['data'])
 

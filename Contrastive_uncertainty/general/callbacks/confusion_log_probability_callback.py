@@ -76,17 +76,18 @@ class ConfusionLogProbability(pl.Callback):
 
             img = img.to(pl_module.device) 
             model_predictions = []
+            # Go through each member in the ensemble and obtain a classification prediction
             for i in range(pl_module.num_models):
                 logits = pl_module.class_forward(img, i)
                 predictions = F.softmax(logits,dim=1)
                 
 
                 model_predictions.append(predictions)
-                
+            # Join the predictions from the models togehter for a particular back of data points    
             model_predictions = torch.stack(model_predictions) # shape (Num models, batch, num classes)
             all_predictions.append(model_predictions)
 
-
+        # concatenate all the batches to get all the predictions
         all_predictions = torch.cat(all_predictions, dim=1)
         return all_predictions
                 
@@ -101,11 +102,18 @@ class ConfusionLogProbability(pl.Callback):
         predictions = torch.mean(predictions, dim=0) # shape (datasize, total classes)
         inlier_predictions = predictions[:,0:inlier_clases] # Predictions for inlier classes only shape (datasize, num_inlier_class)
         
-        # Perfrom summation over all inlier classes, then calculate the mean and the log
+        classwise_CLP = torch.log(torch.mean(inlier_predictions,dim=0))    # calculate mean of data samples and calculate he log
+        #
+        #import ipdb; ipdb.set_trace()
+        ## Perfrom summation over all inlier classes, then calculate the mean and the log
+        
+
         CLP = torch.sum(inlier_predictions, dim=1)
         CLP = torch.log(torch.mean(CLP))
         
         wandb.run.summary['Confusion Log Probability'] = CLP
+        # Need to change the tensor to cpu first to log the tensor value
+        wandb.run.summary['Class wise CLP'] = classwise_CLP.cpu()
         
         '''
         CLP = torch.mean(inlier_predictions)
