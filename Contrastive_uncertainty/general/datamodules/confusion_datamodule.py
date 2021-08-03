@@ -1,3 +1,4 @@
+from typing import List
 from pytorch_lightning.core import datamodule
 from Contrastive_uncertainty.general.train.train_general import train
 from pytorch_lightning.utilities import seed
@@ -122,7 +123,12 @@ class ConfusionDatamodule(LightningDataModule):
     # OOD dataset with labels which are changed in order to calculate the confusion log probability
     def setup_ood_test(self):
         self.ood_dataset = copy.deepcopy(self.OOD_Datamodule.test_dataset)
-        self.ood_dataset.targets = self.ood_dataset.targets + self.ID_Datamodule.num_classes 
+        if isinstance(self.ood_dataset.targets, List):
+            self.ood_dataset.targets = torch.tensor(self.ood_dataset.targets)
+
+
+
+        self.ood_dataset.targets = self.ID_Datamodule.num_classes + self.ood_dataset.targets
         
 
 
@@ -135,16 +141,47 @@ class ConfusionDatamodule(LightningDataModule):
         #OOD_dataset.targets = self.ID_Datamodule.num_classes + OOD_dataset.targets
         ID_data = copy.deepcopy(ID_dataset)
         OOD_data = copy.deepcopy(OOD_dataset)
-        if isinstance(OOD_dataset, Subset):
-            OOD_data.dataset.targets = self.ID_Datamodule.num_classes + OOD_data.dataset.targets  
+        if isinstance(ID_data, Subset):
+            # Hack to make to a tensor
+            if isinstance(ID_data.dataset.targets, List):
+                ID_data.dataset.targets = torch.tensor(ID_data.dataset.targets)
+
         else:
-            OOD_data.targets = self.ID_Datamodule.num_classes + OOD_data.targets  
+            if isinstance(ID_data.targets, List):
+                ID_data.targets = torch.tensor(ID_data.targets)
+
+        if isinstance(OOD_data, Subset):
+            # Hack to make to a tensor
+            if isinstance(OOD_data.dataset.targets, List):
+                OOD_data.dataset.targets = torch.tensor(OOD_data.dataset.targets)
+
+
+            OOD_data.dataset.targets = self.ID_Datamodule.num_classes + OOD_data.dataset.targets
+        else:
+            if isinstance(OOD_data.targets, List):
+                OOD_data.targets = torch.tensor(OOD_data.targets)
+
+            OOD_data.targets = self.ID_Datamodule.num_classes + OOD_data.targets
 
         datasets = [ID_data, OOD_data]
-    
+        #import ipdb; ipdb.set_trace()
         concat_datasets = torch.utils.data.ConcatDataset(datasets)
         
         return concat_datasets
+    # Processing before concatenation of the data    
+    def dataprocessing(self,data):
+        if isinstance(data, Subset):
+            # Hack to make to a tensor
+            if isinstance(data.dataset.targets, List):
+                data.dataset.targets = torch.tensor(data.dataset.targets)
+
+        else:
+            if isinstance(data.targets, List):
+                data.targets = torch.tensor(data.targets)
+        
+        return data
+
+
 
     def train_dataloader(self):
         '''returns training dataloader'''
