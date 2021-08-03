@@ -5,7 +5,7 @@ from Contrastive_uncertainty.general.datamodules.dataset_normalizations import c
     cifar100_normalization, fashionmnist_normalization, mnist_normalization, kmnist_normalization,\
     svhn_normalization, stl10_normalization, emnist_normalization
     
-
+import torch
 
 from PIL import ImageFilter
 from torchvision import transforms
@@ -413,7 +413,29 @@ def dataset_with_indices(cls):
     
     return type(cls.__name__, (cls,), {
         '__getitem__': __getitem__,
-    }) 
+    })
+
+    '''type(name,bases,dict)
+    name is the name of the class which corresponds to the __name__ attribute__
+    bases: tupe of clases from which corresponds to the __bases__ attribute
+    '''
+
+#https://discuss.pytorch.org/t/how-to-retrieve-the-sample-indices-of-a-mini-batch/7948/18
+def dataset_with_indices_SVHN(cls):
+    """
+    Modifies the given Dataset class to return a tuple data, target, index
+    instead of just data, target.
+    """
+    #import ipdb; ipdb.set_trace()
+    def __getitem__(self, index):
+        
+        data, target = cls.__getitem__(self, index)
+        return data, torch.tensor(target), index
+    
+    return type(cls.__name__, (cls,), {
+        '__getitem__': __getitem__,
+    })
+
     '''type(name,bases,dict)
     name is the name of the class which corresponds to the __name__ attribute__
     bases: tupe of clases from which corresponds to the __bases__ attribute

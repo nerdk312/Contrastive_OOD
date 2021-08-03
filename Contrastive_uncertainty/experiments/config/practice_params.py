@@ -14,7 +14,7 @@ emb_dim = 128,
 instance_encoder = 'resnet18',
 bsz = 64,
 dataset = 'CIFAR100',
-OOD_dataset = ['CIFAR10'],
+OOD_dataset = ['SVHN'],
 #OOD_dataset = ['SVHN','CIFAR10'],
 pretrained_network = None,
 

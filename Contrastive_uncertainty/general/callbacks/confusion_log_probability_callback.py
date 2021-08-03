@@ -110,11 +110,14 @@ class ConfusionLogProbability(pl.Callback):
 
         CLP = torch.sum(inlier_predictions, dim=1)
         CLP = torch.log(torch.mean(CLP))
+        min_classwise_CLP = torch.min(classwise_CLP)
+        max_classwise_CLP = torch.max(classwise_CLP)
         
         wandb.run.summary['Confusion Log Probability'] = CLP
         # Need to change the tensor to cpu first to log the tensor value
-        wandb.run.summary['Class wise CLP'] = classwise_CLP.cpu()
-        
+        wandb.run.summary['Class Wise CLP'] = classwise_CLP.cpu()
+        wandb.run.summary['Min Class Wise CLP'] = min_classwise_CLP
+        wandb.run.summary['Max Class Wise CLP'] = max_classwise_CLP
         '''
         CLP = torch.mean(inlier_predictions)
         '''

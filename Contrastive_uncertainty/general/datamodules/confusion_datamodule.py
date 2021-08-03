@@ -22,8 +22,7 @@ import numpy as np
 from math import ceil, floor
 
 
-from Contrastive_uncertainty.general.datamodules.datamodule_transforms import CustomTensorDataset
-from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.general.datamodules.datamodule_transforms import CustomTensorDataset,dataset_with_indices, dataset_with_indices_SVHN
 
 from Contrastive_uncertainty.general.datamodules.mnist_datamodule import MNISTDataModule
 from Contrastive_uncertainty.general.datamodules.fashionmnist_datamodule import FashionMNISTDataModule
@@ -43,12 +42,22 @@ class ConfusionDatamodule(LightningDataModule):
 
         # Update the OOD transforms with the transforms of the ID datamodule
         self.OOD_Datamodule = OOD_Datamodule
-        self.OOD_Datamodule.DATASET_with_indices = dataset_with_indices(OOD_Datamodule.DATASET)
+        
+        # Hack to make SVHN dataset work for the task
+        if self.OOD_Datamodule.name =='svhn':
+            self.OOD_Datamodule.DATASET_with_indices = dataset_with_indices_SVHN(OOD_Datamodule.DATASET)
+        else:
+            self.OOD_Datamodule.DATASET_with_indices = dataset_with_indices(OOD_Datamodule.DATASET)
         self.OOD_Datamodule.train_transforms = train_transforms
         self.OOD_Datamodule.test_transforms = test_transforms
         # Resets the OOD datamodules with the specific transforms of interest required
         self.OOD_Datamodule.setup()
-        
+        '''
+        loader = self.OOD_Datamodule.train_dataloader()
+        for i in loader:
+            print(i)
+            import ipdb; ipdb.set_trace()
+        '''
         self.seed = seed
 
     @property
@@ -129,7 +138,7 @@ class ConfusionDatamodule(LightningDataModule):
 
 
         self.ood_dataset.targets = self.ID_Datamodule.num_classes + self.ood_dataset.targets
-        
+        self.ood_dataset.labels = self.ood_dataset.targets 
 
 
     # Function used to combine the data
@@ -141,6 +150,7 @@ class ConfusionDatamodule(LightningDataModule):
         #OOD_dataset.targets = self.ID_Datamodule.num_classes + OOD_dataset.targets
         ID_data = copy.deepcopy(ID_dataset)
         OOD_data = copy.deepcopy(OOD_dataset)
+
         if isinstance(ID_data, Subset):
             # Hack to make to a tensor
             if isinstance(ID_data.dataset.targets, List):
@@ -149,7 +159,7 @@ class ConfusionDatamodule(LightningDataModule):
         else:
             if isinstance(ID_data.targets, List):
                 ID_data.targets = torch.tensor(ID_data.targets)
-
+        
         if isinstance(OOD_data, Subset):
             # Hack to make to a tensor
             if isinstance(OOD_data.dataset.targets, List):
@@ -157,18 +167,22 @@ class ConfusionDatamodule(LightningDataModule):
 
 
             OOD_data.dataset.targets = self.ID_Datamodule.num_classes + OOD_data.dataset.targets
+            OOD_data.dataset.labels = OOD_data.dataset.targets 
         else:
             if isinstance(OOD_data.targets, List):
                 OOD_data.targets = torch.tensor(OOD_data.targets)
 
             OOD_data.targets = self.ID_Datamodule.num_classes + OOD_data.targets
+            OOD_data.labels = OOD_data.targets
 
         datasets = [ID_data, OOD_data]
         #import ipdb; ipdb.set_trace()
         concat_datasets = torch.utils.data.ConcatDataset(datasets)
-        
+
+        #import ipdb; ipdb.set_trace()
         return concat_datasets
-    # Processing before concatenation of the data    
+    
+    # Processing before concatenation of the data    (Currently not used but can be used)
     def dataprocessing(self,data):
         if isinstance(data, Subset):
             # Hack to make to a tensor
@@ -186,7 +200,7 @@ class ConfusionDatamodule(LightningDataModule):
     def train_dataloader(self):
         '''returns training dataloader'''
         train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last = True,num_workers = 8)
-        
+        import ipdb; ipdb.set_trace()
         return train_loader
     
     def deterministic_train_dataloader(self):

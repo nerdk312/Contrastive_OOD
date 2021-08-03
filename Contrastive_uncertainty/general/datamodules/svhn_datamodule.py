@@ -14,7 +14,7 @@ from torchvision import transforms as transform_lib
 from torchvision.datasets import SVHN
 
 from Contrastive_uncertainty.general.datamodules.dataset_normalizations import svhn_normalization
-from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices
+from Contrastive_uncertainty.general.datamodules.datamodule_transforms import dataset_with_indices, dataset_with_indices_SVHN
 
 
 
@@ -70,6 +70,7 @@ class SVHNDataModule(LightningDataModule):
         self.dims = (3, 32, 32)
         self.DATASET = SVHN
         self.DATASET_with_indices = dataset_with_indices(self.DATASET)
+        #self.DATASET_with_indices = dataset_with_indices_SVHN(self.DATASET)
         self.val_split = val_split
         self.num_workers = num_workers
         self.batch_size = batch_size
