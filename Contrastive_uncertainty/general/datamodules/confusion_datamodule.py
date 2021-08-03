@@ -42,7 +42,7 @@ class ConfusionDatamodule(LightningDataModule):
 
         # Update the OOD transforms with the transforms of the ID datamodule
         self.OOD_Datamodule = OOD_Datamodule
-        
+
         # Hack to make SVHN dataset work for the task
         if self.OOD_Datamodule.name =='svhn':
             self.OOD_Datamodule.DATASET_with_indices = dataset_with_indices_SVHN(OOD_Datamodule.DATASET)
@@ -150,7 +150,22 @@ class ConfusionDatamodule(LightningDataModule):
         #OOD_dataset.targets = self.ID_Datamodule.num_classes + OOD_dataset.targets
         ID_data = copy.deepcopy(ID_dataset)
         OOD_data = copy.deepcopy(OOD_dataset)
+        
+        # Preprocesses the ID and OOD data so they can be concatenate
+        ID_data = self.dataprocessing(ID_data)
+        OOD_data = self.dataprocessing(OOD_data)
+        
+        if isinstance(OOD_data, Subset):
+            OOD_data.dataset.targets = self.ID_Datamodule.num_classes + OOD_data.dataset.targets
+            # Required for SVHN
+            OOD_data.dataset.labels = OOD_data.dataset.targets
 
+        else:
+            OOD_data.targets = self.ID_Datamodule.num_classes + OOD_data.targets
+            # Required for SVHN
+            OOD_data.labels = OOD_data.targets
+        
+        '''
         if isinstance(ID_data, Subset):
             # Hack to make to a tensor
             if isinstance(ID_data.dataset.targets, List):
@@ -174,6 +189,7 @@ class ConfusionDatamodule(LightningDataModule):
 
             OOD_data.targets = self.ID_Datamodule.num_classes + OOD_data.targets
             OOD_data.labels = OOD_data.targets
+        '''
 
         datasets = [ID_data, OOD_data]
         #import ipdb; ipdb.set_trace()
