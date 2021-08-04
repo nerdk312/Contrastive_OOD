@@ -56,7 +56,6 @@ class ConfusionDatamodule(LightningDataModule):
         loader = self.OOD_Datamodule.train_dataloader()
         for i in loader:
             print(i)
-            import ipdb; ipdb.set_trace()
         '''
         self.seed = seed
 
@@ -192,10 +191,8 @@ class ConfusionDatamodule(LightningDataModule):
         '''
 
         datasets = [ID_data, OOD_data]
-        #import ipdb; ipdb.set_trace()
         concat_datasets = torch.utils.data.ConcatDataset(datasets)
 
-        #import ipdb; ipdb.set_trace()
         return concat_datasets
     
     # Processing before concatenation of the data    (Currently not used but can be used)
@@ -216,7 +213,6 @@ class ConfusionDatamodule(LightningDataModule):
     def train_dataloader(self):
         '''returns training dataloader'''
         train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, drop_last = True,num_workers = 8)
-        import ipdb; ipdb.set_trace()
         return train_loader
     
     def deterministic_train_dataloader(self):

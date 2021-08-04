@@ -25,7 +25,6 @@ summary_list, config_list, name_list = [], [], []
 bsz = 10
 # Where to save data for the different runs
 root_dir = 'run_data/'
-total_data_dirs = []
 for i, run in enumerate(runs): 
     # .summary contains the output keys/values for metrics like accuracy.
     summary_list.append(run.summary._json_dict)
@@ -46,20 +45,18 @@ for i, run in enumerate(runs):
     
     # Removes the keys related to the tables images, only retain the Json Files
     keys = [key for key in keys if f'batch size {bsz}' in key.lower()]
-
-    #import ipdb; ipdb.set_trace()
-    
-    data_dirs = [summary_list[i][key]['path'] for key in keys]
-    total_data_dirs.append(data_dirs)
-
-    #print(data_dirs)
-    
-    
+        
     for key in keys:
         
         data_dir = summary_list[i][key]['path'] 
         run_dir = root_dir + run_path
-        
+
+        '''
+        read_dir = run_dir + '/' + data_dir
+        with open(read_dir) as f: 
+            data = json.load(f) 
+        '''
+
         file_data = json.load(run.file(data_dir).download(root=run_dir)) 
     
     
