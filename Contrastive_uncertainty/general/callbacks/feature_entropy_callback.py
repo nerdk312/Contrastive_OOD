@@ -165,11 +165,6 @@ class Feature_Entropy(pl.Callback):
 
 
 
-
-
-
-
-
     def get_eval_results(self, ftrain, labelstrain):
         ftrain_norm = self.normalise(ftrain)
         self.get_marginal_entropy(ftrain,'Marginal Feature Entropy')
