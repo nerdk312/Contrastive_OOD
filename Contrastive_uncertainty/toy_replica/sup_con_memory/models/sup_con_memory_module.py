@@ -81,7 +81,7 @@ class SupConMemoryToy(pl.LightningModule):
         self.queue[:, ptr:ptr + batch_size] = keys.T # Nawid - add the keys to the queue
         
         # replace the label keys at ptr (dequeue and enqueue)
-        self.label_queue[:, ptr:ptr + batch_size] = key_labels
+        self.label_queue[ptr:ptr + batch_size] = key_labels
 
         ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
         self.queue_ptr[0] = ptr
@@ -112,18 +112,19 @@ class SupConMemoryToy(pl.LightningModule):
         q = self.encoder_q(im_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1) # Nawid - normalised query embeddings
 
+        # Obtain the representations and the labels from the queue
         queue_keys, queue_labels = self.queue.clone().detach().T, self.label_queue.clone().detach()
+
+        # Concatenate the momentum encoder outputs
         contrast_features = torch.cat([k,queue_keys],dim=0)
+        # Concatenate the labels from the current iteration and the queue
         contrast_labels = torch.cat([labels,queue_labels],dim=0)
-        self.supervised_contrastive_forward(q,contrast_features, labels, contrast_labels)
+        # Calculate the supervised contrastive loss using the online encoder output, the momentum encoder output and the queue
+        loss = self.supervised_contrastive_forward(q,contrast_features, labels, contrast_labels)
 
-
-
-
-
-    
         self._dequeue_and_enqueue(k,labels) # Nawid - queue values
 
+        return loss 
     def supervised_contrastive_forward(self,anchor_features, contrast_features, anchor_labels, contrast_labels, mask = None):
         """Compute loss for model. If both `labels` and `mask` are None,
         it degenerates to SimCLR unsupervised loss:
@@ -152,7 +153,32 @@ class SupConMemoryToy(pl.LightningModule):
         logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
         logits = anchor_dot_contrast - logits_max.detach()
 
+        # Nawid - logits mask is values of 0s and 1 in the same shape as the mask, it has values of 0 along the diagonal and 1 elsewhere, where the 0s are used to mask out self contrast cases
+        logits_mask = torch.scatter(
+            torch.ones_like(mask),
+            1,
+            torch.arange(anchor_bsz).view(-1, 1).to(self.device),
+            0
+        )
 
+        # Nawid - updates mask to remove self contrast examples
+        mask = mask * logits_mask
+
+        # compute log_prob
+        # Nawid- exponentiate the logits and turn the logits for the self-contrast cases to zero
+        exp_logits = torch.exp(logits) * logits_mask
+
+        # Nawid - subtract the value for all the values along the dimension
+        log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
+
+        # compute mean of log-likelihood over positive
+        # Nawid - mask out all valeus which are zero, then calculate the sum of values along that dimension and then divide by sum
+        mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
+        loss = - (self.hparams.softmax_temperature / 0.07) * mean_log_prob_pos
+        loss = loss.view(1, anchor_bsz).mean()
+        
+        return loss
+        
         
 
     def callback_vector(self, x): # vector for the representation before using separate branches for the task
@@ -176,7 +202,7 @@ class SupConMemoryToy(pl.LightningModule):
 
     def coarse_vector(self, x):
         z = self.callback_vector(x)
-        return 
+        return z 
         
     
 
@@ -188,19 +214,8 @@ class SupConMemoryToy(pl.LightningModule):
         if isinstance(labels, tuple) or isinstance(labels, list):
             labels, *coarse_labels = labels
 
-        self(img_1, img_2,labels)
-
-
-
-        imgs = torch.cat([img_1, img_2], dim=0)
-        bsz = labels.shape[0]
-        features = self.encoder(imgs)
-        features = nn.functional.normalize(features, dim=1)
-        ft_1, ft_2 = torch.split(features, [bsz, bsz], dim=0)
-        features = torch.cat([ft_1.unsqueeze(1), ft_2.unsqueeze(1)], dim=1)
-        loss = self(features, labels) #  forward pass of the model
+        loss = self(img_1, img_2, labels)
         metrics = {'Loss': loss}
-        
         return metrics
 
 

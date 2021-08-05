@@ -16,8 +16,8 @@ typicality_bootstrap = 50,
 typicality_batch = 25,
 
 
-
-callbacks =['Visualisation'],
+callbacks = ['Confusion Log Probability'],
+#callbacks =['Visualisation'],
 # Updating for the test run
 #OOD_dataset = ['TwoMoons','Diagonal'],
 #callbacks =['Mahalanobis'],
