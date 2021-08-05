@@ -1,4 +1,5 @@
 from numpy.core.numeric import indices
+from numpy.lib.ufunclike import isposinf
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -118,16 +119,61 @@ class Feature_Entropy(pl.Callback):
         return ftrain
     
     
-    def get_entropy(self, ftrain, labelstrain):
+    def get_marginal_entropy(self, ftrain, marginal_wandb_name):
+        # Calculate the mean along the feature dimension
+        feature_mean = np.mean(ftrain,axis=0)
+        feature_std = np.std(ftrain,axis=0)
+        
+        marginal_feature_entropy = {'Dimension': [], 'Entropy (Nats)': []}
+        
+        for i in range(len(feature_mean)):
+            m = torch.distributions.normal.Normal(torch.tensor([feature_mean[i]]),torch.tensor([feature_std[i]])) 
+            entropy_value = m.entropy().item() # Get as a scalar rather than tensor oject
+            marginal_feature_entropy['Dimension'].append(i)
+            marginal_feature_entropy['Entropy (Nats)'].append(round(entropy_value,3))
+
+        table_df = pd.DataFrame(marginal_feature_entropy)
+        marginal_entropy_table = wandb.Table(dataframe = table_df)
+        
+        wandb.log({marginal_wandb_name: marginal_entropy_table})
+
+    def get_conditional_entropy(self, ftrain, labelstrain, conditional_wandb_name):
+        xc = [ftrain[labelstrain==i] for i in np.unique(labelstrain)]
+        class_feature_means = [np.mean(xc[i],axis=0) for i in np.unique(labelstrain)]
+        class_feature_std = [np.std(xc[i],axis=0) for i in np.unique(labelstrain)]
+        dimensionality = len(class_feature_means[0])
+        num_classes = len(xc)
+
+        conditional_feature_entropy = {'Dimension':[], 'Entropy (Nats)': []}
+        # Go through the different dimensions of the data
+        for i in range(dimensionality):
+            # Go through the different classes
+            all_class_specific_entropy = []
+            for j in range(num_classes):
+                m = torch.distributions.normal.Normal(torch.tensor([class_feature_means[j][i]]),torch.tensor([class_feature_std[j][i]]))
+                class_specific_entropy = m.entropy().item()
+                all_class_specific_entropy.append(class_specific_entropy)
+            
+            average_class_specific_entropy = np.mean(all_class_specific_entropy)
+            conditional_feature_entropy['Dimension'].append(i)
+            conditional_feature_entropy['Entropy (Nats)'].append(round(average_class_specific_entropy,3))
+
+        table_df = pd.DataFrame(conditional_feature_entropy)
+        conditional_entropy_table = wandb.Table(dataframe = table_df)
+        
+        wandb.log({conditional_wandb_name: conditional_entropy_table})
 
 
 
-     def get_eval_results(self,ftrain,labelstrain):
-        """
-            None.
-        """
+
+
+
+
+
+    def get_eval_results(self, ftrain, labelstrain):
         ftrain_norm = self.normalise(ftrain)
-        self.get_entropy(ftrain,labelstrain)
+        self.get_marginal_entropy(ftrain,'Marginal Feature Entropy')
+        self.get_conditional_entropy(ftrain,labelstrain, 'Class Conditional Feature Entropy')
     
 
         

@@ -441,6 +441,7 @@ class Typicality_OVR_diff_bsz(Typicality_OVR):
         
         table_df = pd.DataFrame(table_data)
         ood_table = wandb.Table(dataframe=table_df)
+        #import ipdb; ipdb.set_trace()
         wandb.log({wandb_name: ood_table})
 
 

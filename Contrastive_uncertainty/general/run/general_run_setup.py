@@ -25,7 +25,7 @@ from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_
 
 from Contrastive_uncertainty.general.callbacks.confusion_log_probability_callback import ConfusionLogProbability
 from Contrastive_uncertainty.general.callbacks.bottom_k_mahalanobis_callback import Bottom_K_Mahalanobis, Bottom_K_Mahalanobis_Difference
-#from Contrastive_uncertainty.general.callbacks.feature_entropy_callback import Feature_Entropy
+from Contrastive_uncertainty.general.callbacks.feature_entropy_callback import Feature_Entropy
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -121,7 +121,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Bottom K Mahalanobis Difference OOD {ood_dataset}': Bottom_K_Mahalanobis_Difference(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,k_values = 3),
                 
 
-                #f'Feature Entropy': Feature_Entropy(Datamodule,OOD_Datamodule,quick_callback),
+                f'Feature Entropy': Feature_Entropy(Datamodule,OOD_Datamodule,quick_callback),
                 f'Confusion Log Probability': ConfusionLogProbability(Datamodule,quick_callback),
 
 
