@@ -2,6 +2,8 @@
 from Contrastive_uncertainty.toy_replica.cross_entropy.config.cross_entropy_params import cross_entropy_hparams
 from Contrastive_uncertainty.toy_replica.moco.config.moco_params import moco_hparams
 from Contrastive_uncertainty.toy_replica.sup_con.config.sup_con_params import sup_con_hparams
+from Contrastive_uncertainty.toy_replica.sup_con_memory.config.sup_con_memory_params import sup_con_memory_hparams
+
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.config.hsup_con_bu_params import hsup_con_bu_hparams
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.config.hsup_con_td_params import hsup_con_td_hparams
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.config.hsup_con_bu_centroid_params import hsup_con_bu_centroid_hparams
@@ -12,6 +14,7 @@ from Contrastive_uncertainty.toy_replica.ensemble.config.cross_entropy_ensemble_
 from Contrastive_uncertainty.toy_replica.cross_entropy.models.cross_entropy_module import CrossEntropyToy
 from Contrastive_uncertainty.toy_replica.moco.models.moco_module import MocoToy
 from Contrastive_uncertainty.toy_replica.sup_con.models.sup_con_module import SupConToy
+from Contrastive_uncertainty.toy_replica.sup_con_memory.models.sup_con_memory_module import SupConMemoryToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_module import HSupConBUToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_module import HSupConTDToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_module import HSupConBUCentroidToy
@@ -22,6 +25,7 @@ from Contrastive_uncertainty.toy_replica.ensemble.models.cross_entropy_ensemble_
 from Contrastive_uncertainty.toy_replica.cross_entropy.models.cross_entropy_model_instance import ModelInstance as CEModelInstance
 from Contrastive_uncertainty.toy_replica.moco.models.moco_model_instance import ModelInstance as MocoModelInstance
 from Contrastive_uncertainty.toy_replica.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
+from Contrastive_uncertainty.toy_replica.sup_con_memory.models.sup_con_memory_model_instance import ModelInstance as SupConMemoryModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_model_instance import ModelInstance as HSupConBUModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_model_instance import ModelInstance as HSupConTDModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu_centroid.models.hsup_con_bu_centroid_model_instance import ModelInstance as HSupConBUCentroidModelInstance
@@ -39,9 +43,10 @@ from Contrastive_uncertainty.general.train.train_general_confusion import train 
 def train(base_dict):   
     # Actively choose which modeles to choose in the acceptable models 
     acceptable_single_models = ['Baselines',
-    'CE',
+    #'CE',
     #'Moco',
     #'SupCon',
+    'SupConMemory',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -62,6 +67,9 @@ def train(base_dict):
                     'SupCon':{'params':sup_con_hparams,'model_module':SupConToy, 
                     'model_instance':SupConModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
                     
+                    'SupConMemory':{'params':sup_con_memory_hparams,'model_module':SupConMemoryToy, 
+                    'model_instance':SupConMemoryModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
+
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUToy, 
                     'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training,'data_dict': general_dataset_dict},
 
