@@ -13,8 +13,8 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet18',
 bsz = 64,
-dataset = 'CIFAR100',
-OOD_dataset = ['SVHN'],
+dataset = 'MNIST',
+#OOD_dataset = ['SVHN'],
 #OOD_dataset = ['SVHN','CIFAR10'],
 pretrained_network = None,
 
@@ -84,8 +84,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Practice'],
 #callbacks = ['General Scores'],
 #callbacks = ['Marginal Typicality OOD'],
-callbacks = ['Confusion Log Probability','Model_saving'],
-
+#callbacks = ['Confusion Log Probability','Model_saving'],
+callbacks = [],
 #callbacks = ['Practice Hierarchical scores'],
 # Either goes through all the models or goes through baselines
 

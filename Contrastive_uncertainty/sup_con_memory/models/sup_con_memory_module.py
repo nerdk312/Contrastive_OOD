@@ -1,13 +1,15 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import wandb
 import pytorch_lightning as pl
-from Contrastive_uncertainty.toy_replica.sup_con.models.encoder_model import Backbone
+import torch
+import torch.nn.functional as F
+from torch import nn
+import torchvision
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.loggers import WandbLogger
 
+from Contrastive_uncertainty.sup_con.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 
-
-
-class SupConMemoryToy(pl.LightningModule):
+class SupConMemoryModule(pl.LightningModule):
     def __init__(self,
         emb_dim: int = 128,
         contrast_mode:str = 'one',
@@ -19,8 +21,10 @@ class SupConMemoryToy(pl.LightningModule):
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
-        pretrained_network:str = None
+        instance_encoder:str = 'resnet50',
+        pretrained_network:str = None,
         ):
+
         super().__init__()
         # Nawid - required to use for the fine tuning
         self.save_hyperparameters()
@@ -37,7 +41,7 @@ class SupConMemoryToy(pl.LightningModule):
             param_k.data.copy_(param_q.data)  # initialize
             param_k.requires_grad = False  # not update by gradient
 
-        
+
         # create the queue
         self.register_buffer("queue", torch.randn(emb_dim, num_negatives))
         self.queue = nn.functional.normalize(self.queue, dim=0)
@@ -47,6 +51,10 @@ class SupConMemoryToy(pl.LightningModule):
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
 
+        '''  
+        if self.hparams.pretrained_network is not None:
+            self.encoder_loading(self.hparams.pretrained_network)
+        '''
     @property
     def name(self):
         ''' return name of model'''
@@ -56,10 +64,18 @@ class SupConMemoryToy(pl.LightningModule):
         """
         Override to add your own encoders
         """
-        encoder_q = Backbone(20, self.hparams.emb_dim)
-        encoder_k = Backbone(20, self.hparams.emb_dim)
+        if self.hparams.instance_encoder == 'resnet18':
+            print('using resnet18')
+            encoder_q = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+        elif self.hparams.instance_encoder =='resnet50':
+            print('using resnet50')
+            encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+        
         return encoder_q, encoder_k
 
+    
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
         """
@@ -69,7 +85,7 @@ class SupConMemoryToy(pl.LightningModule):
             em = self.hparams.encoder_momentum
             param_k.data = param_k.data * em + param_q.data * (1. - em)
 
-    
+
     @torch.no_grad()
     def _dequeue_and_enqueue(self, keys, key_labels):
         # gather keys before updating queue
@@ -86,6 +102,30 @@ class SupConMemoryToy(pl.LightningModule):
         ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
         self.queue_ptr[0] = ptr
     
+
+    
+    def callback_vector(self, x): # vector for the representation before using separate branches for the task
+        """
+        Input:
+            x: a batch of images for classification
+        Output:
+            z: latent vector
+        """
+        z = self.encoder(x)
+        z = nn.functional.normalize(z, dim=1)
+        return z
+    
+    def instance_vector(self, x):
+        z = self.callback_vector(x)
+        return z
+   
+    def fine_vector(self, x):
+        z = self.callback_vector(x)
+        return z
+
+    def coarse_vector(self, x):
+        z = self.callback_vector(x)
+        return z
 
     def forward(self,im_q, im_k, labels):
         """
@@ -120,6 +160,7 @@ class SupConMemoryToy(pl.LightningModule):
         self._dequeue_and_enqueue(k,labels) # Nawid - queue values
 
         return loss 
+    
     def supervised_contrastive_forward(self,anchor_features, contrast_features, anchor_labels, contrast_labels, mask = None):
         """Compute loss for model. If both `labels` and `mask` are None,
         it degenerates to SimCLR unsupervised loss:
@@ -173,33 +214,6 @@ class SupConMemoryToy(pl.LightningModule):
         loss = loss.view(1, anchor_bsz).mean()
         
         return loss
-        
-        
-
-    def callback_vector(self, x): # vector for the representation before using separate branches for the task
-        """
-        Input:
-            x: a batch of images for classification
-        Output:
-            z: latent vector
-        """
-        z = self.encoder_k(x)
-        z = nn.functional.normalize(z, dim=1)
-        return z
-    
-    def instance_vector(self, x):
-        z = self.callback_vector(x)
-        return z
-   
-    def fine_vector(self, x):
-        z = self.callback_vector(x)
-        return z
-
-    def coarse_vector(self, x):
-        z = self.callback_vector(x)
-        return z 
-        
-    
 
 
 
@@ -212,9 +226,6 @@ class SupConMemoryToy(pl.LightningModule):
         loss = self(img_1, img_2, labels)
         metrics = {'Loss': loss}
         return metrics
-
-
-
 
     def training_step(self, batch, batch_idx):
         metrics = self.loss_function(batch)
