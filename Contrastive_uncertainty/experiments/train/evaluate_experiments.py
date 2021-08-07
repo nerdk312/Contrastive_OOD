@@ -116,7 +116,7 @@ def evaluate(run_paths,update_dict):
                     'model_instance':VAEModelInstance,'evaluate':general_evaluation,
                     'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
 
-                    'CE_Ensemble': {'params':cross_entropy_ensemble_hparams,'model_module':CrossEntropyEnsembleModule, 
+                    'CEEnsemble': {'params':cross_entropy_ensemble_hparams,'model_module':CrossEntropyEnsembleModule, 
                     'model_instance':CEEnsembleModelInstance, 'evaluate':general_confusion_evaluation, 
                     'data_dict':general_dataset_dict, 'ood_dict':general_OOD_dict},
     }   

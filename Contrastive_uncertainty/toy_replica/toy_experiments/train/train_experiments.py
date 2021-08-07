@@ -43,10 +43,10 @@ from Contrastive_uncertainty.general.train.train_general_confusion import train 
 def train(base_dict):   
     # Actively choose which modeles to choose in the acceptable models 
     acceptable_single_models = ['Baselines',
-    #'CE',
+    'CE',
     #'Moco',
     #'SupCon',
-    'SupConMemory',
+    #'SupConMemory',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
