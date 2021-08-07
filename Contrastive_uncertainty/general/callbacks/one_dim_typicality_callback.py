@@ -52,21 +52,35 @@ class One_Dim_Typicality(pl.Callback):
 
     def forward_callback(self, trainer, pl_module):
         train_loader = self.Datamodule.deterministic_train_dataloader()
+        val_loader = self.Datamodule.val_dataloader()
+        # Use the test transform validataion loader
+        if isinstance(val_loader, tuple) or isinstance(val_loader, list):
+                    _, val_loader = val_loader
+                
         test_loader = self.Datamodule.test_dataloader()
         ood_loader = self.OOD_Datamodule.test_dataloader()
 
         # Obtain representations of the data
         features_train, labels_train = self.get_features(pl_module, train_loader)
+        features_val, labels_val = self.get_features(pl_module,val_loader)
         features_test, labels_test = self.get_features(pl_module, test_loader)
         features_ood, labels_ood = self.get_features(pl_module, ood_loader)
         
-        self.get_eval_results(
+        dtest, dood, indices_dtest, indices_dood = self.get_eval_results(
             np.copy(features_train),
+            np.copy(features_val),
             np.copy(features_test),
             np.copy(features_ood),
-            np.copy(labels_train))
+            np.copy(labels_train),
+            np.copy(labels_val))
         
-    
+        auroc = get_roc_sklearn(dtest, dood)
+        test_accuracy = self.mahalanobis_classification(dtest,labels_test)
+
+        wandb.run.summary[f'1D Typicality AUROC OOD {self.OOD_dataname}'] = auroc
+        wandb.run.summary[f'1D Typicality Classification'] = test_accuracy
+
+
     def get_features(self, pl_module, dataloader):
         features, labels = [], []
         
@@ -94,10 +108,14 @@ class One_Dim_Typicality(pl.Callback):
         return np.array(features), np.array(labels)
 
     
-    def get_scores(self, ftrain, ftest, food, ypred):
+    def get_scores(self, ftrain,fval, ftest, food, ypred,y_val_pred):
         # Nawid - get all the features which belong to each of the different classes
         xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
         
+        # class wise validataion data
+        xc_val = [fval[y_val_pred ==i] for i in np.unique(y_val_pred)]
+
+
         cov = [np.cov(x.T, bias=True) for x in xc] # Cov and means part should be fine
         means = [np.mean(x,axis=0,keepdims=True) for x in xc] # Calculates mean from (B,embdim) to (1,embdim)
         
@@ -119,11 +137,19 @@ class One_Dim_Typicality(pl.Callback):
         
         # I believe the first din is the list of size class, where each entry is a vector of size (emb dim, batch) where each entry of the embed dim is the 1 dimensional mahalanobis distance along that dimension, so a vector of (embdim,1) represents the mahalanobis distance of each of the n dimensions for that particular data point
 
+        '''Get entropy based on training data (or could get entropy using the validation data)
         # This gets the class scores for the case where there are different values present
         dtrain_class = [np.matmul(eigvectors[class_num].T,(xc[class_num] - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(cov))]
 
         # Calculate the average 1 dimensional entropy for each different classes
         one_dim_class_entropy = [-np.mean(0.5*(dtrain_class[class_num]**2),axis= 1,keepdims=True) for class_num in range(len(cov))]
+        '''
+
+        # This gets the class scores for the case where there are different values present
+        dval_class = [np.matmul(eigvectors[class_num].T,(xc_val[class_num] - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(cov))]
+
+        # Calculate the average 1 dimensional entropy for each different classes
+        one_dim_class_entropy = [-np.mean(0.5*(dval_class[class_num]**2),axis= 1,keepdims=True) for class_num in range(len(cov))]
         
         # Calculate the average 1 dimensional mahalanobis scores for each different class
         #dtrain_class = [np.mean(dtrain_class[class_num],axis= 1) for class_num in range(len(cov))]
@@ -135,6 +161,8 @@ class One_Dim_Typicality(pl.Callback):
         one_dim_class_nll_din = [-0.5*(din[class_num]**2) for class_num in range(len(cov))]
         # calculate  absolute deviation of scores from entropy (as well as the sum for each dimension)
         total_absolute_distance_din  = [np.sum(np.abs(one_dim_class_nll_din[class_num] - one_dim_class_entropy[class_num]),axis=0) for class_num in range(len(cov))]
+        
+        indices_din = np.argmin(total_absolute_distance_din,axis=0)
          # Find min along the class dimension, so this finds the lowest 1 dimensional mahalanobis distance among the different classes for the different data points
         total_absolute_distance_din = np.min(total_absolute_distance_din,axis=0) # shape (num_data_points)
         
@@ -145,34 +173,21 @@ class One_Dim_Typicality(pl.Callback):
         one_dim_class_nll_dood = [-0.5*(dood[class_num]**2) for class_num in range(len(cov))]
         # calculate  absolute deviation of scores from entropy (as well as the sum for each dimension)
         total_absolute_distance_dood  = [np.sum(np.abs(one_dim_class_nll_dood[class_num] - one_dim_class_entropy[class_num]),axis=0) for class_num in range(len(cov))]
-         # Find min along the class dimension, so this finds the lowest 1 dimensional mahalanobis distance among the different classes for the different data points
+        
+        indices_dood = np.argmin(total_absolute_distance_dood,axis=0)
+
+        # Find min along the class dimension, so this finds the lowest 1 dimensional mahalanobis distance among the different classes for the different data points
         total_absolute_distance_dood = np.min(total_absolute_distance_dood,axis=0) # shape (num_data_points)
         
-        return total_absolute_distance_din, total_absolute_distance_dood
-
-
-        
-        dood = [np.matmul(eigvectors[class_num].T,(ftest - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(cov))]
-
-        din = [np.abs(np.matmul(eigvectors[class_num].T,(ftest - means[class_num]).T)**2/eigvalues[class_num]) for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present 
-        # eigenvalues has shape  (128,1) whilst the matrix multiplication term as shape (128,B), therefore the eigenvaleus are broadcast to 128,B
-        din = np.min(din,axis=0) # Find min along the class dimension, so this finds the lowest 1 dimensional mahalanobis distance among the different classes for the different data points
-        din = np.mean(din, axis=1) # Find the mean of all the data points for that particular dimension, din per dimension 
-
-        dood = [np.abs(np.matmul(eigvectors[class_num].T,(food - means[class_num]).T)**2/eigvalues[class_num]) for class_num in range(len(cov))] # Perform the absolute value to prevent issues with the absolute mahalanobis distance being present
-        dood = np.min(dood,axis=0) # Find min along the class dimension
-        dood = np.mean(dood, axis=1) # Find the mean of all the data points, dood per dimension
-        
-        return din, dood
-
+        return total_absolute_distance_din, total_absolute_distance_dood, indices_din, indices_dood
 
     
     # Normalises the data
-    def normalise(self,ftrain, ftest,food):
+    def normalise(self,ftrain,fval, ftest,food):
         # Nawid -normalise the featues for the training, test and ood data
         # standardize data
         ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
-        
+        fval /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
         ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
         food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
         
@@ -180,12 +195,20 @@ class One_Dim_Typicality(pl.Callback):
         m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
         # Nawid - normalise data using the mean and std
         ftrain = (ftrain - m) / (s + 1e-10)
+        fval = (fval - m) / (s + 1e-10)
         ftest = (ftest - m) / (s + 1e-10)
         food = (food - m) / (s + 1e-10)
         
-        return ftrain, ftest, food
+        return ftrain, fval, ftest, food
 
+    # Calaculates the accuracy of a data point based on the closest distance to a centroid
+    def mahalanobis_classification(self,predictions, labels):
+        predictions = torch.tensor(predictions,dtype = torch.long)
+        labels = torch.tensor(labels,dtype = torch.long)
+        mahalanobis_test_accuracy = 100*sum(predictions.eq(labels)) /len(predictions) 
+        return mahalanobis_test_accuracy
     
-    def get_eval_results(self, ftrain, ftest, food, labelstrain):
-        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
-        self.get_scores(ftrain_norm,ftest_norm,food_norm,labelstrain)
+    def get_eval_results(self, ftrain,fval, ftest, food, labelstrain,labelsval):
+        ftrain_norm, fval_norm, ftest_norm, food_norm = self.normalise(ftrain,fval, ftest, food)
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm,fval_norm,ftest_norm,food_norm,labelstrain,labelsval)
+        return dtest, dood, indices_dtest, indices_dood
