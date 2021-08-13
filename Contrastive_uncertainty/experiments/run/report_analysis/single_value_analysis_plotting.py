@@ -19,8 +19,8 @@ api = wandb.Api()
 # Second part used of the filter used for the purpose of an or statement to calculate the different values (Shown in the github link above )
 runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"OOD hierarchy baselines"})
 
-#parameter = 'dists@intra: instance: fine'  
-parameter = 'MMD_distance:instance' #'dists@inter: instance: fine'
+parameter = 'dists@intra: instance: fine'  
+#parameter = 'MMD_distance:instance' #'dists@inter: instance: fine'
 #parameter = 'dists@intra_over_inter: instance: fine'
 # Five different datasets with 3 models
 data_array = np.empty((5,3))
@@ -46,14 +46,25 @@ for i, run in enumerate(runs):
     value = summary_list[i][parameter]
     column = key_dict['model_type'][model_type]
     row = key_dict['dataset'][ID_dataset]
-    data_array[row, column] = np.around(value,decimals=4)
+    data_array[row, column] = np.around(value,decimals=3)
 
 # Obtain the names of the rows and the name of the columns
 column_names = [model for model in key_dict['model_type'].keys()]
 row_names = [dataset for dataset in key_dict['dataset'].keys()]
 data_df = pd.DataFrame(data_array, columns = column_names, index = row_names)
-ax =data_df.plot.bar()
+#ax =data_df.plot.bar()
+
+latex_table = data_df.to_latex()
+latex_table = latex_table.replace('{}','{Dataset}')
+latex_table = latex_table.replace("lrrr","|p{3cm}|c|c|c|")
+latex_table = latex_table.replace(r"\toprule",r"\hline")
+latex_table = latex_table.replace(r"\midrule"," ")
+latex_table = latex_table.replace(r"\bottomrule"," ")
+latex_table = latex_table.replace(r'\\',r'\\ \hline')
+print(latex_table)
+'''
 latex_table = data_df.to_latex()
 print(latex_table)
+'''
 #plt.tight_layout()
 #plt.savefig('MMD.png')

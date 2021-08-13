@@ -30,7 +30,9 @@ runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"OOD hierarc
 
 summary_list, config_list, name_list = [], [], []
 
-data_array = np.zeros((3,5)) # potentially could make the shape (5,3)
+#data_array = np.zeros((3,5)) # potentially could make the shape (5,3)
+data_array = np.zeros((5,3)) # potentially could make the shape (5,3)
+
 
 # Dict to map distances of specific datasets and model types to the data array
 key_dict = {'dataset':{'MNIST':0, 'FashionMNIST':1,'KMNIST':2, 'CIFAR10':3, 'CIFAR100':4},
@@ -64,15 +66,35 @@ for i, run in enumerate(runs):
     mean_distance = mean_vector_calculation(data)
     
     # Choose the row and column of the data based on the specific value present
+    '''
     row = key_dict['model_type'][model_type]
     column = key_dict['dataset'][dataset]
+    '''
+    column = key_dict['model_type'][model_type]
+    row = key_dict['dataset'][dataset]
+    
     data_array[row, column] = mean_distance
 
+'''
 # Calculating the name of the rows and the columns
 column_names =  [dataset for dataset in key_dict['dataset'].keys()] 
 row_names = [model for model in key_dict['model_type'].keys()]
+'''
+row_names =  [dataset for dataset in key_dict['dataset'].keys()] 
+column_names = [model for model in key_dict['model_type'].keys()]
 
 # making the dataframe and with the specified rows and columns, then converting it into a latex table
 mean_vector_df = pd.DataFrame(data_array, columns=column_names,index=row_names)
 latex_table = mean_vector_df.to_latex()
+
+latex_table = latex_table.replace('{}','{Dataset}')
+latex_table = latex_table.replace("lrrr","|p{3cm}|c|c|c|")
+latex_table = latex_table.replace(r"\toprule",r"\hline")
+latex_table = latex_table.replace(r"\midrule"," ")
+latex_table = latex_table.replace(r"\bottomrule"," ")
+#latex_table = latex_table.replace(r"\midrule",r"\hline")
+#latex_table = latex_table.replace(r"\bottomrule",r"\hline")
+#https://stackoverflow.com/questions/24704299/how-to-treat-t-as-a-regular-string-in-python
+
+latex_table = latex_table.replace(r'\\',r'\\ \hline')
 print(latex_table)

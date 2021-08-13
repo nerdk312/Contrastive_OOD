@@ -77,9 +77,22 @@ row_names = []
 # iterate through the ID dataset, and iterate for all the OOD datasets in the ID dataset
 for dataset in key_dict['dataset'].keys():
     for OOD_dataset in dataset_dict[dataset].keys():
-        row_names.append(f'ID: {dataset}, OOD: {OOD_dataset}')
+        row_names.append(f'ID:{dataset}, OOD:{OOD_dataset}')
 
 
 auroc_df = pd.DataFrame(data_array, columns = column_names, index = row_names)
 latex_table = auroc_df.to_latex()
+
+
+# Table post processing
+latex_table = latex_table.replace('{}','{Datasets}')
+latex_table = latex_table.replace("lrrr","|p{3cm}|c|c|c|")
+latex_table = latex_table.replace(r"\toprule",r"\hline")
+latex_table = latex_table.replace(r"\midrule"," ")
+latex_table = latex_table.replace(r"\bottomrule"," ")
+#latex_table = latex_table.replace(r"\midrule",r"\hline")
+#latex_table = latex_table.replace(r"\bottomrule",r"\hline")
+#https://stackoverflow.com/questions/24704299/how-to-treat-t-as-a-regular-string-in-python
+
+latex_table = latex_table.replace(r'\\',r'\\ \hline')
 print(latex_table)
