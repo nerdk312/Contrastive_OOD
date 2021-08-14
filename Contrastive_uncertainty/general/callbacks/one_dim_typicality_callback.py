@@ -312,10 +312,22 @@ class One_Dim_Typicality_Class(pl.Callback):
         din_dood_deviation = [dood_deviation[i] - din_deviation[i] for i in range(len(cov))]
         df = pd.DataFrame(dood_deviation).T # Transpose to get the appropriate rows and columns
         # update the columns of the data
-        df.columns = [f'Class {i}' for i in range(len(cov))]  
-        table = wandb.Table(data=df)
+        columns = [f'Class {i}' for i in range(len(cov))]  
+        df.columns = columns
+        #table = wandb.Table(data=df)
+        #import ipdb; ipdb.set_trace()
+        num_classes = 10
+        xs = list(range(len(df.index)))
+        # Only access first 10 for the purpose of clutter
+        ys = [df[f'Class {class_num}'].tolist() for class_num in range(num_classes)]
         
-        wandb.log({f'Typicality Class Deviation {self.OOD_dataname}':table})
+        wandb.log({f'Typicality Class Deviation {self.OOD_dataname}': wandb.plot.line_series(
+            xs = xs,
+            ys = ys,
+            keys =columns[0:num_classes],
+            title=f'Typicality Class Deviation {self.OOD_dataname}')})
+        #wandb.log({f'Typicality Class Deviation {self.OOD_dataname}':table})
+
         return din_dood_deviation
 
 

@@ -14,7 +14,8 @@ from ood_centroid_analysis import dataset_dict,key_dict, ood_dataset_string
 import matplotlib.pyplot as plt
 
 def feature_entropy_saving():
-
+    #desired_key = 'marginal feature entropy'
+    desired_key = 'class conditional feature entropy'
     api = wandb.Api()
     # Gets the runs corresponding to a specific filter
     # https://github.com/wandb/client/blob/v0.10.31/wandb/apis/public.py
@@ -45,7 +46,7 @@ def feature_entropy_saving():
 
         # .name is the human-readable name of the run.dir
         name_list.append(run.name)
-        keys = [key for key, value in summary_list[i].items() if 'marginal feature entropy' in key.lower()]
+        keys = [key for key, value in summary_list[i].items() if desired_key in key.lower()]
         
         for key in keys:
         
@@ -61,7 +62,8 @@ def feature_entropy_saving():
 
 def feature_entropy_plotting():
     ID = 'CIFAR100'
-    desired_key = 'marginal feature entropy'
+    #desired_key = 'marginal feature entropy'
+    desired_key = 'class conditional feature entropy'
     datadict = {}
     api = wandb.Api()
     # Gets the runs corresponding to a specific filter
@@ -119,7 +121,7 @@ def feature_entropy_plotting():
     plt.plot( 'Dimension', 'Feature Entropy', data=datadict['CE'], marker='', color='red', linewidth=2,label ='CE')
     plt.plot( 'Dimension', 'Feature Entropy', data=datadict['Moco'], marker='', color='olive', linewidth=2,label='Moco')
     plt.plot( 'Dimension', 'Feature Entropy', data=datadict['SupCLR'], marker='', color='skyblue', linewidth=2, linestyle='dashed', label="SupCLR")
-    
+    plt.ylim(-10,0)
     # show legend
     plt.legend()
     plt.savefig(f'{desired_key}_{ID}.png')
