@@ -29,7 +29,7 @@ from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k
 
 
 
-
+# Performs 1 dimensional typicality using a single data point
 class One_Dim_Typicality(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
         quick_callback:bool = True):
@@ -217,7 +217,7 @@ class One_Dim_Typicality(pl.Callback):
 
 
 
-# Version of typicality based approach which does not use the entropy for the calculation
+# Version of typicality based approach which does not use the entropy for the calculation (ORACLE VERSION)
 class One_Dim_Typicality_Class(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
         quick_callback:bool = True):
@@ -386,4 +386,105 @@ class One_Dim_Typicality_Class(pl.Callback):
     def get_eval_results(self, ftrain, ftest, food, labelstrain,labelstest):
         ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
         din_deviation = self.get_scores(ftrain_norm,ftest_norm,food_norm,labelstrain,labelstest)
+        return din_deviation
+
+
+# Used to calculate the 1 dimensional mahalanobis distances to see the difference in performance
+class One_Dim_Typicality_Marginal_Oracle(One_Dim_Typicality_Class):
+    def __init__(self, Datamodule,OOD_Datamodule,
+        quick_callback:bool = True):
+        super().__init__(Datamodule,OOD_Datamodule,quick_callback)
+    
+
+    def forward_callback(self, trainer, pl_module):
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        val_loader = self.Datamodule.val_dataloader()
+        # Use the test transform validataion loader
+        if isinstance(val_loader, tuple) or isinstance(val_loader, list):
+                    _, val_loader = val_loader
+                
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_features(pl_module, test_loader)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
+        
+        self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood))
+
+
+
+    def get_scores(self, ftrain, ftest, food):
+        # Get information related to the train info
+        mean, cov, eigvalues, eigvectors, dtrain = self.get_1d_train(ftrain)
+        # Get the test data for a particular class of the data
+        
+        # Inference
+        # Calculate the scores for the in distribution data
+
+        din = np.matmul(eigvectors.T,(ftest - mean).T)**2/eigvalues  # shape
+        din = np.mean(din,axis= 1)
+
+        # Find the deviation for din and dtrain
+        din_deviation = np.abs(din - dtrain)
+
+
+        dood = np.matmul(eigvectors.T,(food - mean).T)**2/eigvalues  # shape
+        dood = np.mean(dood,axis= 1)
+
+        # Find the deviation for din and dtrain
+        dood_deviation = np.abs(dood - dtrain)
+
+        
+        # Aim to have positive values which means that dood_deviation is larger than din_deviation, which means that din was close to the means of the data
+        din_dood_deviation = dood_deviation - din_deviation
+        df = pd.DataFrame(dood_deviation) # Transpose to get the appropriate rows and columns
+        # update the columns of the data
+        
+        columns = ['1D Deviation']  
+        df.columns = columns
+        #table = wandb.Table(data=df)
+        #import ipdb; ipdb.set_trace()
+        xs = list(range(len(df.index)))
+        # Only access first 10 for the purpose of clutter
+        ys = [df['1D Deviation'].tolist()] 
+
+        wandb.log({f'Typicality Oracle Marginal Deviation {self.OOD_dataname}': wandb.plot.line_series(
+            xs = xs,
+            ys = ys,
+            keys =columns,
+            title=f'Typicality Oracle Marginal Deviation {self.OOD_dataname}')})
+        #wandb.log({f'Typicality Class Deviation {self.OOD_dataname}':table})
+
+        return din_dood_deviation
+
+    
+    def get_1d_train(self, ftrain):
+        # Nawid - get all the features which belong to each of the different classes
+        cov = np.cov(ftrain.T, bias=True) # Cov and means part should be fine
+        mean = np.mean(ftrain,axis=0,keepdims=True) # Calculates mean from (B,embdim) to (1,embdim)
+        
+        eigvalues, eigvectors = np.linalg.eigh(cov)
+        eigvalues = np.expand_dims(eigvalues,axis=1)
+        
+        dtrain = np.matmul(eigvectors.T,(ftrain - mean).T)**2/eigvalues
+        dtrain = np.mean(dtrain,axis= 1)
+        
+        # Value for a particular class
+        # Vector of datapoints(embdim,num_eigenvectors) (each column is eigenvector so the different columns is the number of eigenvectors)
+        # data - means is shape (B, emb_dim), therefore the matrix multiplication needs to be (num_eigenvectors, embdim), (embdim,batch) to give (num eigenvectors, Batch) and then this is divided by (num eigenvectors,1) 
+        # to give (num eigen vectors, batch) different values for 1 dimensional mahalanobis distances 
+        
+        # I believe the first din is the list of size class, where each entry is a vector of size (emb dim, batch) where each entry of the embed dim is the 1 dimensional mahalanobis distance along that dimension, so a vector of (embdim,1) represents the mahalanobis distance of each of the n dimensions for that particular data point
+
+        #Get entropy based on training data (or could get entropy using the validation data)
+        return mean, cov, eigvalues, eigvectors, dtrain
+    
+    def get_eval_results(self, ftrain, ftest, food):
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
+        din_deviation = self.get_scores(ftrain_norm,ftest_norm,food_norm)
         return din_deviation
