@@ -489,23 +489,24 @@ class One_Dim_Typicality_Marginal_Oracle(One_Dim_Typicality_Class):
         din_deviation = self.get_scores(ftrain_norm,ftest_norm,food_norm)
         return din_deviation
 
-
+# Used to calculate the one dim typicality for a specific batch size
 class One_Dim_Typicality_Marginal(One_Dim_Typicality_Marginal_Oracle):
     def __init__(self,Datamodule, OOD_Datamodule,quick_callback:bool=True,typicality_bsz:int=25):
         super().__init__(Datamodule,OOD_Datamodule, quick_callback)
 
         self.typicality_bsz= typicality_bsz
 
-    def get_thresholds(self, fdata, mean, cov, eigvalues, eigvectors,dtrain,bsz):
+    def get_thresholds(self, fdata, mean, eigvalues, eigvectors,dtrain,bsz):
         thresholds = [] # List of threshold values
         num_batches = len(fdata)//bsz
 
         for i in range(num_batches):
             fdata_batch = fdata[(i*bsz):((i+1)*bsz)]
-            ddata = np.matmul(eigvectors.T,(fdata_batch - mean).T)**2/eigvalues  # shape
+            ddata = np.matmul(eigvectors.T,(fdata_batch - mean).T)**2/eigvalues  # shape (dim, batch size)
+            # shape (dim) average of all data in batch size
             ddata = np.mean(ddata,axis= 1)
 
-            # Sum of the deviations 
+            # Sum of the deviations of each individual dimension
             ddata_deviation = np.sum(np.abs(ddata - dtrain))
             thresholds.append(ddata_deviation)
         
@@ -518,14 +519,15 @@ class One_Dim_Typicality_Marginal(One_Dim_Typicality_Marginal_Oracle):
 
         # Inference
         # Calculate the scores for the in-distribution data and the OOD data
-        din = self.get_thresholds(ftest, mean, cov, eigvalues,eigvectors, dtrain, self.typicality_bsz)
-        dood = self.get_thresholds(food, mean, cov, eigvalues,eigvectors, dtrain, self.typicality_bsz)
+        din = self.get_thresholds(ftest, mean, eigvalues,eigvectors, dtrain, self.typicality_bsz)
+        dood = self.get_thresholds(food, mean, eigvalues,eigvectors, dtrain, self.typicality_bsz)
 
         return din, dood
     
-    def get_eval_results(self, ftrain, ftest, food, labelstrain,labelstest):
+    def get_eval_results(self, ftrain, ftest, food):
         ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
-        din, dood = self.get_scores(ftrain_norm,ftest_norm,food_norm,labelstrain,labelstest)
+        din, dood = self.get_scores(ftrain_norm,ftest_norm,food_norm)
         AUROC = get_roc_sklearn(din, dood)
-
+        wandb.run.summary[f'Unnormalized One Dim Marginal Typicality {self.OOD_Datamodule.name}'] = AUROC
+        
         return din, dood

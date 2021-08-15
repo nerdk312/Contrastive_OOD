@@ -26,7 +26,7 @@ from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_
 from Contrastive_uncertainty.general.callbacks.confusion_log_probability_callback import ConfusionLogProbability
 from Contrastive_uncertainty.general.callbacks.bottom_k_mahalanobis_callback import Bottom_K_Mahalanobis, Bottom_K_Mahalanobis_Difference
 from Contrastive_uncertainty.general.callbacks.feature_entropy_callback import Feature_Entropy
-from Contrastive_uncertainty.general.callbacks.one_dim_typicality_callback import One_Dim_Typicality, One_Dim_Typicality_Class, One_Dim_Typicality_Marginal_Oracle
+from Contrastive_uncertainty.general.callbacks.one_dim_typicality_callback import One_Dim_Typicality, One_Dim_Typicality_Class, One_Dim_Typicality_Marginal_Oracle, One_Dim_Typicality_Marginal
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -88,7 +88,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'One Dim Typicality Class {ood_dataset}':One_Dim_Typicality_Class(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 
                 f'One Dim Typicality Marginal Oracle {ood_dataset}': One_Dim_Typicality_Marginal_Oracle(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
-
+                f'One Dim Typicality Marginal Batch {ood_dataset}': One_Dim_Typicality_Marginal(Datamodule,OOD_Datamodule,quick_callback=quick_callback,typicality_bsz=config['typicality_batch']),
 
 
                 f'IForest {ood_dataset}': IForest(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
