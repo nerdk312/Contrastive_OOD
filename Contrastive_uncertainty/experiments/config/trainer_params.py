@@ -37,7 +37,7 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['IForest'],
 #callbacks = ['Class Variance'],
 #callbacks = ['Class Radii'],
-#callbacks = ['Centroid Distances'],
+
 #callbacks = ['Class Variance'],
 #callbacks = ['One Dimensional Background Mahalanobis'],
 #callbacks = ['Class Relative Mahalanobis', 'Class Inverted Relative Mahalanobis'],
@@ -49,7 +49,10 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Confusion Log Probability'],
 #callbacks = ['One Dim Typicality'],
 #callbacks = ['One Dim Typicality Class'],
-callbacks = ['One Dim Typicality Marginal Oracle'],
+#callbacks = ['One Dim Typicality Marginal Oracle'],
+callbacks = ['Centroid Distances'],
+
+
 
 #callbacks = ['Typicality_OVR_diff_bsz_updated'],
 #callbacks = ['Typicality_OVR'],
