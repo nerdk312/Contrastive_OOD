@@ -315,7 +315,6 @@ class One_Dim_Typicality_Class(pl.Callback):
         columns = [f'Class {i}' for i in range(len(cov))]  
         df.columns = columns
         #table = wandb.Table(data=df)
-        #import ipdb; ipdb.set_trace()
         num_classes = 10
         xs = list(range(len(df.index)))
         # Only access first 10 for the purpose of clutter
@@ -448,7 +447,6 @@ class One_Dim_Typicality_Marginal_Oracle(One_Dim_Typicality_Class):
         columns = ['1D Deviation']  
         df.columns = columns
         #table = wandb.Table(data=df)
-        #import ipdb; ipdb.set_trace()
         xs = list(range(len(df.index)))
         # Only access first 10 for the purpose of clutter
         ys = [df['1D Deviation'].tolist()] 
@@ -495,7 +493,7 @@ class One_Dim_Typicality_Marginal(One_Dim_Typicality_Marginal_Oracle):
         super().__init__(Datamodule,OOD_Datamodule, quick_callback)
 
         self.typicality_bsz= typicality_bsz
-
+        self.summary_key = f'Unnormalized One Dim Marginal Typicality Batch Size - {self.typicality_bsz} OOD - {self.OOD_Datamodule.name}'
     def get_thresholds(self, fdata, mean, eigvalues, eigvectors,dtrain,bsz):
         thresholds = [] # List of threshold values
         num_batches = len(fdata)//bsz
@@ -510,7 +508,6 @@ class One_Dim_Typicality_Marginal(One_Dim_Typicality_Marginal_Oracle):
             ddata_deviation = np.sum(np.abs(ddata - dtrain))
             thresholds.append(ddata_deviation)
         
-    
         return thresholds
 
     def get_scores(self,ftrain, ftest, food):
@@ -528,6 +525,72 @@ class One_Dim_Typicality_Marginal(One_Dim_Typicality_Marginal_Oracle):
         ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
         din, dood = self.get_scores(ftrain_norm,ftest_norm,food_norm)
         AUROC = get_roc_sklearn(din, dood)
-        wandb.run.summary[f'Unnormalized One Dim Marginal Typicality {self.OOD_Datamodule.name}'] = AUROC
+        wandb.run.summary[self.summary_key] = AUROC
         
+        return din, dood
+
+
+class One_Dim_Typicality_Normalised_Marginal(One_Dim_Typicality_Marginal):
+    def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool, typicality_bsz: int):
+        super().__init__(Datamodule, OOD_Datamodule, quick_callback=quick_callback, typicality_bsz=typicality_bsz)
+
+        # Used to save the summary value
+        self.summary_key = f'Normalized One Dim Marginal Typicality Batch Size - {self.typicality_bsz} OOD - {self.OOD_Datamodule.name}'
+
+    # calculate the std of the 1d likelihood scores as well
+    def get_1d_train(self, ftrain):
+        # Nawid - get all the features which belong to each of the different classes
+        cov = np.cov(ftrain.T, bias=True) # Cov and means part should be fine
+        mean = np.mean(ftrain,axis=0,keepdims=True) # Calculates mean from (B,embdim) to (1,embdim)
+        
+        eigvalues, eigvectors = np.linalg.eigh(cov)
+        eigvalues = np.expand_dims(eigvalues,axis=1)
+        
+        dtrain = np.matmul(eigvectors.T,(ftrain - mean).T)**2/eigvalues
+        # calculate the mean and the standard deviations of the different values
+        dtrain_1d_mean = np.mean(dtrain,axis= 1,keepdims=True) # shape (dim,1)
+        dtrain_1d_std = np.std(dtrain,axis=1,keepdims=True) # shape (dim,1)
+        
+        #normalised_dtrain = (dtrain - dtrain_1d_mean)
+        
+        # Value for a particular class
+        # Vector of datapoints(embdim,num_eigenvectors) (each column is eigenvector so the different columns is the number of eigenvectors)
+        # data - means is shape (B, emb_dim), therefore the matrix multiplication needs to be (num_eigenvectors, embdim), (embdim,batch) to give (num eigenvectors, Batch) and then this is divided by (num eigenvectors,1) 
+        # to give (num eigen vectors, batch) different values for 1 dimensional mahalanobis distances 
+        
+        # I believe the first din is the list of size class, where each entry is a vector of size (emb dim, batch) where each entry of the embed dim is the 1 dimensional mahalanobis distance along that dimension, so a vector of (embdim,1) represents the mahalanobis distance of each of the n dimensions for that particular data point
+
+        #Get entropy based on training data (or could get entropy using the validation data)
+        return mean, cov, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std
+
+    def get_thresholds(self, fdata, mean, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, bsz):
+        thresholds = [] # List of threshold values
+        num_batches = len(fdata)//bsz
+
+        for i in range(num_batches):
+            fdata_batch = fdata[(i*bsz):((i+1)*bsz)]
+            ddata = np.matmul(eigvectors.T,(fdata_batch - mean).T)**2/eigvalues  # shape (dim, batch size)
+            # Normalise the data
+            ddata = (ddata - dtrain_1d_mean)/(dtrain_1d_std +1e-10) # shape (dim, batch)
+
+            # shape (dim) average of all data in batch size
+            ddata = np.mean(ddata,axis= 1) # shape : (dim)
+            
+            # Sum of the deviations of each individual dimension
+            ddata_deviation = np.sum(np.abs(ddata))
+
+            thresholds.append(ddata_deviation)
+        
+        return thresholds
+
+    
+    def get_scores(self,ftrain, ftest, food):
+        # Get information related to the train info
+        mean, cov, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std = self.get_1d_train(ftrain)
+
+        # Inference
+        # Calculate the scores for the in-distribution data and the OOD data
+        din = self.get_thresholds(ftest, mean, eigvalues,eigvectors, dtrain_1d_mean,dtrain_1d_std, self.typicality_bsz)
+        dood = self.get_thresholds(food, mean, eigvalues,eigvectors, dtrain_1d_mean,dtrain_1d_std, self.typicality_bsz)
+
         return din, dood

@@ -11,7 +11,7 @@ validation_ratio = 1.0,
 test_ratio = 1.0,
 val_check = 1,  # evaluation, Moco_training
 typicality_bootstrap = 50,
-typicality_batch = 10,
+typicality_batch = 5,
 
 # Used to update callback dict
 vector_level = ['instance', 'fine', 'coarse'],
@@ -50,8 +50,7 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['One Dim Typicality'],
 #callbacks = ['One Dim Typicality Class'],
 #callbacks = ['One Dim Typicality Marginal Oracle'],
-callbacks = ['Centroid Distances'],
-
+callbacks = ['One Dim Typicality Marginal Batch', 'One Dim Typicality Normalised Marginal Batch'],
 
 
 #callbacks = ['Typicality_OVR_diff_bsz_updated'],
