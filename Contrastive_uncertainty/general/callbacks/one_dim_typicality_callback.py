@@ -494,6 +494,8 @@ class One_Dim_Typicality_Marginal(One_Dim_Typicality_Marginal_Oracle):
 
         self.typicality_bsz= typicality_bsz
         self.summary_key = f'Unnormalized One Dim Marginal Typicality Batch Size - {self.typicality_bsz} OOD - {self.OOD_Datamodule.name}'
+    
+    
     def get_thresholds(self, fdata, mean, eigvalues, eigvectors,dtrain,bsz):
         thresholds = [] # List of threshold values
         num_batches = len(fdata)//bsz

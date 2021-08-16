@@ -1,5 +1,5 @@
 #import ipdb
-from numpy.lib.function_base import quantile
+from numpy.lib.function_base import average, quantile
 from pandas.io.formats.format import DataFrameFormatter
 import torch
 from torch._C import dtype
@@ -251,5 +251,140 @@ class Marginal_Typicality_OOD_detection(pl.Callback):
         ood_table = wandb.Table(dataframe=table_df)
         wandb.log({wandb_name: ood_table})
     '''
+
+
+# Performs the typicality test between the ID test data and the OOD data
+class Marginal_Typicality_entropy_mean(pl.Callback):
+    def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool, typicality_bsz: int):
+        super().__init__()
+
+        self.Datamodule = Datamodule
+        self.OOD_Datamodule = OOD_Datamodule
+        self.OOD_Datamodule.test_transforms = self.Datamodule.test_transforms #  Make the transform of the OOD data the same as the actual data
+        #import ipdb; ipdb.set_trace()
+        self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
+        self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
+        
+        # Chooses what vector representation to use as well as which level of label hierarchy to use        
+        self.OOD_dataname = self.OOD_Datamodule.name
+
+        self.typicality_bsz = typicality_bsz
+        
+    def on_test_epoch_end(self, trainer, pl_module):
+        self.forward_callback(trainer=trainer, pl_module=pl_module)
+
     
-    
+    # Performs all the computation in the callback
+    def forward_callback(self, trainer,pl_module):
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        
+        # Use the test transform validataion loader
+        
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+        
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_features(pl_module, test_loader)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
+        
+        # Number of classes obtained from the max label value + 1 ( to take into account counting from zero)
+        self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood))
+            
+    def get_features(self, pl_module, dataloader):
+        features, labels = [], []
+        
+        loader = quickloading(self.quick_callback, dataloader)
+        for index, (img, *label, indices) in enumerate(loader):
+            assert len(loader)>0, 'loader is empty'
+            if isinstance(img, tuple) or isinstance(img, list):
+                    img, *aug_img = img # Used to take into accoutn whether the data is a tuple of the different augmentations
+
+            # Selects the correct label based on the desired label level
+            if len(label) > 1:
+                label_index = 0
+                label = label[label_index]
+            else: # Used for the case of the OOD data
+                label = label[0]
+
+            img = img.to(pl_module.device)
+            
+            # Compute feature vector and place in list
+            feature_vector = pl_module.callback_vector(img) # Performs the callback for the desired level
+            
+            features += list(feature_vector.data.cpu().numpy())
+            labels += list(label.data.cpu().numpy())            
+
+        return np.array(features), np.array(labels)
+
+    # Get the statistics from the training information which is present
+    def get_statistics(self, ftrain):
+        mean = np.mean(ftrain, axis=0,keepdims=True)
+        cov = np.cov(ftrain.T, bias=True)
+        
+        dtrain = np.sum(
+                (ftrain - mean) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(cov).dot(
+                        (ftrain - mean).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1)
+        # Calculates approximation for the entropy
+        entropy = -np.mean(0.5*(dtrain**2))
+        average_likelihood = np.mean(dtrain, keepdims=True)
+        import ipdb; ipdb.set_trace()
+        return mean, cov, entropy, average_likelihood
+
+    # Used to calculate the thresholds for the general case
+    def get_thresholds(self, fdata, mean, cov, entropy,average_likelihood, bsz):
+        thresholds_entropy = [] #  List of class threshold values
+        thresholds_mean = []
+        # obtain the num batches
+        num_batches = len(fdata)//bsz
+        
+        for i in range(num_batches):
+            fdata_batch = fdata[(i*bsz):((i+1)*bsz)]
+            ddata = np.sum(
+            (fdata_batch - mean) # Nawid - distance between the data point and the mean
+            * (
+                np.linalg.pinv(cov).dot(
+                    (fdata_batch - mean).T
+                ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+            ).T,
+            axis=-1)
+
+            nll = - np.mean(0.5*(ddata**2))
+            threshold_entropy_k = np.abs(nll- entropy)
+            thresholds_entropy.append(threshold_entropy_k)
+
+            # Threshold using average likelihood approach 
+            average_data_ll = np.mean(ddata)
+            thresholds_mean_k = np.abs(average_data_ll - average_likelihood)
+            thresholds_mean.append(thresholds_mean_k)
+            
+        return thresholds_entropy, thresholds_mean
+       
+    def get_eval_results(self, ftrain, ftest, food):
+        """
+            None.
+        """
+        
+        # Nawid - obtain the scores for the test data and the OOD data
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
+        mean, cov, entropy, average_likelihood = self.get_statistics(ftrain_norm)
+        
+        test_thresholds_entropy, test_thresholds_average_ll = self.get_thresholds(ftest_norm,mean, cov, entropy,self.typicality_bsz)
+        ood_thresholds_entropy, ood_thresholds_average_ll = self.get_thresholds(food_norm, mean, cov, entropy,self.typicality_bsz)
+        
+        # AUROC using entropy approach and AUROC using mean likelihood approach (not the mean of the AUROC)
+        AUROC_entropy = get_roc_sklearn(test_thresholds_entropy, ood_thresholds_entropy)
+        AUROC_average_ll = get_roc_sklearn(test_thresholds_average_ll, ood_thresholds_average_ll)
+
+
+
+
+        
