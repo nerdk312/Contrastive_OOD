@@ -253,7 +253,7 @@ class Marginal_Typicality_OOD_detection(pl.Callback):
     '''
 
 
-# Performs the typicality test between the ID test data and the OOD data
+# Performs the typicality test between the ID test data and the OOD data using both the entropy as well as the average likelihood
 class Marginal_Typicality_entropy_mean(pl.Callback):
     def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool, typicality_bsz: int):
         super().__init__()
@@ -269,7 +269,9 @@ class Marginal_Typicality_entropy_mean(pl.Callback):
         self.OOD_dataname = self.OOD_Datamodule.name
 
         self.typicality_bsz = typicality_bsz
-        
+        # Calculates both the entropy and the average likelihood for the approach
+        self.summary_key = f'Marginal Typicality Entropy Average Likelihood Batch Size - {self.typicality_bsz} OOD - {self.OOD_Datamodule.name}'
+
     def on_test_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer=trainer, pl_module=pl_module)
 
@@ -335,8 +337,8 @@ class Marginal_Typicality_entropy_mean(pl.Callback):
                 axis=-1)
         # Calculates approximation for the entropy
         entropy = -np.mean(0.5*(dtrain**2))
-        average_likelihood = np.mean(dtrain, keepdims=True)
-        import ipdb; ipdb.set_trace()
+        average_likelihood = np.mean(dtrain)
+        #average_likelihood = np.mean(dtrain, keepdims=True)
         return mean, cov, entropy, average_likelihood
 
     # Used to calculate the thresholds for the general case
@@ -377,14 +379,28 @@ class Marginal_Typicality_entropy_mean(pl.Callback):
         ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
         mean, cov, entropy, average_likelihood = self.get_statistics(ftrain_norm)
         
-        test_thresholds_entropy, test_thresholds_average_ll = self.get_thresholds(ftest_norm,mean, cov, entropy,self.typicality_bsz)
-        ood_thresholds_entropy, ood_thresholds_average_ll = self.get_thresholds(food_norm, mean, cov, entropy,self.typicality_bsz)
+        test_thresholds_entropy, test_thresholds_average_ll = self.get_thresholds(ftest_norm,mean, cov, entropy,average_likelihood, self.typicality_bsz)
+        ood_thresholds_entropy, ood_thresholds_average_ll = self.get_thresholds(food_norm, mean, cov, entropy,average_likelihood, self.typicality_bsz)
         
         # AUROC using entropy approach and AUROC using mean likelihood approach (not the mean of the AUROC)
-        AUROC_entropy = get_roc_sklearn(test_thresholds_entropy, ood_thresholds_entropy)
-        AUROC_average_ll = get_roc_sklearn(test_thresholds_average_ll, ood_thresholds_average_ll)
+        AUROC_entropy = round(get_roc_sklearn(test_thresholds_entropy, ood_thresholds_entropy),3)
+        AUROC_average_ll = round(get_roc_sklearn(test_thresholds_average_ll, ood_thresholds_average_ll),3)
+        AUROC = [AUROC_entropy, AUROC_average_ll]
+        wandb.run.summary[self.summary_key] = AUROC
 
-
-
-
+    # Normalises the data
+    def normalise(self,ftrain, ftest,food):
+        # Nawid -normalise the featues for the training, test and ood data
+        # standardize data
+        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
+        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
+        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
         
+        # Nawid - calculate the mean and std of the traiing features
+        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
+        # Nawid - normalise data using the mean and std
+        ftrain = (ftrain - m) / (s + 1e-10)
+        ftest = (ftest - m) / (s + 1e-10)
+        food = (food - m) / (s + 1e-10)
+        
+        return ftrain, ftest, food        

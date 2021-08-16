@@ -7,7 +7,7 @@ from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_
 from Contrastive_uncertainty.general.callbacks.experimental_ood_callbacks import Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD
 from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO, Typicality_OVR_diff_bsz, Typicality_General_Point, Typicality_General_Point_updated, Typicality_OVR_diff_batch_updated
-from Contrastive_uncertainty.general.callbacks.marginal_typicality_ood_callback import Marginal_Typicality_OOD_detection
+from Contrastive_uncertainty.general.callbacks.marginal_typicality_ood_callback import Marginal_Typicality_OOD_detection, Marginal_Typicality_entropy_mean
 
 
 from Contrastive_uncertainty.general.callbacks.metrics.metric_callback import MetricLogger, evaluation_metrics, evaltypes
@@ -84,6 +84,9 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Typicality General Point Updated {ood_dataset}': Typicality_General_Point_updated(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,bootstrap_num=typicality_bootstrap,typicality_bsz=typicality_batch),
 
                 f'Marginal Typicality OOD {ood_dataset}': Marginal_Typicality_OOD_detection(Datamodule,OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback,typicality_bsz=typicality_batch),
+                f'Marginal Typicality Entropy Mean OOD {ood_dataset}': Marginal_Typicality_entropy_mean(Datamodule,OOD_Datamodule, quick_callback=quick_callback,typicality_bsz=typicality_batch),
+
+
                 f'One Dim Typicality {ood_dataset}':One_Dim_Typicality(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'One Dim Typicality Class {ood_dataset}':One_Dim_Typicality_Class(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 

@@ -75,8 +75,8 @@ from Contrastive_uncertainty.general.train.train_general_confusion import train 
 def train(base_dict):    
     acceptable_single_models = ['Baselines',
     #'CE',
-    'Moco',
-    #'SupCon'
+    #'Moco',
+    'SupCon'
     #'SupConMemory',
     # 'PCL',
     # 'MultiPCL',
