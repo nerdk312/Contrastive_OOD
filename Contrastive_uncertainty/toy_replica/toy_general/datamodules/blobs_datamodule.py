@@ -78,7 +78,8 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
         '''called one each GPU separately - stage defines if we are at fit or test step'''
         # we set up only relevant datasets when stage is specified (automatically set by Pytorch-Lightning)
         if stage == 'fit' or stage is None:
-            self.train_data, self.train_labels = sklearn.datasets.make_blobs(n_samples=1000, centers=self.centers)
+            #self.train_data, self.train_labels = sklearn.datasets.make_blobs(n_samples=1000, centers=self.centers)
+            self.train_data, self.train_labels = sklearn.datasets.make_blobs(n_samples=10000, centers=self.centers)
             
             self.mean, self.std = np.mean(self.train_data,axis = 0), np.std(self.train_data,axis = 0) # calculate the mean and std along a particular dimension
 
