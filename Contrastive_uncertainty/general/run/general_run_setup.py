@@ -22,7 +22,7 @@ from Contrastive_uncertainty.general.callbacks.one_dim_mahalanobis_similarity_ca
 from Contrastive_uncertainty.general.callbacks.oracle_hierarchical_ood import Oracle_Hierarchical_Metrics, Hierarchical_Random_Coarse, Hierarchical_Subclusters_OOD
 from Contrastive_uncertainty.general.callbacks.isolation_forest_callback import IForest
 from Contrastive_uncertainty.general.callbacks.analysis_callback import Dataset_class_variance, Dataset_class_radii, Centroid_distances, Centroid_relative_distances, Class_Radii_histograms
-from Contrastive_uncertainty.general.callbacks.total_centroid_similarity_callback import Total_Centroid_KL
+from Contrastive_uncertainty.general.callbacks.total_centroid_similarity_callback import Total_Centroid_KL, Class_Centroid_Radii_Overlap
 
 from Contrastive_uncertainty.general.callbacks.confusion_log_probability_callback import ConfusionLogProbability
 from Contrastive_uncertainty.general.callbacks.bottom_k_mahalanobis_callback import Bottom_K_Mahalanobis, Bottom_K_Mahalanobis_Difference
@@ -103,7 +103,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Centroid Relative Distances': Centroid_relative_distances(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
                 f'Class Radii Histograms {ood_dataset}': Class_Radii_histograms(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
                 f'Total Centroid KL': Total_Centroid_KL(Datamodule, quick_callback=quick_callback),
-
+                f'Class Centroid Radii Overlap': Class_Centroid_Radii_Overlap(Datamodule, quick_callback=quick_callback),
 
                 f'OVR classification {ood_dataset}':Mahalanobis_OvR(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),
                 f'OVO classification {ood_dataset}':Mahalanobis_OvO(Datamodule, OOD_Datamodule, vector_level='instance', label_level='fine', quick_callback=quick_callback),

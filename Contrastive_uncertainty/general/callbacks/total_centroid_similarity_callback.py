@@ -1,3 +1,4 @@
+from numpy.core.defchararray import lower, upper
 from numpy.lib.function_base import quantile
 from pandas.io.formats.format import DataFrameFormatter
 import torch
@@ -96,7 +97,7 @@ class Total_Centroid_KL(pl.Callback):
         #https://pytorch.org/docs/stable/distributions.html
         # Need to also have enough data present otherwise the covariance matrix will be invertible 
         # Need to make sure that the mean is one dimensional , rather than 2 dimensional 
-        
+
         # Need to train Ftrain into the correct shape
         # Need to also have enough data present otherwise the covariance matrix will be invertible
 
@@ -131,3 +132,75 @@ class Total_Centroid_KL(pl.Callback):
         ftrain_norm = self.normalise(ftrain)
         KLs = self.get_scores(ftrain_norm, labelstrain)
         return KLs 
+
+
+# Calculates the overlap between the data points in different classes
+class Class_Centroid_Radii_Overlap(Total_Centroid_KL):
+    def __init__(self, Datamodule, quick_callback: bool, lower_percentile:int = 75, upper_percentile:int = 95):
+        super().__init__(Datamodule, quick_callback=quick_callback)
+
+        self.lower_percentile= lower_percentile
+        self.upper_percentile= upper_percentile
+
+    # calculate centroids
+    def get_cluster_centroids(self, ftrain, ypred):
+        centroids = []
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        centroids = np.array([np.mean(x, axis=0) for x in xc])
+        return centroids
+
+
+    def get_radii(self, ftrain, ypred):
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        class_centroids = [np.mean(x,axis=0,keepdims=True) for x in xc]
+        diff = [xc[class_num] - class_centroids[class_num] for class_num in range(len(class_centroids))]
+        radii = [np.linalg.norm(class_data,axis=1) for class_data in diff] # Changes shape from (class_batch, dim) to (class_batch)
+        
+        #class_centroids = np.array(np.squeeze(class_centroids)) # need to squeeze to get shape (num classes, emb dim) otherwise shape will be (num classes, 1, embdim)
+        return class_centroids,radii
+
+    def get_scores(self, ftrain, ypred): 
+        
+        class_centroids, radii = self.get_radii(ftrain, ypred)
+        lower_radii = [np.percentile(class_radii,self.lower_percentile) for class_radii in radii]
+        upper_radii = [np.percentile(class_radii,self.upper_percentile) for class_radii in radii]
+        #lower_radii = [round(np.percentile(class_radii,self.lower_percentile),2) for class_radii in radii]
+        #upper_radii = [round(np.percentile(class_radii,self.upper_percentile),2) for class_radii in radii]
+        
+        # obtain all datapoints besides the data point from interest
+        xc = [ftrain[ypred != i] for i in np.unique(ypred)] 
+
+        diff = [xc[class_num]- class_centroids[class_num] for class_num in range(len(class_centroids))]
+        # calculates the radii between the class centroids and points not in the class
+        non_class_radii = [np.linalg.norm(non_class_data,axis=1) for non_class_data in diff]
+        
+        # Check values in the non class which is lower than the lower radii for the class
+        lower_radii_present = [non_class_radii[class_num][non_class_radii[class_num] <lower_radii[class_num]] for class_num in range(len(class_centroids))]
+        lower_radii_present = [len(lower_radii_present[class_num])/len(non_class_radii[class_num]) for class_num in range(len(class_centroids))]
+        lower_radii_present = np.around(np.array(lower_radii_present), decimals=3)
+
+        upper_radii_present = [non_class_radii[class_num][non_class_radii[class_num] <upper_radii[class_num]] for class_num in range(len(class_centroids))]
+        upper_radii_present = [len(upper_radii_present[class_num])/len(non_class_radii[class_num]) for class_num in range(len(class_centroids))]
+        upper_radii_present = np.around(np.array(upper_radii_present), decimals=3)
+
+        collated_radii_present= np.stack((lower_radii_present,upper_radii_present),axis=1)
+
+        columns = [f'Fraction present - {self.lower_percentile}th percentile class radius', f'Fraction present - {self.upper_percentile}th percentile class radius']
+        indices = [f'Class {i}' for i in range(len(xc))]
+        df = pd.DataFrame(collated_radii_present,index=indices, columns=columns)
+        table = wandb.Table(dataframe=df)
+        wandb.log({'Non Class Percentage Overlap':table})
+        # Plot the KL divergences in a table
+        
+        return df
+        
+        
+
+
+
+
+    
+    def get_eval_results(self, ftrain, labelstrain):
+        ftrain_norm = self.normalise(ftrain)
+        df = self.get_scores(ftrain_norm,labelstrain)
+        return  df

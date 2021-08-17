@@ -23,7 +23,7 @@ epochs = 1,
 
 # Trainer configurations in common
 fast_run = False,
-quick_callback = False,
+quick_callback = True,
 training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
@@ -92,7 +92,11 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['One Dim Typicality Marginal Batch'],
 #callbacks = ['One Dim Typicality Normalised Marginal Batch'],
 #callbacks = ['Marginal Typicality Entropy Mean'],
-callbacks = ['Total Centroid KL'],
+
+#callbacks = ['Total Centroid KL'],
+callbacks = ['Class Centroid Radii Overlap'],
+#callbacks = ['Total Centroid KL','Class Centroid Radii Overlap'],
+
 #callbacks = ['Feature Entropy'],
 #callbacks = ['Confusion Log Probability','Model_saving'],
 #callbacks = ['Bottom K Mahalanobis Difference'],
