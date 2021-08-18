@@ -33,7 +33,6 @@ def train(params,model_module,model_function):
     #channels = Channel_selection(dataset_dict,config['dataset'])
 
     class_names_dict = datamodule.idx2class  # name of dict which contains class names
-    import ipdb; ipdb.set_trace()
     callback_dict = callback_dictionary(datamodule, OOD_datamodule, config)
     
     desired_callbacks = [callback_dict['Metrics'], callback_dict['Model_saving'], 

@@ -32,7 +32,6 @@ def train(params,model_module,model_function,datamodule_dict):
     callback_dict = callback_dictionary(datamodule, config,datamodule_dict)
     desired_callbacks = specific_callbacks(callback_dict, config['callbacks'])
     
-    #import ipdb; ipdb.set_trace()
                         
     # model_function takes in the model module and the config and uses it to instantiate the model
     model = model_function(model_module,config,datamodule)

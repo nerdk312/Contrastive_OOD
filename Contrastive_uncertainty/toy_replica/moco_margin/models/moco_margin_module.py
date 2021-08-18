@@ -7,6 +7,7 @@ from torch import nn
 import torchvision
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
+from tqdm import tqdm
 
 from Contrastive_uncertainty.toy_replica.moco.models.encoder_model import Backbone
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
@@ -147,18 +148,30 @@ class MocoMarginToy(pl.LightningModule):
 
         # dequeue and enqueue
         self._dequeue_and_enqueue(k) # Nawid - queue values
-        return logits, labels
+        return logits, labels, q
 
     def loss_function(self, batch):
         (img_1, img_2), *labels, indices = batch
         if isinstance(labels, tuple) or isinstance(labels, list):
             labels, *coarse_labels = labels
         
-        output, target = self(img_1, img_2)
-        loss = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
+        output, target, q = self(img_1, img_2)
+        loss_margin = self.margin_loss(q)
+        loss_instance = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
+        loss = loss_margin + loss_instance
         acc_1, acc_5 = precision_at_k(output, target,top_k=(1,5))
-        metrics = {'Loss': loss, 'Accuracy @1':acc_1,'Accuracy @5':acc_5}
+        metrics = {'Loss': loss, 'Loss Margin':loss_margin, 'Loss Instance':loss_instance, 'Accuracy @1':acc_1,'Accuracy @5':acc_5}
         return metrics
+
+    def margin_loss(self, q):
+        diff = q - self.centroid
+        radii = torch.linalg.norm(diff,axis=1)
+        #radii_margin = 2.0 - radii
+        radii_margin = self.hparams.margin - radii 
+        clamped_radii_margin = torch.clamp(radii_margin, min = 0, max = 100000)
+        #loss_margin = torch.sum(clamped_radii_margin)
+        loss_margin = torch.mean(clamped_radii_margin)
+        return loss_margin
 
 
     def training_step(self, batch, batch_idx):
@@ -189,6 +202,42 @@ class MocoMarginToy(pl.LightningModule):
                                         weight_decay=self.hparams.weight_decay)
         return optimizer
     
+
+
+    # Calculate centroid using the validation dataloader every epoch
+    def on_train_epoch_start(self):
+        dataloader = self.datamodule.val_dataloader() 
+        if isinstance(dataloader,list) or isinstance(dataloader,tuple):
+            _, dataloader = dataloader # obtain the version of the dataloader which does not use augmentations
+        # calculate the centroid
+        self.centroid = self.compute_centroid(dataloader)
+    
+    def on_fit_start(self):
+        dataloader = self.datamodule.val_dataloader() 
+        if isinstance(dataloader,list) or isinstance(dataloader,tuple):
+            _, dataloader = dataloader # obtain the version of the dataloader which does not use augmentations
+        # calculate the centroid
+        self.centroid = self.compute_centroid(dataloader)
+
+    def compute_centroid(self,dataloader):
+
+        #features = torch.zeros(self.datasize(dataloader), self.hparams.emb_dim, device = self.device)
+        features = []
+        for i, (images, *labels, indices) in enumerate(tqdm(dataloader)):
+            if isinstance(images, tuple) or isinstance(images, list):
+                images, *aug_images = images
+            images = images.to(self.device)
+
+            feat = self.encoder_k(images)  # Nawid - obtain features for the task
+            feat = nn.functional.normalize(feat, dim=1) # Obtain 12 normalised features for clustering
+            
+            features.append(feat)
+
+        features = torch.cat(features,axis=0)
+        centroid = torch.mean(features, axis=0,keepdim=True)
+        return centroid
+
+
 
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):
