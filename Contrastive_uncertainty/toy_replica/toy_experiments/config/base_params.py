@@ -94,7 +94,7 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Marginal Typicality Entropy Mean'],
 
 #callbacks = ['Total Centroid KL'],
-callbacks = ['Class Centroid Radii Overlap'],
+#callbacks = ['Class Centroid Radii Overlap'],
 #callbacks = ['Total Centroid KL','Class Centroid Radii Overlap'],
 
 #callbacks = ['Feature Entropy'],
@@ -106,7 +106,7 @@ callbacks = ['Class Centroid Radii Overlap'],
 
 
 
-#callbacks = ['Model_saving'],
+callbacks = ['Model_saving'],
 #callbacks = ['Class Inverted Relative Mahalanobis'],
 #callbacks = ['One Dimensional Relative Mahalanobis'],
 #callbacks = ['Class Radii'],

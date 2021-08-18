@@ -85,7 +85,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['General Scores'],
 #callbacks = ['Marginal Typicality OOD'],
 #callbacks = ['Confusion Log Probability','Model_saving'],
-callbacks = [],
+#callbacks = [],
+callbacks = ['Model_saving'],
 #callbacks = ['Practice Hierarchical scores'],
 # Either goes through all the models or goes through baselines
 

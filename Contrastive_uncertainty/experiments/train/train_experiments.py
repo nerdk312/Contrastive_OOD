@@ -76,8 +76,8 @@ def train(base_dict):
     acceptable_single_models = ['Baselines',
     #'CE',
     #'Moco',
-    'SupCon'
-    #'SupConMemory',
+    #'SupCon'
+    'SupConMemory',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',

@@ -40,8 +40,8 @@ class Total_Centroid_KL(pl.Callback):
         self.forward_callback(trainer=trainer, pl_module=pl_module)
     
     def forward_callback(self,trainer,pl_module):
-        #train_loader = self.Datamodule.determinstic_train_dataloader()
-        train_loader = self.Datamodule.train_dataloader()
+        train_loader = self.Datamodule.determinstic_train_dataloader()
+        #train_loader = self.Datamodule.train_dataloader()
 
 
         # Obtain representations of the data
