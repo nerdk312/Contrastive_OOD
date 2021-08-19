@@ -106,7 +106,8 @@ label_level = ['fine','fine','coarse'],
 
 
 
-callbacks = ['Model_saving'],
+#callbacks = ['Model_saving'],
+callbacks = ['Confusion Log Probability'],
 #callbacks = ['Class Inverted Relative Mahalanobis'],
 #callbacks = ['One Dimensional Relative Mahalanobis'],
 #callbacks = ['Class Radii'],

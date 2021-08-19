@@ -52,7 +52,7 @@ def train(base_dict):
     #'Moco',
     #'SupCon',
     #'SupConMemory',
-    'MocoMargin',
+    #'MocoMargin',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -60,7 +60,7 @@ def train(base_dict):
     #'HSupConBU',
     # 'HSupConBUCentroid',
     #'HSupConTD'
-    #'CEEnsemble'
+    'CEEnsemble'
     ]
 
     # Dict for the model name, parameters and specific training loop

@@ -53,8 +53,8 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['One Dim Typicality Marginal Batch', 'One Dim Typicality Normalised Marginal Batch'],
 #callbacks = ['Marginal Typicality Entropy Mean'],
 #callbacks = ['Total Centroid KL','Class Centroid Radii Overlap'],
-
-callbacks = ['Class Centroid Radii Overlap'],
+callbacks = ['Total Centroid KL'],
+#callbacks = ['Class Centroid Radii Overlap'],
 
 #callbacks = ['Typicality_OVR_diff_bsz_updated'],
 #callbacks = ['Typicality_OVR'],

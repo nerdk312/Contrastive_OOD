@@ -40,7 +40,7 @@ class Total_Centroid_KL(pl.Callback):
         self.forward_callback(trainer=trainer, pl_module=pl_module)
     
     def forward_callback(self,trainer,pl_module):
-        train_loader = self.Datamodule.determinstic_train_dataloader()
+        train_loader = self.Datamodule.deterministic_train_dataloader()
         #train_loader = self.Datamodule.train_dataloader()
 
 
@@ -195,10 +195,6 @@ class Class_Centroid_Radii_Overlap(Total_Centroid_KL):
         return df
         
         
-
-
-
-
     
     def get_eval_results(self, ftrain, labelstrain):
         ftrain_norm = self.normalise(ftrain)

@@ -25,3 +25,5 @@ cifar-100-python
 
 *.json
 media
+run_data
+Scatter_Plots

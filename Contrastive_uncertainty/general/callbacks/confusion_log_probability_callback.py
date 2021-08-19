@@ -118,6 +118,18 @@ class ConfusionLogProbability(pl.Callback):
         wandb.run.summary['Class Wise CLP'] = classwise_CLP.cpu()
         wandb.run.summary['Min Class Wise CLP'] = min_classwise_CLP
         wandb.run.summary['Max Class Wise CLP'] = max_classwise_CLP
+
+        # Used to make wandb table to capture all the different values present
+        class_wise_clp_np= np.expand_dims(classwise_CLP.cpu().numpy(),axis=1)
+        columns = ['Class Wise Confusion Log Probability']
+        indices = [f'Class {i}' for i in range(inlier_clases)] 
+        df = pd.DataFrame(class_wise_clp_np, columns= columns, index=indices)
+
+        table = wandb.Table(data= df)
+        wandb.log({'Class Wise Confusion Log Probability': table})
+
+        
+
         '''
         CLP = torch.mean(inlier_predictions)
         '''

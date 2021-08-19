@@ -76,8 +76,8 @@ def batch_train(base_dict):
     acceptable_single_models = ['Baselines',
     #'CE',
     #'Moco',
-    #'SupCon',
-    'SupConMemory',
+    'SupCon',
+    #'SupConMemory',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -135,8 +135,8 @@ def batch_train(base_dict):
     
 
     # Update the seed
-    #seeds = [25,50,75,100]
-    seeds = [26,25,50,75,100] # Additional seed for the case of supcon memory run
+    seeds = [25,50,75,100]
+    #seeds = [26,25,50,75,100] # Additional seed for the case of supcon memory run
     for i in range(len(seeds)):
         # Update the seed
         base_dict['seed'] = seeds[i]
