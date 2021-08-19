@@ -6,6 +6,7 @@ softmax_temperature = 0.07,
 instance_encoder = 'resnet50',
 margin = 1.0, # Margin term for moco margin
 
+
 # optimizer args
 optimizer = 'sgd',
 learning_rate= 0.03,#3e-4,
@@ -13,10 +14,9 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'Blobs',
-OOD_dataset = ['TwoMoons','Diagonal'],
+dataset = 'MNIST',
+OOD_dataset = ['FashionMNIST'],
 
-use_mlp = True,
 
 # Miscellaneous arguments
 seed = 42,
@@ -39,7 +39,7 @@ pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
 model_type = 'MocoMargin',
-project = 'toy_replica',# evaluation, Moco_training
+project = 'evaluation',# evaluation, Moco_training
 group = None,
 notes = None,
 )

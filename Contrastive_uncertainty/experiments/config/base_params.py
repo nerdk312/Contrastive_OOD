@@ -65,6 +65,9 @@ softmax_temperature = 0.07,
 # Supcon specific parameters
 contrast_mode ='one',
 
+# Moco Margin specific parameters
+margin = 1.0,
+
 # PCL specific parameters
 num_multi_cluster = [2000,4000], 
 num_cluster_negatives = 1024,

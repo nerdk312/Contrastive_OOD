@@ -3,7 +3,7 @@ from Contrastive_uncertainty.cross_entropy.config.cross_entropy_params import cr
 from Contrastive_uncertainty.moco.config.moco_params import moco_hparams
 from Contrastive_uncertainty.sup_con.config.sup_con_params import sup_con_hparams
 from Contrastive_uncertainty.sup_con_memory.config.sup_con_memory_params import sup_con_memory_hparams
-
+from Contrastive_uncertainty.moco_margin.config.moco_margin_params import moco_margin_hparams
 
 from Contrastive_uncertainty.PCL.config.pcl_params import pcl_hparams
 from Contrastive_uncertainty.hierarchical_models.HSupCon.config.hsup_con_params import hsup_con_hparams
@@ -26,6 +26,9 @@ from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import Cr
 from Contrastive_uncertainty.moco.models.moco_module import MocoModule
 from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
 from Contrastive_uncertainty.sup_con_memory.models.sup_con_memory_module import SupConMemoryModule
+from Contrastive_uncertainty.moco_margin.models.moco_margin_module import MocoMarginModule
+
+
 from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
 from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_module import HSupConModule
 from Contrastive_uncertainty.hierarchical_models.HSupConBU.models.hsup_con_bu_module import HSupConBUModule
@@ -47,6 +50,7 @@ from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance i
 from Contrastive_uncertainty.moco.models.moco_model_instance import ModelInstance as MocoModelInstance
 from Contrastive_uncertainty.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
 from Contrastive_uncertainty.sup_con_memory.models.sup_con_memory_model_instance import ModelInstance as SupConMemoryModelInstance
+from Contrastive_uncertainty.moco_margin.models.moco_margin_model_instance import ModelInstance as MocoMarginModelInstance
 
 from Contrastive_uncertainty.PCL.models.pcl_model_instance import ModelInstance as PCLModelInstance
 from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_model_instance import ModelInstance as HSupConModelInstance
@@ -77,7 +81,8 @@ def train(base_dict):
     #'CE',
     #'Moco',
     #'SupCon'
-    'SupConMemory',
+    #'SupConMemory',
+    'MocoMargin',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -106,6 +111,9 @@ def train(base_dict):
 
                     'SupConMemory':{'params':sup_con_memory_hparams,'model_module':SupConMemoryModule, 
                     'model_instance':SupConMemoryModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
+
+                    'MocoMargin':{'params':moco_margin_hparams,'model_module':MocoMarginModule, 
+                    'model_instance':MocoMarginModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
 
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
                     'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training, 'data_dict':general_dataset_dict},

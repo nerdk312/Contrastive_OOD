@@ -38,7 +38,7 @@ pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 #label_level = ['fine'],
 callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
-model_type ='SupCon',
+model_type ='SupConMemory',
 project = 'toy_replica',# evaluation, Moco_training
 group = None,
 notes = None,

@@ -60,10 +60,16 @@ softmax_temperature = 0.07,
 # Supcon specific parameters
 contrast_mode ='one',
 
+# Moco Margin specific parameters
+margin = 1.0,
+
+
 # PCL specific parameters
 num_multi_cluster = [100,500],
 num_cluster_negatives = 4096,
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
+
+
 
 
 # unsupcon memory parameters
