@@ -122,7 +122,15 @@ def centroid_total_kl_plot():
         sns.regplot(x = df['Class Centroid Distance'], y = df['KL(Total||Class) (Nats)'],color='blue')
         plt.annotate('y={:.2f}+{:.2f}*x'.format(fit[1], fit[0]), xy=(0.05, 0.95), xycoords='axes fraction')
         plt.title(f'Class Centroid Distance and KL Divergence for {dataset} dataset using {Model_name} model', size=12)
-        
+        plt.ylim(0)
+        '''
+        if model_type =='Moco':
+            plt.xlim(2.0, 6.0)
+            plt.ylim(0, 1000)
+        else:
+            plt.xlim(8.0, 12.5)
+            plt.ylim(0, 5000)
+        '''
         #plt.show()
 
         folder = f'Scatter_Plots/Centroid_Distance_KL_plots/{model_type}'
@@ -133,4 +141,4 @@ def centroid_total_kl_plot():
         plt.savefig(f'{folder}/Class_centroid_KL_{dataset}_{Model_name}.png')
         plt.close()
 
-#centroid_total_kl_plot()
+centroid_total_kl_plot()
