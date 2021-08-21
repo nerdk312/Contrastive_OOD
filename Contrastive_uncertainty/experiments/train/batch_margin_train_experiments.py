@@ -76,13 +76,13 @@ from Contrastive_uncertainty.general_clustering.train.train_general_clustering i
 from Contrastive_uncertainty.general_hierarchy.train.train_general_hierarchy import train as general_hierarchy_training
 from Contrastive_uncertainty.general.train.train_general_confusion import train as general_confusion_training
 
-def train(base_dict):    
+def batch_margin_train(base_dict):    
     acceptable_single_models = ['Baselines',
     #'CE',
     #'Moco',
     #'SupCon'
-    'SupConMemory',
-    #'MocoMargin',
+    #'SupConMemory',
+    'MocoMargin',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -141,53 +141,61 @@ def train(base_dict):
                     
     }
     
-    # Update the parameters of each model
-
-    # iterate through all items of the state dict
-    for base_k, base_v in base_dict.items():
-        # Iterate through all the model dicts
-        for model_k, model_v in model_dict.items():
-            # Go through each dict one by one and check if base k in model params
-            if base_k in model_dict[model_k]['params']:
-                # update model key with base params
-                model_dict[model_k]['params'][base_k] = base_v
-
-
-    # Checks whether base_dict single model is present in the list
-    assert base_dict['single_model'] in acceptable_single_models, 'single model response not in list of acceptable responses'
     
-    datasets = ['MNIST','FashionMNIST','KMNIST','CIFAR10', 'CIFAR100']
-    ood_datasets = [['FashionMNIST'],['MNIST'],['SVHN'],['SVHN']]
-    
-    # BASELINES
-    # Go through all the models in the current dataset and current OOD dataset
-    if base_dict['single_model']== 'Baselines':
-        for model_k, model_v in model_dict.items():
-            # Checks if model is present in the acceptable single models
-            if model_k in acceptable_single_models:
-                params = model_dict[model_k]['params']
-                train_method = model_dict[model_k]['train']
-                model_module = model_dict[model_k]['model_module'] 
-                model_instance_method = model_dict[model_k]['model_instance']
-                model_data_dict = model_dict[model_k]['data_dict']
-                # Try statement to allow the code to continue even if a single run fails
-                #train_method(params, model_module, model_instance_method)
-                train_method(params, model_module, model_instance_method,model_data_dict)
 
-    ## SINGLE MODEL
-    # Go through a single model on all different datasets
-    else:
-        # Name of the chosen model
-        chosen_model = base_dict['single_model']
-        # Specific model dictionary chosen
-        model_info = model_dict[chosen_model]
-        train_method = model_info['train']
-        params = model_info['params']
-        model_module = model_info['model_module'] 
-        model_instance_method = model_info['model_instance']
-        model_data_dict = model_info['data_dict']
-        # Loop through the different datasets and OOD datasets and examine if the model is able to train for the task
-        for dataset, ood_dataset in zip(datasets, ood_datasets):
-            params['dataset'] = dataset
-            params['OOD_dataset'] = ood_dataset
-            train_method(params, model_module, model_instance_method, model_data_dict)
+    # Update the seed
+    margins = [1.5,2.0,2.5,3.0,3.5]
+    #seeds = [26,25,50,75,100] # Additional seed for the case of supcon memory run
+    for i in range(len(margins)):
+        # Update the seed
+        base_dict['margin'] = margins[i]
+
+        # Update the parameters of each model
+        # iterate through all items of the state dict
+        for base_k, base_v in base_dict.items():
+            # Iterate through all the model dicts
+            for model_k, model_v in model_dict.items():
+                # Go through each dict one by one and check if base k in model params
+                if base_k in model_dict[model_k]['params']:
+                    # update model key with base params
+                    model_dict[model_k]['params'][base_k] = base_v
+
+
+        # Checks whether base_dict single model is present in the list
+        assert base_dict['single_model'] in acceptable_single_models, 'single model response not in list of acceptable responses'
+
+        datasets = ['MNIST','FashionMNIST','KMNIST','CIFAR10', 'CIFAR100']
+        ood_datasets = [['FashionMNIST'],['MNIST'],['SVHN'],['SVHN']]
+
+        # BASELINES
+        # Go through all the models in the current dataset and current OOD dataset
+        if base_dict['single_model']== 'Baselines':
+            for model_k, model_v in model_dict.items():
+                # Checks if model is present in the acceptable single models
+                if model_k in acceptable_single_models:
+                    params = model_dict[model_k]['params']
+                    train_method = model_dict[model_k]['train']
+                    model_module = model_dict[model_k]['model_module'] 
+                    model_instance_method = model_dict[model_k]['model_instance']
+                    model_data_dict = model_dict[model_k]['data_dict']
+                    # Try statement to allow the code to continue even if a single run fails
+                    #train_method(params, model_module, model_instance_method)
+                    train_method(params, model_module, model_instance_method,model_data_dict)
+
+        ## SINGLE MODEL
+        # Go through a single model on all different datasets
+        else:
+            # Name of the chosen model
+            chosen_model = base_dict['single_model']
+            # Specific model dictionary chosen
+            model_info = model_dict[chosen_model]
+            train_method = model_info['train']
+            params = model_info['params']
+            model_module = model_info['model_module'] 
+            model_instance_method = model_info['model_instance']
+            model_data_dict = model_info['data_dict']
+            # Loop through the different datasets and OOD datasets and examine if the model is able to train for the task
+            for dataset, ood_dataset in zip(datasets, ood_datasets):
+                params['dataset'] = dataset
+                params['OOD_dataset'] = ood_dataset
+                train_method(params, model_module, model_instance_method, model_data_dict)
