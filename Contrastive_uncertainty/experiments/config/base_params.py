@@ -16,7 +16,7 @@ weight_decay = 1e-4,
 emb_dim = 128,
 instance_encoder = 'resnet50', # Use resnet 18 for confusion log probability 
 bsz = 256,
-dataset = 'CIFAR10',
+dataset = 'MNIST',
 #OOD_dataset = ['CIFAR10'],
 #dataset = 'CIFAR100',
 #OOD_dataset = ['SVHN'],
@@ -40,8 +40,8 @@ typicality_batch = 25,
 # Wandb parameters in common
 project = 'evaluation',
 
-group = 'Baselines Repeats',
-notes = 'Repeating the hierarchical baselines',  # Add notes to the specific models each time
+group = 'New Model Testing',
+notes = 'Testing whether new models are able to train effectively',  # Add notes to the specific models each time
 
 #group = 'Separate branch combinations',
 #notes = 'Training different combinations of branches weights for the hierarchical network',  # Add notes to the specific models each time
