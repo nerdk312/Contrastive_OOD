@@ -102,8 +102,7 @@ class Relative_Mahalanobis(Mahalanobis_OOD):
             feature_vector = self.vector_dict['vector_level'][vector_level](img) # Performs the callback for the desired level
             
             features += list(feature_vector.data.cpu().numpy())
-            labels += list(label.data.cpu().numpy())
-        #import ipdb; ipdb.set_trace()              
+            labels += list(label.data.cpu().numpy())            
 
         return np.array(features), np.array(labels)
 

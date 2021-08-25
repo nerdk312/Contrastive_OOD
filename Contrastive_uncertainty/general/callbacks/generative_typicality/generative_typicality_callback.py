@@ -48,8 +48,7 @@ class GenerativeTypicality(pl.Callback):
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
 
     # Performs all the computation in the callback
-    def forward_callback(self, trainer,pl_module):
-        
+    def forward_callback(self, trainer,pl_module):        
         train_loader = self.Datamodule.train_dataloader()
         test_loader = self.Datamodule.test_dataloader()
         ood_loader = self.OOD_Datamodule.test_dataloader()

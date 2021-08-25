@@ -52,3 +52,8 @@ def generic_saving(desired_key,run_filter):
             data_dir = summary_list[i][key]['path'] 
             run_dir = root_dir + run_path
             file_data = json.load(run.file(data_dir).download(root=run_dir))
+
+if __name__ =='__main__':
+    desired_key = 'Centroid Distances Average vector_table'
+    run_filter={"config.group":"Baselines Repeats"}
+    generic_saving(desired_key,run_filter)

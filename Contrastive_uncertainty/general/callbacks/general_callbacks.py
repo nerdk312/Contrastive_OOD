@@ -117,3 +117,41 @@ def quickloading(quick_test, dataloader):
     else:
         loader = dataloader
     return loader
+
+
+def get_roc_sklearn(xin, xood):
+    labels = [0] * len(xin)  + [1] * len(xood)
+    data = np.concatenate((xin, xood))
+    auroc = skm.roc_auc_score(labels, data)
+    return auroc
+
+# calculates aupr
+def get_pr_sklearn(xin, xood):
+    labels = [0] * len(xin)  + [1] * len(xood)
+    data = np.concatenate((xin, xood))
+    aupr = skm.average_precision_score(labels, data)
+    return aupr
+
+# Nawid - calculate false positive rate
+def get_fpr(xin, xood):
+    return np.sum(xood < np.percentile(xin, 95)) / len(xood)
+
+def get_roc_plot(xin, xood,OOD_name):
+    anomaly_targets = [0] * len(xin)  + [1] * len(xood)
+    outputs = np.concatenate((xin, xood))
+
+    fpr, trp, thresholds = skm.roc_curve(anomaly_targets, outputs)
+    plt.figure(figsize=(16,10))
+    sns.scatterplot(
+    x=fpr, y=trp,
+    legend="full",
+    alpha=0.3
+    )
+    # Set  x and y-axis labels
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    
+    ROC_filename = f'Images/ROC_{OOD_name}.png'
+    plt.savefig(ROC_filename)
+    wandb_ROC = f'ROC curve: OOD dataset {OOD_name}'
+    wandb.log({wandb_ROC:wandb.Image(ROC_filename)})

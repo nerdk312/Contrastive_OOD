@@ -130,4 +130,5 @@ def centroid_overlapping_fraction_plot():
         plt.savefig(f'{folder}/Class_centroid_overlapping_fraction_{percentile}_{dataset}_{Model_name}.png')
         plt.close()
 
-centroid_overlapping_fraction_plot()
+if __name__ == '__main__':
+    centroid_overlapping_fraction_plot()

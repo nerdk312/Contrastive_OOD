@@ -126,4 +126,5 @@ def feature_entropy_plotting():
     plt.legend()
     plt.savefig(f'{desired_key}_{ID}.png')
 #feature_entropy_saving()
-feature_entropy_plotting()
+if __name__ == '__main__':
+    feature_entropy_plotting()

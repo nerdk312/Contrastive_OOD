@@ -16,9 +16,9 @@ api = wandb.Api()
 #runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"OOD hierarchy baselines"}) # "OOD detection at different scales experiment" (other group I use to run experiments)
 #runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"OOD hierarchy baselines","$or": [{"config.model_type":"Moco" }, {"config.model_type": "SupCon"}]})
 #runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Baselines Repeats","$or": [{"config.model_type":"Moco" }, {"config.model_type": "CE"}]})
-
-runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Baselines Repeats","$or": [{"config.model_type": "SupCon"}]})
-
+#runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Baselines Repeats","$or": [{"config.model_type": "SupCon"}]})
+runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Baselines Repeats"})
+#runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Baselines Repeats","$or": [{"config.model_type":"Moco"}, {"config.model_type": "SupCon"}]})
 #runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Separate branch combinations","config.branch_weights":[0,0,1]})
 for i in range(len(runs)):
     # Joins together the path of the runs which are separated into different parts in a list

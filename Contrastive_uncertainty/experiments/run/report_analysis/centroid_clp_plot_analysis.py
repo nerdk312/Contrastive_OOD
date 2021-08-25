@@ -243,8 +243,8 @@ def centroid_clp_plot_v2():
                         plt.savefig(f'{folder}/Class_centroid_CLP_{ID}_{OOD}_{Model_name}.png')
                         plt.close()
                         
-
-centroid_clp_plot_v2()
+if __name__ == '__main__':
+    centroid_clp_plot_v2()
 #           
 #centroid_clp_plot()
 

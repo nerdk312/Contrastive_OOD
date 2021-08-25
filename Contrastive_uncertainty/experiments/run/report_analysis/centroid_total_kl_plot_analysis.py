@@ -1,6 +1,5 @@
 # Plotting the centroid distances against the confuson log probability
 
-import ipdb
 import wandb
 import pandas as pd
 import numpy as np
@@ -141,4 +140,5 @@ def centroid_total_kl_plot():
         plt.savefig(f'{folder}/Class_centroid_KL_{dataset}_{Model_name}.png')
         plt.close()
 
-centroid_total_kl_plot()
+if __name__ == '__main__':
+    centroid_total_kl_plot()

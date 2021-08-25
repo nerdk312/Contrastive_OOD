@@ -106,11 +106,7 @@ class VAEModule(pl.LightningModule):
         z = self.callback_vector(x)
         return z
     
-    def class_forward(self, x):
-        z = self.encoder(x)
-        z = nn.functional.normalize(z, dim=1)
-        logits = self.encoder.class_fc2(z)
-        return logits
+    z
 
     # Pass in a latent representations and obtain reconstructed output
     def decode(self, z):
