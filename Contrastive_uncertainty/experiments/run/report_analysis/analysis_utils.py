@@ -56,4 +56,5 @@ def generic_saving(desired_key,run_filter):
 if __name__ =='__main__':
     desired_key = 'Centroid Distances Average vector_table'
     run_filter={"config.group":"Baselines Repeats"}
+    #run_filter={"config.group":"Baselines Repeats","$or": [{"config.model_type":"Moco"}, {"config.model_type": "SupCon"}]}
     generic_saving(desired_key,run_filter)

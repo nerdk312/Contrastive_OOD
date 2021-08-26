@@ -670,9 +670,9 @@ class Point_One_Dim_Class_Typicality_Normalised(pl.Callback):
 
         eigvalues = []
         eigvectors = []
-        #import ipdb; ipdb.set_trace()
-        dtrain_1d_mean = []
-        dtrain_1d_std = []
+        
+        dtrain_1d_mean = [] # 1D mean for each class
+        dtrain_1d_std = [] # 1D std for each class
         for class_num, class_cov in enumerate(covs):
             class_eigvals, class_eigvectors = np.linalg.eigh(class_cov) # Each column is a normalised eigenvector of
             
@@ -684,8 +684,7 @@ class Point_One_Dim_Class_Typicality_Normalised(pl.Callback):
             # Get the distribution of the 1d Scores from the certain class, which involves seeing the one dimensional scores for a specific class and calculating the mean and the standard deviation
             dtrain_class = np.matmul(eigvectors[class_num].T,(xc[class_num] - means[class_num]).T)**2/eigvalues[class_num]
             dtrain_1d_mean.append(np.mean(dtrain_class, axis= 1, keepdims=True))
-            dtrain_1d_std.append(np.std(dtrain_class, axis= 1, keepdims=True))
-
+            dtrain_1d_std.append(np.std(dtrain_class, axis= 1, keepdims=True))        
         
         return means, covs, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std
     
@@ -695,8 +694,8 @@ class Point_One_Dim_Class_Typicality_Normalised(pl.Callback):
         # obtain the normalised the scores for the different classes
         ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
 
-        # Obtain the sum of the different dimensions for the score
-        scores = [np.sum(ddata[class_num],axis=0) for class_num in range(len(means))]
+        # Obtain the sum of absolute normalised scores
+        scores = [np.sum(np.abs(ddata[class_num]),axis=0) for class_num in range(len(means))]
         # Obtain the scores corresponding to the lowest class
         ddata = np.min(scores,axis=0)
 
@@ -723,23 +722,177 @@ class Point_One_Dim_Relative_Class_Typicality_Analysis(Point_One_Dim_Class_Typic
     def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool):
         super().__init__(Datamodule, OOD_Datamodule, quick_callback)
 
-    def get_statistics(self, fdata, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std):
-        raw_ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes         
+
+    def forward_callback(self, trainer, pl_module):
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        val_loader = self.Datamodule.val_dataloader()
+        # Use the test transform validataion loader
+        if isinstance(val_loader, tuple) or isinstance(val_loader, list):
+                    _, val_loader = val_loader
+                
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_features(pl_module, test_loader)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader)
+        
+
+        # Used to get the predcitions for te OOD data points - involves normalising the data
+        din, dood, indices_din, indices_dood = self.get_predictions(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train))
+        
+        # Does not involve normalising the data
+        self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train),
+            np.copy(labels_test),
+            np.copy(indices_dood))
+
+    
+    def get_scores(self,ftrain, ftest, food, ypred):
+        # Nawid - get all the features which belong to each of the different classes
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        
+        din = [
+            np.sum(
+                (ftest - np.mean(x, axis=0, keepdims=True)) # Nawid - distance between the data point and the mean
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (ftest - np.mean(x, axis=0, keepdims=True)).T
+                    ) # Nawid - calculating the covariance matrix of the data belonging to a particular class and dot product by the distance of the data point from the mean (distance calculation)
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid - done for all the different classes
+        ]
+        
+        dood = [
+            np.sum(
+                (food - np.mean(x, axis=0, keepdims=True))
+                * (
+                    np.linalg.pinv(np.cov(x.T, bias=True)).dot(
+                        (food - np.mean(x, axis=0, keepdims=True)).T
+                    )
+                ).T,
+                axis=-1,
+            )
+            for x in xc # Nawid- this calculates the score for all the OOD examples 
+        ]
+        # Calculate the indices corresponding to the values
+        indices_din = np.argmin(din,axis = 0)
+        indices_dood = np.argmin(dood, axis=0)
+
+        din = np.min(din, axis=0) # Nawid - calculate the minimum distance 
+        dood = np.min(dood, axis=0)
+
+        return din, dood, indices_din, indices_dood
+
+    # normalise scores to get the predictions of food
+    def normalise(self,ftrain,ftest,food):
+        # Nawid -normalise the featues for the training, test and ood data
+        # standardize data
+        
+        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
+        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
+        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
+        # Nawid - calculate the mean and std of the traiing features
+        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
+        # Nawid - normalise data using the mean and std
+        ftrain = (ftrain - m) / (s + 1e-10)
+        ftest = (ftest - m) / (s + 1e-10)
+        food = (food - m) / (s + 1e-10)
+        
+        return ftrain, ftest,food
+
+    def get_predictions(self,ftrain, ftest,food,labelstrain):
+        ftrain_norm,ftest_norm,food_norm = self.normalise(ftrain,ftest,food)
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        return dtest, dood, indices_dtest, indices_dood
+
+    def get_1d_train(self,ftrain, ypred): 
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        covs = [np.cov(x.T, bias=True) for x in xc] # Cov and means part should be fine
+        means = [np.mean(x,axis=0,keepdims=True) for x in xc] # Calculates mean from (B,embdim) to (1,embdim)
+
+        ####### Background information ##########
+        background_cov = np.cov(ftrain.T, bias=True)
+        background_mean = np.mean(ftrain,axis=0,keepdims=True)
+        background_eigvalues, background_eigvectors = np.linalg.eigh(background_cov)
+        background_eigvalues =  np.expand_dims(background_eigvalues,axis=1)
+
+        eigvalues = []
+        eigvectors = []
+            
+        dtrain_1d_mean = [] # 1D mean for each class
+        dtrain_1d_std = [] # 1D std for each class
+        all_dtrain_class = [] # 1d scores for each class
+
+        background_class_1d_mean = [] # 1D mean for each class
+        background_class_1d_std = [] # 1D std for each class
+        all_background_train_class = [] # scores for the background
+        for class_num, class_cov in enumerate(covs):
+            class_eigvals, class_eigvectors = np.linalg.eigh(class_cov) # Each column is a normalised eigenvector of
+            
+            # Reverse order as the eigenvalues and eigenvectors are in ascending order (lowest value first), therefore it would be beneficial to get them in descending order
+            #class_eigvals, class_eigvectors = np.flip(class_eigvals, axis=0), np.flip(class_eigvectors,axis=0)
+            eigvalues.append(np.expand_dims(class_eigvals,axis=1))
+            eigvectors.append(class_eigvectors)
+
+            # Get the distribution of the 1d Scores from the certain class, which involves seeing the one dimensional scores for a specific class and calculating the mean and the standard deviation
+            dtrain_class = np.matmul(eigvectors[class_num].T,(xc[class_num] - means[class_num]).T)**2/eigvalues[class_num]
+            dtrain_1d_mean.append(np.mean(dtrain_class, axis= 1, keepdims=True))
+            dtrain_1d_std.append(np.std(dtrain_class, axis= 1, keepdims=True))
+            all_dtrain_class.append(dtrain_class)
+
+            # Information related to the background statistics of each class
+            background_class = np.matmul(background_eigvectors.T,(xc[class_num] - background_mean).T)**2/background_eigvalues
+            background_class_1d_mean.append(np.mean(background_class, axis= 1, keepdims=True))
+            background_class_1d_std.append(np.std(background_class, axis= 1, keepdims=True))
+            all_background_train_class.append(background_class)
+
+            class_semantic_information = means, covs, eigvalues, eigvectors,all_dtrain_class, dtrain_1d_mean, dtrain_1d_std
+            class_background_information = background_mean, background_cov,  background_eigvalues, background_eigvectors, all_background_train_class, background_class_1d_mean, background_class_1d_std
+        
+        return class_semantic_information, class_background_information
+    # Continue by getting the test and OOD statistics of the data
+    
+    def get_statistics(self, fdata,labels_data,train_labels, class_semantic_information,class_background_information):
+        xc = [fdata[labels_data == i] for i in np.unique(train_labels)] # Need to use the train labels to get all the labels
+        
+        semantic_means, semantic_cov, semantic_eigvalues, semantic_eigvectors,all_semantic_train_class, semantic_dtrain_1d_mean, semantic_dtrain_1d_std = class_semantic_information     
+        background_mean, background_cov,  background_eigvalues, background_eigvectors, all_background_train_class, background_class_1d_mean, background_class_1d_std =  class_background_information        
+
+        semantic_raw_ddata = [np.matmul(semantic_eigvectors[class_num].T,(xc[class_num] - semantic_means[class_num]).T)**2/semantic_eigvalues[class_num] for class_num in range(len(xc))] # Calculate the 1D scores for all the different classes         
         # obtain the normalised the scores for the different classes
-        normalized_ddata = [raw_ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
+        semantic_normalized_ddata = [semantic_raw_ddata[class_num] - semantic_dtrain_1d_mean[class_num]/(semantic_dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(xc))] # shape (dim, batch)
 
-        return raw_ddata, normalized_ddata
+        background_raw_ddata = [np.matmul(background_eigvectors.T,(xc[class_num] - background_mean).T)**2/background_eigvalues for class_num in range(len(xc))] # Calculate the 1D scores for all the different classes         
+        # obtain the normalised the scores for the different classes
+        background_normalized_ddata = [background_raw_ddata[class_num] - background_class_1d_mean[class_num]/(background_class_1d_std[class_num] + +1e-10) for class_num in range(len(xc))] # shape (dim, batch)
 
-    def get_scores(self,ftrain,ftest, food, labelstrain):
-        means, covs, eigvalues, eigvectors, dtrain_class, dtrain_1d_mean, dtrain_1d_std = self.get_1d_train(ftrain, labelstrain)
+        return semantic_raw_ddata, semantic_normalized_ddata, background_raw_ddata, background_normalized_ddata
+
+    def get_analysis_scores(self,ftrain,ftest, food, labelstrain,labelstest,predictedood):
+        class_semantic_information, class_background_information = self.get_1d_train(ftrain, labelstrain)
         
-        # Inference
-        # Calculate the scores for the in-distribution data and the OOD data
-        raw_din, normalized_din = self.get_statistics(ftest, means, eigvalues,eigvectors, dtrain_1d_mean,dtrain_1d_std)
-        raw_dood, normalized_dood = self.get_statistics(food, means, eigvalues,eigvectors, dtrain_1d_mean,dtrain_1d_std)
-        return dtrain_class, raw_din, normalized_din, raw_dood, normalized_dood
+        semantic_raw_din, semantic_normalized_din, background_raw_din, background_normalized_din = self.get_statistics(ftest,labelstest,labelstrain,class_semantic_information, class_background_information)
+        semantic_raw_dood, semantic_normalized_dood, background_raw_dood, background_normalized_dood = self.get_statistics(food,predictedood,labelstrain,class_semantic_information, class_background_information)        
+        return semantic_raw_din, semantic_normalized_din, background_raw_din, background_normalized_din, semantic_raw_dood, semantic_normalized_dood, background_raw_dood, background_normalized_dood 
 
-    def get_eval_results(self, ftrain, ftest, food, labelstrain):
-        dtrain_class, raw_din, normalized_din, raw_dood, normalized_dood = self.get_scores(ftrain, ftest, food, labelstrain)
         
+
+    def get_eval_results(self, ftrain, ftest, food, labelstrain,labelstest,predictedood):
+        semantic_raw_din, semantic_normalized_din, background_raw_din, background_normalized_din, semantic_raw_dood, semantic_normalized_dood, background_raw_dood, background_normalized_dood  = self.get_analysis_scores(ftrain,ftest, food, labelstrain,labelstest,predictedood)
+        import ipdb; ipdb.set_trace()
+    
+
+
+    
         

@@ -52,7 +52,9 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Feature Entropy', 'Centroid_distances'],#,'Total Centroid KL'],
 #callbacks = ['Total Centroid KL'],
 
-callbacks = ['Centroid Distances','MMD'],
+#callbacks = ['Centroid Distances','MMD'],
+callbacks = ['Point One Dim Class Typicality Normalised'],
+
 #callbacks = ['One Dim Typicality'],
 #callbacks = ['One Dim Typicality Class'],
 #callbacks = ['One Dim Typicality Marginal Oracle'],
