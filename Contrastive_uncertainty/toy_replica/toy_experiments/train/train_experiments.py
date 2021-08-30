@@ -4,6 +4,7 @@ from Contrastive_uncertainty.toy_replica.moco.config.moco_params import moco_hpa
 from Contrastive_uncertainty.toy_replica.sup_con.config.sup_con_params import sup_con_hparams
 from Contrastive_uncertainty.toy_replica.sup_con_memory.config.sup_con_memory_params import sup_con_memory_hparams
 from Contrastive_uncertainty.toy_replica.moco_margin.config.moco_margin_params import moco_margin_hparams
+from Contrastive_uncertainty.toy_replica.moco_divergence.config.moco_divergence_params import moco_divergence_hparams
 
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.config.hsup_con_bu_params import hsup_con_bu_hparams
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.config.hsup_con_td_params import hsup_con_td_hparams
@@ -17,6 +18,7 @@ from Contrastive_uncertainty.toy_replica.moco.models.moco_module import MocoToy
 from Contrastive_uncertainty.toy_replica.sup_con.models.sup_con_module import SupConToy
 from Contrastive_uncertainty.toy_replica.sup_con_memory.models.sup_con_memory_module import SupConMemoryToy
 from Contrastive_uncertainty.toy_replica.moco_margin.models.moco_margin_module import MocoMarginToy
+from Contrastive_uncertainty.toy_replica.moco_divergence.models.moco_divergence_module import MocoDivergenceToy
 
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_module import HSupConBUToy
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_module import HSupConTDToy
@@ -30,6 +32,7 @@ from Contrastive_uncertainty.toy_replica.moco.models.moco_model_instance import 
 from Contrastive_uncertainty.toy_replica.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
 from Contrastive_uncertainty.toy_replica.sup_con_memory.models.sup_con_memory_model_instance import ModelInstance as SupConMemoryModelInstance
 from Contrastive_uncertainty.toy_replica.moco_margin.models.moco_margin_model_instance import ModelInstance as MocoMarginModelInstance
+from Contrastive_uncertainty.toy_replica.moco_divergence.models.moco_divergence_model_instance import ModelInstance as MocoDivergenceModelInstance
 
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_bu.models.hsup_con_bu_model_instance import ModelInstance as HSupConBUModelInstance
 from Contrastive_uncertainty.toy_replica.hierarchical_models.hsup_con_td.models.hsup_con_td_model_instance import ModelInstance as HSupConTDModelInstance
@@ -52,7 +55,8 @@ def train(base_dict):
     #'Moco',
     #'SupCon',
     #'SupConMemory',
-    'MocoMargin',
+    #'MocoMargin',
+    'MocoDivergence',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -78,6 +82,9 @@ def train(base_dict):
 
                     'MocoMargin':{'params':moco_margin_hparams,'model_module':MocoMarginToy, 
                     'model_instance':MocoMarginModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
+
+                    'MocoDivergence':{'params':moco_divergence_hparams,'model_module':MocoDivergenceToy, 
+                    'model_instance':MocoDivergenceModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
 
                     'HSupConBU':{'params':hsup_con_bu_hparams,'model_module':HSupConBUToy, 
                     'model_instance':HSupConBUModelInstance,'train':general_hierarchy_training,'data_dict': general_dataset_dict},

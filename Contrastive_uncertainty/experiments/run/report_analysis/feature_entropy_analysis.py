@@ -126,8 +126,10 @@ def feature_entropy_plotting():
     plt.xlabel('Feature Dimension')
     if desired_key == 'marginal feature entropy':
         plt.ylabel('Differential Entropy')
+        plt.title(f'Differential Entropy for the {ID} Dataset', size=12)
     else:
         plt.ylabel('Class Conditional Differential Entropy')
+        plt.title(f'Class Conditional Differential Entropy for the {ID} Dataset', size=12)
     # show legend
     plt.legend()
     # replace the space with a value for the _

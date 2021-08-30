@@ -106,7 +106,11 @@ label_level = ['fine','fine','coarse'],
 
 
 #callbacks = ['Point One Dim Class Typicality Normalised'],
-callbacks = ['Point One Dim Relative Class Typicality Analysis'],
+#callbacks = ['Point One Dim Relative Class Typicality Analysis'],
+callbacks = [],
+
+
+
 #callbacks = ['Model_saving'],
 #callbacks = ['Confusion Log Probability'],
 #callbacks = ['Class Inverted Relative Mahalanobis'],

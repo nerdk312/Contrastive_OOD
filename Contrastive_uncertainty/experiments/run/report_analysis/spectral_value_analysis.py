@@ -7,6 +7,8 @@ import numpy as np
 # Import general params
 import json
 import math
+import matplotlib
+matplotlib.rcParams['text.usetex'] = True # Makes it so that latex can be used 
 import matplotlib.pyplot as plt
 
 from ood_centroid_analysis import key_dict
@@ -61,6 +63,9 @@ column_names = ['SupCLR' if model =='SupCon' else model for model in key_dict['m
 row_names = [dataset for dataset in key_dict['dataset'].keys()]
 data_df = pd.DataFrame(data_array, columns = column_names, index = row_names)
 ax =data_df.plot.bar()
+plt.title('Spectral Decay for different datasets')
+plt.ylabel(r'$\rho$')
 plt.tight_layout()
+
 plt.savefig('spectral_values.png')
 #plt.savefig('absolute MMD distance.png')
