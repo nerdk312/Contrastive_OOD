@@ -10,7 +10,8 @@ import json
 import math
 
 from ood_centroid_analysis import dataset_dict,key_dict, ood_dataset_string
-
+import matplotlib
+matplotlib.rcParams['text.usetex'] = True # Makes it so that latex can be used 
 import matplotlib.pyplot as plt
 
 def feature_entropy_saving():
@@ -122,9 +123,16 @@ def feature_entropy_plotting():
     plt.plot( 'Dimension', 'Feature Entropy', data=datadict['Moco'], marker='', color='olive', linewidth=2,label='Moco')
     plt.plot( 'Dimension', 'Feature Entropy', data=datadict['SupCLR'], marker='', color='skyblue', linewidth=2, linestyle='dashed', label="SupCLR")
     plt.ylim(-10,0)
+    plt.xlabel('Feature Dimension')
+    if desired_key == 'marginal feature entropy':
+        plt.ylabel('Differential Entropy')
+    else:
+        plt.ylabel('Class Conditional Differential Entropy')
     # show legend
     plt.legend()
-    plt.savefig(f'{desired_key}_{ID}.png')
+    # replace the space with a value for the _
+    saving_name = desired_key.replace(' ','_')
+    plt.savefig(f'{saving_name}_{ID}.png')
 #feature_entropy_saving()
 if __name__ == '__main__':
     feature_entropy_plotting()

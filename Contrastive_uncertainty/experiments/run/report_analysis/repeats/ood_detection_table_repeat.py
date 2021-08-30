@@ -143,11 +143,14 @@ def ood_detection_repeat_table():
 
     # Table post processing
     auroc_mean_latex_table = auroc_mean_latex_table.replace('{}','{Datasets}')
-    auroc_mean_latex_table = auroc_mean_latex_table.replace("lrrr","|p{3cm}|c|c|c|")
+    auroc_mean_latex_table = auroc_mean_latex_table.replace("lrrr","|p{3cm}|p{1.25cm}|p{1.25cm}|p{1.25cm}|")
     auroc_mean_latex_table = auroc_mean_latex_table.replace(r"\toprule",r"\hline")
+    auroc_mean_latex_table = auroc_mean_latex_table.replace(r"\\",r"\\ \hline")
     auroc_mean_latex_table = auroc_mean_latex_table.replace(r"\midrule"," ")
     auroc_mean_latex_table = auroc_mean_latex_table.replace(r"\bottomrule"," ")
 
+    auroc_mean_latex_table = auroc_mean_latex_table + ' \\\ \hline'
     print(auroc_mean_latex_table)
+    import ipdb; ipdb.set_trace()
 if __name__ == '__main__':
     ood_detection_repeat_table()

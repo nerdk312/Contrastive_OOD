@@ -14,46 +14,61 @@ import copy
 import json
 
 from Contrastive_uncertainty.experiments.run.report_analysis.ood_centroid_analysis import dataset_dict,key_dict, ood_dataset_string
-from Contrastive_uncertainty.experiments.run.report_analysis.mean_centroid_analysis import mean_vector_calculation
 
+
+def ood_fraction_values(auroc_json, k_values):
+    auroc_data = np.array(auroc_json['data'])
+    ood_fractions = auroc_data[:-1,-1]
+    # top k value indices unsorted
+    idx = np.argpartition(ood_fractions, -k_values)[-k_values:]
+    # top k value indices sorted
+    idx = idx[np.argsort(ood_fractions[idx])][::-1]
+    ood_sum = 0
+    for i in idx:
+        ood_sum += float(ood_fractions[i])
+    
+    return ood_sum
 # Code for the case of obtaining the MMD distance
-def mean_centroid_repeat_table():
+def mean_OOD_fraction_repeat_table():
     #desired_key = 'Mahalanobis AUROC: instance vector'.lower()
     
-    desired_key = 'Centroid Distances Average vector_table'
+    desired_key = 'class wise mahalanobis instance fine'
     decimal_places = 3 # num of decimal places to save
-
+    k_values = 2 
     
     # Dictionary to place values inside
-    values_dict = {'CE':{'MNIST':[],'FashionMNIST':[],'KMNIST':[], 'CIFAR10':[], 'CIFAR100':[]},
-    'Moco':{'MNIST':[],'FashionMNIST':[],'KMNIST':[], 'CIFAR10':[], 'CIFAR100':[]},
-    'SupCon':{'MNIST':[],'FashionMNIST':[],'KMNIST':[], 'CIFAR10':[], 'CIFAR100':[]}}
+    values_dict = {'CE':
+    {'MNIST':{'FashionMNIST':[],'KMNIST':[]},
+    'FashionMNIST':{'MNIST':[],'KMNIST':[]},
+    'KMNIST':{'MNIST':[],'FashionMNIST':[]},
+    'CIFAR10':{'SVHN':[],'CIFAR100':[]},
+    'CIFAR100':{'SVHN':[],'CIFAR10':[]}
+    },
     
+    'Moco':
+    {'MNIST':{'FashionMNIST':[],'KMNIST':[]},
+    'FashionMNIST':{'MNIST':[],'KMNIST':[]},
+    'KMNIST':{'MNIST':[],'FashionMNIST':[]},
+    'CIFAR10':{'SVHN':[],'CIFAR100':[]},
+    'CIFAR100':{'SVHN':[],'CIFAR10':[]}
+    },
+
+    'SupCon':
+    {'MNIST':{'FashionMNIST':[],'KMNIST':[]},
+    'FashionMNIST':{'MNIST':[],'KMNIST':[]},
+    'KMNIST':{'MNIST':[],'FashionMNIST':[]},
+    'CIFAR10':{'SVHN':[],'CIFAR100':[]},
+    'CIFAR100':{'SVHN':[],'CIFAR10':[]}
+    },
+    }
     api = wandb.Api()
-    data_array = np.empty((5,3))
+    data_array = np.empty((10,3))
     data_array[:] = np.nan
     # Array for std values
-    std_array = np.empty((5,3))
+    std_array = np.empty((10,3))
     std_array[:] = np.nan
     runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Baselines Repeats"})
-    '''
-
-    values_dict = {'Moco':{'MNIST':[],'FashionMNIST':[],'KMNIST':[], 'CIFAR10':[], 'CIFAR100':[]},
-    'SupCon':{'MNIST':[],'FashionMNIST':[],'KMNIST':[], 'CIFAR10':[], 'CIFAR100':[]}}
-
-    # Dict for the specific case to the other value
-    key_dict = {'model_type':{'Moco':0, 'SupCon':1},
-            'dataset': {'MNIST':0, 'FashionMNIST':1, 'KMNIST':2, 'CIFAR10':3,'CIFAR100':4}}
-
-    api = wandb.Api()
-    data_array = np.empty((5,2))
-    data_array[:] = np.nan
-    # Array for std values
-    std_array = np.empty((5,2))
-    std_array[:] = np.nan
     
-    runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Baselines Repeats","$or": [{"config.model_type":"Moco"}, {"config.model_type": "SupCon"}]})
-    '''
     summary_list, config_list, name_list = [], [], []
     root_dir = 'run_data/'
     for i, run in enumerate(runs): 
@@ -70,46 +85,68 @@ def mean_centroid_repeat_table():
 
         ID_dataset = config_list[i]['dataset']
         model_type = config_list[i]['model_type']
-        
+        name_list.append(run.name)
+
         # Getting the path
         group_name = config_list[i]['group']
         path_list = runs[i].path
         path_list.insert(-1, group_name) # insert the group name in the location one before the last value (rather than the last value which is peculiar)
         run_path = '/'.join(path_list)
         run_dir = root_dir + run_path
-        data_dir =  summary_list[i][desired_key]['path']
         
-        read_dir = run_dir + '/' + data_dir
-        name_list.append(run.name)
-        #print(run.name)
-        #import ipdb; ipdb.set_trace()
-        # opening file
-        with open(read_dir) as f:
-            centroid_json = json.load(f)
+        keys = [key for key, value in summary_list[i].items() if desired_key in key.lower()]
+        # Removes the keys related to the tables images, only retain the Json Files
+        auroc_keys = [key for key in keys if 'table' not in key.lower()]
+        # Remove keys which use emnist 
+        auroc_keys = [key for key in auroc_keys if 'emnist' not in key.lower()]
         
-        # Calculate the mean distance for a single run and placing into dict
-        centroid_run_mean_distance = mean_vector_calculation(centroid_json)
-        values_dict[model_type][ID_dataset].append(centroid_run_mean_distance)
-        
+        # Iterate through the keys (corresponding to different OOD dataset) and save the data
+        for key in auroc_keys:
+            OOD_dataset = ood_dataset_string(key, dataset_dict, ID_dataset)
 
+            data_dir = summary_list[i][key]['path']
+
+            read_dir = run_dir + '/' + data_dir
+        
+            # opening file
+            with open(read_dir) as f:
+                ood_fraction_json = json.load(f)
+            
+            ood_value = ood_fraction_values(ood_fraction_json, k_values)
+            
+    
+            # Calculate the mean distance for a single run and placing into dict
+            values_dict[model_type][ID_dataset][OOD_dataset].append(ood_value)
+    
+    #import ipdb; ipdb.set_trace()
+    
     # All values to iterate through
-    Models = ['CE','Moco','SupCon']
-    #Models = ['Moco','SupCon']
+    Models = ['CE','Moco','SupCon']    
     all_ID = ['MNIST','FashionMNIST','KMNIST', 'CIFAR10','CIFAR100']
+    all_OOD = {'MNIST':['FashionMNIST','KMNIST'],
+    'FashionMNIST':['MNIST','KMNIST'],
+    'KMNIST':['MNIST','FashionMNIST'],
+    'CIFAR10':['SVHN','CIFAR100'],
+    'CIFAR100':['SVHN','CIFAR10']}
     
 
     for Model in Models:# Go through the different models
         for ID in all_ID: # Go through the different ID dataset
-            column = key_dict['model_type'][Model]
-            row = key_dict['dataset'][ID]
-            mean_val = np.around(np.mean(values_dict[Model][ID]),decimals=decimal_places) 
-            std_val = np.around(np.std(values_dict[Model][ID]),decimals=decimal_places)
-            data_array[row, column] = mean_val
-            std_array[row, column] = std_val
+            for OOD in all_OOD[ID]: # Go through the different OOD datasets for a particular ID dataset
+                column = key_dict['model_type'][Model]
+                row = 2*key_dict['dataset'][ID] + dataset_dict[ID][OOD]
+                mean_val = np.around(np.mean(values_dict[Model][ID][OOD]),decimals=decimal_places) 
+                std_val = np.around(np.std(values_dict[Model][ID][OOD]),decimals=decimal_places)
+                data_array[row, column] = mean_val
+                std_array[row, column] = std_val
     
     # iterate through the ID dataset, and iterate for all the OOD datasets in the ID dataset
     column_names= ['SupCLR' if model=='SupCon' else model for model in key_dict['model_type'].keys()]
-    row_names = [dataset for dataset in key_dict['dataset'].keys()]
+    row_names = []
+    # iterate through the ID dataset, and iterate for all the OOD datasets in the ID dataset
+    for dataset in key_dict['dataset'].keys():
+        for OOD_dataset in dataset_dict[dataset].keys():
+            row_names.append(f'ID:{dataset}, OOD:{OOD_dataset}')
     
     mean_distance_df = pd.DataFrame(data_array, columns = column_names, index = row_names)
     std_distance_df = pd.DataFrame(std_array, columns = column_names, index = row_names)
@@ -120,7 +157,7 @@ def mean_centroid_repeat_table():
     mean_values_string = re.findall("\d+\.\d+", mean_latex_table)
     std_values_string = re.findall("\d+\.\d+", std_latex_table)
     
-    concat_list_string = [mean_values_string[i] + ' \pm ' + std_values_string[i] for i in range(len(mean_values_string))]
+    concat_list_string = [mean_values_string[i] + ' $\pm$ ' + std_values_string[i] for i in range(len(mean_values_string))]
     
     concatenated_list = []
     recursive_string = copy.copy(mean_latex_table)
@@ -138,7 +175,7 @@ def mean_centroid_repeat_table():
     mean_latex_table = ''.join(concatenated_list)
 
     # Table post processing
-    mean_latex_table= mean_latex_table.replace('{}','{Datasets}')
+    mean_latex_table= mean_latex_table.replace('{}','Datasets')
     mean_latex_table= mean_latex_table.replace("lrrr","|p{3cm}|p{1.25cm}|p{1.25cm}|p{1.25cm}|")
     mean_latex_table= mean_latex_table.replace(r"\toprule",r"\hline")
     mean_latex_table = mean_latex_table.replace(r"\\",r"\\ \hline")
@@ -148,6 +185,7 @@ def mean_centroid_repeat_table():
     mean_latex_table = mean_latex_table + ' \\\ \hline'
 
     print(mean_latex_table)
+    
 
 if __name__ == '__main__':
-    mean_centroid_repeat_table()
+    mean_OOD_fraction_repeat_table()

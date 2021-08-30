@@ -57,7 +57,7 @@ for i, run in enumerate(runs):
     data_array[row, column] = np.around(value,decimals=3)
 
 # Obtain the names of the rows and the name of the columns
-column_names = [model for model in key_dict['model_type'].keys()]
+column_names = ['SupCLR' if model =='SupCon' else model for model in key_dict['model_type'].keys()]
 row_names = [dataset for dataset in key_dict['dataset'].keys()]
 data_df = pd.DataFrame(data_array, columns = column_names, index = row_names)
 ax =data_df.plot.bar()

@@ -17,6 +17,9 @@ import wandb
 import sklearn.metrics as skm
 import faiss
 import statistics
+import copy
+import random 
+
 
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
@@ -870,12 +873,12 @@ class Point_One_Dim_Relative_Class_Typicality_Analysis(Point_One_Dim_Class_Typic
         background_mean, background_cov,  background_eigvalues, background_eigvectors, all_background_train_class, background_class_1d_mean, background_class_1d_std =  class_background_information        
 
         semantic_raw_ddata = [np.matmul(semantic_eigvectors[class_num].T,(xc[class_num] - semantic_means[class_num]).T)**2/semantic_eigvalues[class_num] for class_num in range(len(xc))] # Calculate the 1D scores for all the different classes         
-        # obtain the normalised the scores for the different classes
-        semantic_normalized_ddata = [semantic_raw_ddata[class_num] - semantic_dtrain_1d_mean[class_num]/(semantic_dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(xc))] # shape (dim, batch)
+        # obtain the normalised the scores for the different classes (requires obtaining the absolute value) which is important for replacing nans in the data
+        semantic_normalized_ddata = [np.abs(semantic_raw_ddata[class_num] - semantic_dtrain_1d_mean[class_num]/(semantic_dtrain_1d_std[class_num] +1e-10)) for class_num in range(len(xc))] # shape (dim, batch)
 
         background_raw_ddata = [np.matmul(background_eigvectors.T,(xc[class_num] - background_mean).T)**2/background_eigvalues for class_num in range(len(xc))] # Calculate the 1D scores for all the different classes         
         # obtain the normalised the scores for the different classes
-        background_normalized_ddata = [background_raw_ddata[class_num] - background_class_1d_mean[class_num]/(background_class_1d_std[class_num] + +1e-10) for class_num in range(len(xc))] # shape (dim, batch)
+        background_normalized_ddata = [np.abs(background_raw_ddata[class_num] - background_class_1d_mean[class_num]/(background_class_1d_std[class_num]  +1e-10)) for class_num in range(len(xc))] # shape (dim, batch)
 
         return semantic_raw_ddata, semantic_normalized_ddata, background_raw_ddata, background_normalized_ddata
 
@@ -886,13 +889,39 @@ class Point_One_Dim_Relative_Class_Typicality_Analysis(Point_One_Dim_Class_Typic
         semantic_raw_dood, semantic_normalized_dood, background_raw_dood, background_normalized_dood = self.get_statistics(food,predictedood,labelstrain,class_semantic_information, class_background_information)        
         return semantic_raw_din, semantic_normalized_din, background_raw_din, background_normalized_din, semantic_raw_dood, semantic_normalized_dood, background_raw_dood, background_normalized_dood 
 
-        
-
     def get_eval_results(self, ftrain, ftest, food, labelstrain,labelstest,predictedood):
         semantic_raw_din, semantic_normalized_din, background_raw_din, background_normalized_din, semantic_raw_dood, semantic_normalized_dood, background_raw_dood, background_normalized_dood  = self.get_analysis_scores(ftrain,ftest, food, labelstrain,labelstest,predictedood)
-        import ipdb; ipdb.set_trace()
-    
 
-
+        self.datasaving(semantic_normalized_din,background_normalized_din,semantic_normalized_dood, background_normalized_dood)
     
+    def datasaving(self, semantic_normalized_din,  background_normalized_din, semantic_normalized_dood,background_normalized_dood):
+        num_classes = len(semantic_normalized_din)
+           
+        semantic_din = [pd.DataFrame(semantic_normalized_din[class_num].T) for class_num in range(num_classes)]
+        background_din =  [pd.DataFrame(background_normalized_din[class_num].T) for class_num in range(num_classes)]
+
+        semantic_dood = [pd.DataFrame(semantic_normalized_dood[class_num].T) for class_num in range(num_classes)]
+        background_dood =  [pd.DataFrame(background_normalized_dood[class_num].T) for class_num in range(num_classes)]
         
+        all_df = copy.deepcopy(semantic_din)
+        # Need to add the lists into a single existing list
+        all_df.extend(background_din)
+        all_df.extend(semantic_dood)
+        all_df.extend(background_dood)
+        
+        # Concatenate all the dataframes (which places nans in situations where the columns have different lengths)
+        all_df = pd.concat(all_df,axis=1)
+        all_df = all_df.applymap(lambda l: l if not np.isnan(l) else random.uniform(-2,-1))
+        
+        semantic_din_columns = [f'Semantic typicality scores ID Class {i}' for i in range(num_classes)]
+        background_din_columns = [f'Background typicality scores ID Class {i}' for i in range(num_classes)]
+        semantic_dood_columns = [f'Semantic typicality scores OOD {self.OOD_dataname} Class {i}' for i in range(num_classes)]
+        background_dood_columns = [f'Background typicality scores OOD {self.OOD_dataname} Class {i}' for i in range(num_classes)]
+        
+        all_df.columns = semantic_din_columns + background_din_columns + semantic_dood_columns + background_dood_columns
+
+        analysis_table = wandb.Table(data = all_df)
+        wandb.log({'Practice':analysis_table})
+
+
+        # Need to get the correct number of columns for the data. The number of columns should be the number of class x number of dimensions (10 x128) x 4 (due too having 4 measurements )

@@ -119,8 +119,9 @@ def distance_repeat_table():
 
     # Table post processing
     mean_latex_table= mean_latex_table.replace('{}','{Datasets}')
-    mean_latex_table= mean_latex_table.replace("lrrr","|p{3cm}|c|c|c|")
+    mean_latex_table= mean_latex_table.replace("lrrr","|p{2cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}|")
     mean_latex_table= mean_latex_table.replace(r"\toprule",r"\hline")
+    mean_latex_table= mean_latex_table.replace(r"\\",r"\\ \hline")
     mean_latex_table= mean_latex_table.replace(r"\midrule"," ")
     mean_latex_table= mean_latex_table.replace(r"\bottomrule"," ")
 

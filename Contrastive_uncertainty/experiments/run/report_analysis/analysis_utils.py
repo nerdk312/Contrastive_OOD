@@ -47,14 +47,16 @@ def generic_saving(desired_key,run_filter):
         # .name is the human-readable name of the run.dir
         name_list.append(run.name)
         keys = [key for key, value in summary_list[i].items() if desired_key in key.lower()]
-        
+        keys = [key for key in keys if 'table' not in key.lower()]
         for key in keys:    
             data_dir = summary_list[i][key]['path'] 
             run_dir = root_dir + run_path
             file_data = json.load(run.file(data_dir).download(root=run_dir))
 
 if __name__ =='__main__':
-    desired_key = 'Centroid Distances Average vector_table'
+    #desired_key = 'Centroid Distances Average vector_table'
+    #desired_key = 'KL Divergence(Total||Class)'
+    desired_key = 'class wise mahalanobis instance fine'
     run_filter={"config.group":"Baselines Repeats"}
     #run_filter={"config.group":"Baselines Repeats","$or": [{"config.model_type":"Moco"}, {"config.model_type": "SupCon"}]}
     generic_saving(desired_key,run_filter)
