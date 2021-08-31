@@ -64,6 +64,8 @@ branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
 
+#Moco divergence parameters
+weighting = 0.25,
 
 #vector_level = 'fine',
 #label_level = 'coarse',

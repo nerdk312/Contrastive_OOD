@@ -83,6 +83,12 @@ branch_weights = [0.15, 0.30, 0.55],
 # Either goes through all the models or goes through baselines
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
+
+
+#Moco divergence parameters
+weighting = 0.25,
+
+
 #callbacks = ['Model_saving','Variational'],
 callbacks = ['Model_saving'],
 #callbacks = ['Model_saving', 'Confusion Log Probability'],

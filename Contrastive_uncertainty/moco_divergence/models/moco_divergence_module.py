@@ -19,7 +19,7 @@ class MocoDivergenceModule(pl.LightningModule):
         num_negatives: int = 65536,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
-        margin:float = 0.5,
+        weighting:float = 0.5,
         optimizer:str = 'sgd',
         learning_rate: float = 0.03,
         momentum: float = 0.9,
@@ -166,8 +166,8 @@ class MocoDivergenceModule(pl.LightningModule):
         loss_kl = self.kl_loss(q,labels)
         loss_instance = F.cross_entropy(output, target) # Nawid - instance based info NCE loss
 
-        # margin used to weight the losses
-        loss =  (1- self.hparams.margin)*loss_instance - (self.hparams.margin*loss_kl) # The aim should be to maximise the KL divergence therefore I should be put a negative value in front 
+        # weighting used to weight the losses
+        loss =  (1- self.hparams.weighting)*loss_instance - (self.hparams.weighting*loss_kl) # The aim should be to maximise the KL divergence therefore I should be put a negative value in front 
         acc_1, acc_5 = precision_at_k(output, target,top_k=(1,5))
         metrics = {'Loss': loss, 'Loss KL':loss_kl, 'Loss Instance':loss_instance, 'Accuracy @1':acc_1,'Accuracy @5':acc_5}
         return metrics
@@ -182,7 +182,7 @@ class MocoDivergenceModule(pl.LightningModule):
         class_std = [torch.std(class_query[class_num], axis=0) for class_num in range(num_classes)]
         class_gaussians = [torch.distributions.normal.Normal(class_means[class_num],class_std[class_num]) for class_num in range(num_classes)]
         class_KLs = [torch.mean(torch.distributions.kl.kl_divergence(self.total_distribution,class_gaussians[class_num])) for class_num in range(num_classes)]
-        print('class KLs',class_KLs)
+        #print('class KLs',class_KLs)
         loss_KL = torch.mean(torch.stack(class_KLs))        
 
         return loss_KL

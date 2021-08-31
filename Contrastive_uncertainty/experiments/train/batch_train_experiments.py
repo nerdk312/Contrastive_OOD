@@ -3,6 +3,8 @@ from Contrastive_uncertainty.cross_entropy.config.cross_entropy_params import cr
 from Contrastive_uncertainty.moco.config.moco_params import moco_hparams
 from Contrastive_uncertainty.sup_con.config.sup_con_params import sup_con_hparams
 from Contrastive_uncertainty.sup_con_memory.config.sup_con_memory_params import sup_con_memory_hparams
+from Contrastive_uncertainty.moco_divergence.config.moco_divergence_params import moco_divergence_hparams
+
 
 from Contrastive_uncertainty.PCL.config.pcl_params import pcl_hparams
 from Contrastive_uncertainty.hierarchical_models.HSupCon.config.hsup_con_params import hsup_con_hparams
@@ -25,6 +27,8 @@ from Contrastive_uncertainty.cross_entropy.models.cross_entropy_module import Cr
 from Contrastive_uncertainty.moco.models.moco_module import MocoModule
 from Contrastive_uncertainty.sup_con.models.sup_con_module import SupConModule
 from Contrastive_uncertainty.sup_con_memory.models.sup_con_memory_module import SupConMemoryModule
+from Contrastive_uncertainty.moco_divergence.models.moco_divergence_module import MocoDivergenceModule
+
 
 from Contrastive_uncertainty.PCL.models.pcl_module import PCLModule
 from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_module import HSupConModule
@@ -47,6 +51,8 @@ from Contrastive_uncertainty.cross_entropy.models.cross_entropy_model_instance i
 from Contrastive_uncertainty.moco.models.moco_model_instance import ModelInstance as MocoModelInstance
 from Contrastive_uncertainty.sup_con.models.sup_con_model_instance import ModelInstance as SupConModelInstance
 from Contrastive_uncertainty.sup_con_memory.models.sup_con_memory_model_instance import ModelInstance as SupConMemoryModelInstance
+from Contrastive_uncertainty.moco_divergence.models.moco_divergence_model_instance import ModelInstance as MocoDivergenceModelInstance
+
 
 from Contrastive_uncertainty.PCL.models.pcl_model_instance import ModelInstance as PCLModelInstance
 from Contrastive_uncertainty.hierarchical_models.HSupCon.models.hsup_con_model_instance import ModelInstance as HSupConModelInstance
@@ -76,8 +82,9 @@ def batch_train(base_dict):
     acceptable_single_models = ['Baselines',
     #'CE',
     #'Moco',
-    'SupCon',
+    #'SupCon',
     #'SupConMemory',
+    'MocoDivergence',
     # 'PCL',
     # 'MultiPCL',
     # 'UnSupConMemory',
@@ -107,6 +114,9 @@ def batch_train(base_dict):
                     'SupConMemory':{'params':sup_con_memory_hparams,'model_module':SupConMemoryModule, 
                     'model_instance':SupConMemoryModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
 
+                    'MocoDivergence':{'params':moco_divergence_hparams,'model_module':MocoDivergenceModule, 
+                    'model_instance':MocoDivergenceModelInstance, 'train':general_training, 'data_dict':general_dataset_dict},
+
                     'HSupConBUCentroid':{'params':hsup_con_bu_centroid_hparams,'model_module':HSupConBUCentroidModule, 
                     'model_instance':HSupConBUCentroidModelInstance, 'train':general_hierarchy_training, 'data_dict':general_dataset_dict},
                     
@@ -135,11 +145,18 @@ def batch_train(base_dict):
     
 
     # Update the seed
+    '''
     seeds = [25,50,75,100]
     #seeds = [26,25,50,75,100] # Additional seed for the case of supcon memory run
     for i in range(len(seeds)):
         # Update the seed
         base_dict['seed'] = seeds[i]
+    '''
+    
+    weightings = [0.01,0.1, 0.25, 0.5]
+    for i in range(len(weightings)):
+        # Update the seed
+        base_dict['weighting'] = weightings[i]
 
         # Update the parameters of each model
         # iterate through all items of the state dict

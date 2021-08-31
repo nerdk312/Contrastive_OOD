@@ -4,7 +4,7 @@ num_negatives = 65536,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
 instance_encoder = 'resnet50',
-margin = 1.0, # # weighting term for the KL divergence loss
+weighting = 1.0, # # weighting term for the KL divergence loss
 
 
 # optimizer args

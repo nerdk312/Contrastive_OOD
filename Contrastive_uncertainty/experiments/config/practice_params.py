@@ -69,9 +69,6 @@ num_multi_cluster = [100,500],
 num_cluster_negatives = 4096,
 num_inference_cluster = [10,100,1000], # Number of clusters for the inference callback
 
-
-
-
 # unsupcon memory parameters
 memory_momentum = 0.5,
 num_cluster = [10],
@@ -80,6 +77,11 @@ num_cluster = [10],
 branch_weights = [1.0/3, 1.0/3, 1.0/3],
 vector_level = ['instance', 'fine', 'coarse'],
 label_level = ['fine','fine','coarse'],
+
+
+#Moco divergence parameters
+weighting = 0.25,
+
 #callbacks = ['OOD_Dataset_distances'],
 #callbacks = ['Model_saving','Variational'],
 #callbacks = ['Aggregated','Differing'],
