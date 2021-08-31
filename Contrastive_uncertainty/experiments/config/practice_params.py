@@ -12,7 +12,7 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet18',
-bsz = 64,
+bsz = 256,#64,
 dataset = 'MNIST',
 #OOD_dataset = ['SVHN'],
 #OOD_dataset = ['SVHN','CIFAR10'],
@@ -52,7 +52,7 @@ enc_out_dim = 128,
 label_smoothing = False,
 
 # Contrastive specific parameters
-num_negatives = 128,
+num_negatives = 512,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
 

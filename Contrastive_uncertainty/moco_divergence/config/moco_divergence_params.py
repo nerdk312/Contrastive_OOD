@@ -4,7 +4,8 @@ num_negatives = 65536,
 encoder_momentum = 0.999,
 softmax_temperature = 0.07,
 instance_encoder = 'resnet50',
-margin = 1.0, # weighting term for the KL divergence loss
+margin = 1.0, # # weighting term for the KL divergence loss
+
 
 # optimizer args
 optimizer = 'sgd',
@@ -13,10 +14,9 @@ momentum= 0.9,
 weight_decay = 1e-4,
 
 bsz = 256,
-dataset = 'Blobs',
-OOD_dataset = ['TwoMoons','Diagonal'],
+dataset = 'MNIST',
+OOD_dataset = ['FashionMNIST'],
 
-use_mlp = True,
 
 # Miscellaneous arguments
 seed = 42,
@@ -39,7 +39,7 @@ pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis'],
 
 model_type = 'MocoDivergence',
-project = 'toy_replica',# evaluation, Moco_training
+project = 'evaluation',# evaluation, Moco_training
 group = None,
 notes = None,
 )

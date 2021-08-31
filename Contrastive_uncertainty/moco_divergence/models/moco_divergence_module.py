@@ -1,4 +1,3 @@
-from numpy.core.fromnumeric import sort
 from torch.utils import data
 import wandb
 import pytorch_lightning as pl
@@ -10,23 +9,23 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from tqdm import tqdm
 
-from Contrastive_uncertainty.toy_replica.moco.models.encoder_model import Backbone
+
+from Contrastive_uncertainty.moco.models.resnet_models import custom_resnet18,custom_resnet34,custom_resnet50
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k, mean
 
-
-
-class MocoDivergenceToy(pl.LightningModule):
+class MocoDivergenceModule(pl.LightningModule):
     def __init__(self,
         emb_dim: int = 128,
         num_negatives: int = 65536,
         encoder_momentum: float = 0.999,
         softmax_temperature: float = 0.07,
-        margin:float = 1.0,
+        margin:float = 0.5,
         optimizer:str = 'sgd',
         learning_rate: float = 0.03,
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
         datamodule: pl.LightningDataModule = None,
+        instance_encoder:str = 'resnet50',
         pretrained_network:str = None,
         ):
 
@@ -61,8 +60,15 @@ class MocoDivergenceToy(pl.LightningModule):
         """
         Override to add your own encoders
         """
-        encoder_q = Backbone(20, self.hparams.emb_dim)
-        encoder_k = Backbone(20, self.hparams.emb_dim)
+        if self.hparams.instance_encoder == 'resnet18':
+            print('using resnet18')
+            encoder_q = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet18(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+        elif self.hparams.instance_encoder =='resnet50':
+            print('using resnet50')
+            encoder_q = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+            encoder_k = custom_resnet50(latent_size = self.hparams.emb_dim,num_channels = self.num_channels,num_classes = self.num_classes)
+        
         return encoder_q, encoder_k
 
     @torch.no_grad()
@@ -166,6 +172,8 @@ class MocoDivergenceToy(pl.LightningModule):
         metrics = {'Loss': loss, 'Loss KL':loss_kl, 'Loss Instance':loss_instance, 'Accuracy @1':acc_1,'Accuracy @5':acc_5}
         return metrics
 
+    #  https://discuss.pytorch.org/t/use-kl-divergence-as-loss-between-two-multivariate-gaussians/40865
+    # https://stackoverflow.com/questions/60765000/understanding-log-prob-for-normal-distribution-in-pytorch
     def kl_loss(self, query, labels):
         # Obtain representations for the different classes
         class_query = [query[labels==i] for i in torch.unique(labels,sorted=True)]
@@ -174,6 +182,7 @@ class MocoDivergenceToy(pl.LightningModule):
         class_std = [torch.std(class_query[class_num], axis=0) for class_num in range(num_classes)]
         class_gaussians = [torch.distributions.normal.Normal(class_means[class_num],class_std[class_num]) for class_num in range(num_classes)]
         class_KLs = [torch.mean(torch.distributions.kl.kl_divergence(self.total_distribution,class_gaussians[class_num])) for class_num in range(num_classes)]
+        print('class KLs',class_KLs)
         loss_KL = torch.mean(torch.stack(class_KLs))        
 
         return loss_KL
@@ -207,6 +216,7 @@ class MocoDivergenceToy(pl.LightningModule):
                                         weight_decay=self.hparams.weight_decay)
         return optimizer
     
+
     # Calculate total distribution using the validation dataloader every epoch
     def on_train_epoch_start(self):
         dataloader = self.datamodule.val_dataloader() 
@@ -241,8 +251,6 @@ class MocoDivergenceToy(pl.LightningModule):
         features_std = torch.std(features,axis=0)
         total_distribution = torch.distributions.normal.Normal(features_mean,features_std) 
         return total_distribution
-
-
 
     # Loads both network as a target state dict
     def encoder_loading(self,pretrained_network):
