@@ -77,6 +77,21 @@ class ToyEvalTwoMoonsTransforms:
         k = self.test_transform(inp)
         return q, k
 
+class ToyMultiTwoMoonsTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self):
+        # image augmentation functions
+        self.multi_transform = transforms.Compose([
+            transforms.RandomApply([GaussianNoise([0, 0.00001])], p=0.5),
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        return multiple_aug_inp
+
 class ToyTrainGaussianBlobsTransforms:
     """
     Moco 2 augmentation:
@@ -193,6 +208,21 @@ class ToyEvalBlobsTransforms:
         k = self.test_transform(inp)
         #k = Normalize(k, mean, std)
         return q, k
+
+class ToyMultiBlobsTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self):
+        # image augmentation functions
+        self.multi_transform = transforms.Compose([
+            transforms.RandomApply([GaussianNoise([.1, 2.])], p=0.5),
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        return multiple_aug_inp
 
 
 

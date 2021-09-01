@@ -211,6 +211,22 @@ class FashionMNISTDataModule(LightningDataModule):
             self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
 
 
+        multi_transforms = self.default_transforms() if self.multi_transforms is None else self.multi_transforms
+        self.multi_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=multi_transforms, **self.extra_args)
+                
+        if isinstance(self.multi_dataset.targets, list):
+            self.multi_dataset.targets = torch.Tensor(self.multi_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
+        elif isinstance(self.multi_dataset.targets,np.ndarray):
+            self.multi_dataset.targets = torch.from_numpy(self.multi_dataset.targets).type(torch.int64)
+
+
+        '''
+        self.non_augmented_test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, **self.extra_args)
+        if isinstance(self.non_augmented_test_dataset .targets, list):
+            self.non_augmented_test_dataset.targets = torch.Tensor(self.non_augmented_test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
+        elif isinstance(self.non_augmented_test_dataset.targets, np.ndarray):
+            self.non_augmented_test_dataset.targets = torch.from_numpy(self.non_augmented_test_dataset.targets).type(torch.int64)
+        '''
 
     def train_dataloader(self):
         """
@@ -286,6 +302,21 @@ class FashionMNISTDataModule(LightningDataModule):
 
         loader = DataLoader(
             self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            drop_last=True,
+            pin_memory=True
+        )
+        return loader
+    
+    def multi_dataloader(self):
+        """
+        FashionMNIST test set uses the test split
+        """
+
+        loader = DataLoader(
+            self.multi_dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,

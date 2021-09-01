@@ -24,11 +24,12 @@ blobs_coarse_labels = np.array([ 0,  0, 1,  1,  2,  2,  3,  3, 4,  4])
 
 
 class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
-    def __init__(self,data_dir: str = None, batch_size=32, seed =42, centers = 10, train_transforms=None, test_transforms=None):
+    def __init__(self,data_dir: str = None, batch_size=32, seed =42, centers = 10, train_transforms=None, test_transforms=None, multi_transforms=None):
         super().__init__()
         self.batch_size = batch_size
         self.train_transforms = train_transforms
         self.test_transforms = test_transforms
+        self.multi_transforms = multi_transforms
         self.centers = centers  # Number of different classes
         self.seed = seed
     
@@ -98,9 +99,11 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
         
         self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels), torch.from_numpy(blobs_coarse_labels[self.test_labels])),transform = self.test_transforms)
 
+        self.multi_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels), torch.from_numpy(blobs_coarse_labels[self.test_labels])),transform = self.multi_transforms)
+        '''
         # Test dataset where no augmenation is applied
         self.non_augmented_test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels), torch.from_numpy(blobs_coarse_labels[self.test_labels])))         
-
+        '''
 
         #import ipdb; ipdb.set_trace()
         #self.test_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)
@@ -136,9 +139,17 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
         test_loader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
         return test_loader
 
+
+    def multi_dataloader(self):
+        '''returns test dataloader'''
+        
+        multi_loader = DataLoader(self.multi_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
+        return multi_loader
+
+    '''
     def non_augmented_test_dataloader(self):
-        ''' return test loader without augmentation'''
+        # return test loader without augmentation
 
         non_augmented_test_loader = DataLoader(self.non_augmented_test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
         return non_augmented_test_loader
-        
+    ''' 

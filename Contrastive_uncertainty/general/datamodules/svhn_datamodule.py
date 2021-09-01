@@ -210,6 +210,15 @@ class SVHNDataModule(LightningDataModule):
 
         self.test_dataset.targets = self.test_dataset.labels
 
+        multi_transforms = self.default_transforms() if self.multi_transforms is None else self.multi_transforms
+        self.multi_dataset = self.DATASET_with_indices(self.data_dir, split ='test', download=False, transform=multi_transforms, **self.extra_args)
+        if isinstance(self.multi_dataset.labels, list):
+            self.multi_dataset.labels = torch.Tensor(self.multi_dataset.labels).type(torch.int64) # Need to change into int64 to use in test step 
+        elif isinstance(self.multi_dataset.labels,np.ndarray):
+            self.multi_dataset.labels = torch.from_numpy(self.multi_dataset.labels).type(torch.int64)
+
+        self.multi_dataset.targets = self.multi_dataset.labels
+
     def train_dataloader(self):
         """
         FashionMNIST train set removes a subset to use for validation
@@ -290,6 +299,22 @@ class SVHNDataModule(LightningDataModule):
         )
         return loader
 
+    
+    def multi_dataloader(self):
+        """
+        FashionMNIST test set uses the test split
+        """
+
+        loader = DataLoader(
+            self.multi_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            drop_last=True,
+            pin_memory=True
+        )
+        return loader
+
     def default_transforms(self):
         svhn_transforms = transform_lib.Compose([
             transform_lib.ToTensor(),
@@ -298,5 +323,3 @@ class SVHNDataModule(LightningDataModule):
         return svhn_transforms
 
 
-datamodule = SVHNDataModule()
-datamodule.setup()

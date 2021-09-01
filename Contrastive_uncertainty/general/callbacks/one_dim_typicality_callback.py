@@ -1050,28 +1050,60 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
     def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool):
         super().__init__(Datamodule, OOD_Datamodule, quick_callback)
         
-        self.transforms = self.Datamodule.train_transforms
+        self.OOD_Datamodule.multi_transforms = self.Datamodule.multi_transforms #  Make the transform of the OOD data the same as the actual data
+        self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
+        self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
+        
         self.augmentations = 10
         self.summary_key = f'Normalized Data augmented Point One Dim Class Typicality Batch Size {self.augmentations} OOD  - {self.OOD_Datamodule.name}'
         
     def forward_callback(self, trainer, pl_module):
         train_loader = self.Datamodule.deterministic_train_dataloader()
 
-        non_augmented_test_loader = self.Datamodule.non_augmented_test_dataloader()
-        non_augmented_ood_loader = self.OOD_Datamodule.non_augmented_test_dataloader()
+        multi_loader = self.Datamodule.multi_dataloader()
+        multi_ood_loader = self.OOD_Datamodule.multi_dataloader()
+        
         
         # Obtain representations of the data
         features_train, labels_train = self.get_features(pl_module, train_loader)
-        features_test, labels_test = self.get_augmented_features(pl_module, non_augmented_test_loader)
-        features_ood, labels_ood = self.get_augmented_features(pl_module, non_augmented_ood_loader)
+        features_test, labels_test = self.get_augmented_features(pl_module, multi_loader)
+        features_ood, labels_ood = self.get_augmented_features(pl_module, multi_ood_loader)
         
         self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
             np.copy(features_ood),
             np.copy(labels_train))
-        
+    
 
+    # Performs data augmentation on the dataloader
+    def get_augmented_features(self, pl_module, non_augmented_dataloader):
+        features, labels = [], []
+        
+        loader = quickloading(self.quick_callback, non_augmented_dataloader)
+        for index, (img, *label, indices) in enumerate(loader):
+            assert len(loader)>0, 'loader is empty'
+            augmented_features = []
+
+            # Selects the correct label based on the desired label level
+            if len(label) > 1:
+                label_index = 0
+                label = label[label_index]
+            else: # Used for the case of the OOD data
+                label = label[0]
+
+            num_augmentations = len(img)
+            # Turn all augmented images to pytorch
+            img = [img[i].to(pl_module.device) for i in range(num_augmentations)]
+            augmented_features = [pl_module.callback_vector(img[i]) for i in range(num_augmentations)]
+
+            augmented_features = torch.stack(augmented_features)
+            features += list(augmented_features.data.cpu().numpy()) 
+            labels += list(label.data.cpu().numpy()) 
+        
+        return np.array(features), np.array(labels)
+    
+    '''
     # Performs data augmentation on the dataloader
     def get_augmented_features(self, pl_module, non_augmented_dataloader):
         features, labels = [], []
@@ -1104,7 +1136,7 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
             labels += list(label.data.cpu().numpy()) 
         
         return np.array(features), np.array(labels)
-
+    '''
 
     def get_thresholds(self, fdata, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std):
         ddata = [np.einsum('ij, klj->ikl',eigvectors[class_num].T,fdata - means[class_num])**2/np.expand_dims(eigvalues[class_num],axis=1) for class_num in range(len(means))]

@@ -94,6 +94,31 @@ class Moco2EvalCIFAR10Transforms:
         k = self.test_transform(inp)
         return q, k
 
+
+class Moco2MultiCIFAR10Transforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=32):
+        # image augmentation functions
+        self.train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            cifar10_normalization()
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        return multiple_aug_inp
+
+
 class Moco2TrainCIFAR100Transforms:
     """
     Moco 2 augmentation:
@@ -138,6 +163,29 @@ class Moco2EvalCIFAR100Transforms:
         return q, k
 
 
+class Moco2MultiCIFAR100Transforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=32):
+        # image augmentation functions
+        self.train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            cifar100_normalization()
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        return multiple_aug_inp
+
 class Moco2TrainSVHNTransforms:
     """
     Moco 2 augmentation:
@@ -180,6 +228,29 @@ class Moco2EvalSVHNTransforms:
         q = self.test_transform(inp)
         k = self.test_transform(inp)
         return q, k
+
+class Moco2MultiSVHNTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=32):
+        # image augmentation functions
+        self.train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            svhn_normalization()
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        return multiple_aug_inp
 
 class Moco2TrainSTL10Transforms:
     """
@@ -265,6 +336,25 @@ class Moco2EvalFashionMNISTTransforms:
         k = self.test_transform(inp)
         return q, k
 
+class Moco2MultiFashionMNISTTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        # image augmentation functions
+        self.multi_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            fashionmnist_normalization(),
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        return multiple_aug_inp
+
 
 class Moco2TrainMNISTTransforms:
     """
@@ -304,6 +394,26 @@ class Moco2EvalMNISTTransforms:
         q = self.test_transform(inp)
         k = self.test_transform(inp)
         return q, k
+
+class Moco2MultiMNISTTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        # image augmentation functions
+        self.multi_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            mnist_normalization()
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        return multiple_aug_inp
+        
 
 class Moco2TrainKMNISTTransforms:
     """
@@ -364,6 +474,24 @@ class Moco2TrainEMNISTTransforms:
         k = self.train_transform(inp)
         return q, k
 
+class Moco2MultiKMNISTTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        # image augmentation functions
+        self.multi_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            kmnist_normalization()
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        return multiple_aug_inp
 
 class Moco2EvalEMNISTTransforms:
     """
@@ -383,6 +511,25 @@ class Moco2EvalEMNISTTransforms:
         k = self.test_transform(inp)
         return q, k
     
+
+class Moco2MultiEMNISTTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self, height=28):
+        # image augmentation functions
+        self.multi_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            emnist_normalization()
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        return multiple_aug_inp
 
 
         

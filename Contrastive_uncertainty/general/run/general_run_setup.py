@@ -48,6 +48,7 @@ def Datamodule_selection(data_dict, dataset, config):
     Datamodule.train_transforms = datamodule_info['train_transform']
     Datamodule.val_transforms = datamodule_info['val_transform']
     Datamodule.test_transforms = datamodule_info['test_transform']
+    Datamodule.multi_transforms = datamodule_info['multi_transform']
     Datamodule.prepare_data()
     Datamodule.setup()
     return Datamodule

@@ -54,7 +54,8 @@ label_level = ['fine','fine','coarse'],
 
 #callbacks = ['Centroid Distances','MMD'],
 #callbacks = ['Point One Dim Class Typicality Normalised'],
-callbacks = ['Point One Dim Relative Class Typicality Normalised'],
+#callbacks = ['Point One Dim Relative Class Typicality Normalised'],
+callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
 
 #callbacks = ['One Dim Typicality'],
 #callbacks = ['One Dim Typicality Class'],
