@@ -94,7 +94,8 @@ weighting = 0.25,
 #callbacks = ['Marginal Typicality OOD'],
 #callbacks = ['Confusion Log Probability','Model_saving'],
 #callbacks = [],
-callbacks = ['Model_saving'],
+#callbacks = ['Model_saving'],
+callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
 #callbacks = ['Practice Hierarchical scores'],
 # Either goes through all the models or goes through baselines
 

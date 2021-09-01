@@ -27,7 +27,7 @@ from Contrastive_uncertainty.general.callbacks.total_centroid_similarity_callbac
 from Contrastive_uncertainty.general.callbacks.confusion_log_probability_callback import ConfusionLogProbability
 from Contrastive_uncertainty.general.callbacks.bottom_k_mahalanobis_callback import Bottom_K_Mahalanobis, Bottom_K_Mahalanobis_Difference
 from Contrastive_uncertainty.general.callbacks.feature_entropy_callback import Feature_Entropy
-from Contrastive_uncertainty.general.callbacks.one_dim_typicality_callback import One_Dim_Typicality, One_Dim_Typicality_Class, One_Dim_Typicality_Marginal_Oracle, One_Dim_Typicality_Marginal, One_Dim_Typicality_Normalised_Marginal, Point_One_Dim_Class_Typicality_Normalised, Point_One_Dim_Relative_Class_Typicality_Analysis, Point_One_Dim_Relative_Class_Typicality_Normalised
+from Contrastive_uncertainty.general.callbacks.one_dim_typicality_callback import One_Dim_Typicality, One_Dim_Typicality_Class, One_Dim_Typicality_Marginal_Oracle, One_Dim_Typicality_Marginal, One_Dim_Typicality_Normalised_Marginal, Point_One_Dim_Class_Typicality_Normalised, Point_One_Dim_Relative_Class_Typicality_Analysis, Point_One_Dim_Relative_Class_Typicality_Normalised, Data_Augmented_Point_One_Dim_Class_Typicality_Normalised
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -96,6 +96,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'One Dim Typicality Normalised Marginal Batch {ood_dataset}': One_Dim_Typicality_Normalised_Marginal(Datamodule,OOD_Datamodule,quick_callback=quick_callback,typicality_bsz=config['typicality_batch']),
                 f'Point One Dim Class Typicality Normalised {ood_dataset}':Point_One_Dim_Class_Typicality_Normalised(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Point One Dim Relative Class Typicality Normalised {ood_dataset}': Point_One_Dim_Relative_Class_Typicality_Normalised(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
+                f'Data Augmented Point One Dim Class Typicality Normalised {ood_dataset}':Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Point One Dim Relative Class Typicality Analysis {ood_dataset}': Point_One_Dim_Relative_Class_Typicality_Analysis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
 
                 

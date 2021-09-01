@@ -97,7 +97,11 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
         self.val_test_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(), torch.from_numpy(self.val_labels), torch.from_numpy(blobs_coarse_labels[self.val_labels])),transform = self.test_transforms)
         
         self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels), torch.from_numpy(blobs_coarse_labels[self.test_labels])),transform = self.test_transforms)
-        
+
+        # Test dataset where no augmenation is applied
+        self.non_augmented_test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels), torch.from_numpy(blobs_coarse_labels[self.test_labels])))         
+
+
         #import ipdb; ipdb.set_trace()
         #self.test_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)
         #self.val_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(),torch.from_numpy(self.val_labels)), transform = self.test_transforms)
@@ -131,3 +135,10 @@ class BlobsDataModule(LightningDataModule): # Data module for Two Moons dataset
         
         test_loader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
         return test_loader
+
+    def non_augmented_test_dataloader(self):
+        ''' return test loader without augmentation'''
+
+        non_augmented_test_loader = DataLoader(self.non_augmented_test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
+        return non_augmented_test_loader
+        

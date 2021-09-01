@@ -108,7 +108,8 @@ weighting = 0.25,
 
 
 #callbacks = ['Point One Dim Class Typicality Normalised'],
-callbacks = ['Point One Dim Relative Class Typicality Normalised'],
+#callbacks = ['Point One Dim Relative Class Typicality Normalised'],
+callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
 #callbacks = ['Point One Dim Relative Class Typicality Analysis'],
 #callbacks = [],
 

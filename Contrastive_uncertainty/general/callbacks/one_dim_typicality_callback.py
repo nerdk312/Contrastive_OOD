@@ -928,7 +928,7 @@ class Point_One_Dim_Relative_Class_Typicality_Analysis(Point_One_Dim_Class_Typic
 
 
 
-# Perform typicality using a point value of a single class datapoint
+# Perform typicality using a point value of a single class datapoint whilst using background information
 class Point_One_Dim_Relative_Class_Typicality_Normalised(Point_One_Dim_Class_Typicality_Normalised):
     def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool):
         super().__init__(Datamodule, OOD_Datamodule, quick_callback)
@@ -1044,3 +1044,127 @@ class Point_One_Dim_Relative_Class_Typicality_Normalised(Point_One_Dim_Class_Typ
         din, dood = self.get_scores(ftrain, ftest, food, labelstrain)
         AUROC = get_roc_sklearn(din, dood)
         wandb.run.summary[self.summary_key] = AUROC
+
+
+class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Class_Typicality_Normalised):
+    def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool):
+        super().__init__(Datamodule, OOD_Datamodule, quick_callback)
+        
+        self.transforms = self.Datamodule.train_transforms
+        self.augmentations = 10
+        self.summary_key = f'Normalized Data augmented Point One Dim Class Typicality Batch Size {self.augmentations} OOD  - {self.OOD_Datamodule.name}'
+        
+    def forward_callback(self, trainer, pl_module):
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+
+        non_augmented_test_loader = self.Datamodule.non_augmented_test_dataloader()
+        non_augmented_ood_loader = self.OOD_Datamodule.non_augmented_test_dataloader()
+        
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_augmented_features(pl_module, non_augmented_test_loader)
+        features_ood, labels_ood = self.get_augmented_features(pl_module, non_augmented_ood_loader)
+        
+        self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train))
+        
+
+    # Performs data augmentation on the dataloader
+    def get_augmented_features(self, pl_module, non_augmented_dataloader):
+        features, labels = [], []
+        
+        loader = quickloading(self.quick_callback, non_augmented_dataloader)
+        for index, (img, *label, indices) in enumerate(loader):
+            assert len(loader)>0, 'loader is empty'
+            augmented_features = []
+
+            # Selects the correct label based on the desired label level
+            if len(label) > 1:
+                label_index = 0
+                label = label[label_index]
+            else: # Used for the case of the OOD data
+                label = label[0]
+
+            for i in range(self.augmentations//2):
+                img1, img2 = self.transforms(img)
+
+                img1, img2 = img1.to(pl_module.device), img2.to(pl_module.device)
+                # Compute feature vector and place in list
+                feature_vector = pl_module.callback_vector(img1) # Performs the callback for the desired level
+                
+                augmented_features.append(feature_vector)
+                feature_vector2 = pl_module.callback_vector(img2)
+                augmented_features.append(feature_vector2)
+
+            augmented_features = torch.stack(augmented_features)
+            features += list(augmented_features.data.cpu().numpy()) 
+            labels += list(label.data.cpu().numpy()) 
+        
+        return np.array(features), np.array(labels)
+
+
+    def get_thresholds(self, fdata, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std):
+        ddata = [np.einsum('ij, klj->ikl',eigvectors[class_num].T,fdata - means[class_num])**2/np.expand_dims(eigvalues[class_num],axis=1) for class_num in range(len(means))]
+        
+        #ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
+        
+        # obtain the normalised the scores for the different classes
+        ddata = [ddata[class_num] - np.expand_dims(dtrain_1d_mean[class_num],axis=1)/(np.expand_dims(dtrain_1d_std[class_num],axis=1) + +1e-10) for class_num in range(len(means))]
+        #ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
+
+        # Obtain the sum of absolute normalised scores
+        scores = [np.sum(np.abs(ddata[class_num]),axis=(0,1)) for class_num in range(len(means))]
+
+        #ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
+        #ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
+        #scores = [np.sum(np.abs(ddata[class_num]),axis=0) for class_num in range(len(means))]
+        # Obtain the scores corresponding to the lowest class
+        ddata = np.min(scores,axis=0)
+
+        return ddata
+        
+
+    def get_eval_results(self, ftrain, ftest, food, labelstrain):
+        din, dood = self.get_scores(ftrain, ftest, food, labelstrain)
+        AUROC = get_roc_sklearn(din, dood)
+        wandb.run.summary[self.summary_key] = AUROC
+        
+    '''
+    def get_thresholds(self, fdata, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std):
+        ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
+        
+        # obtain the normalised the scores for the different classes
+        ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
+
+        # Obtain the sum of absolute normalised scores
+        scores = [np.sum(np.abs(ddata[class_num]),axis=0) for class_num in range(len(means))]
+        # Obtain the scores corresponding to the lowest class
+        ddata = np.min(scores,axis=0)
+
+        return ddata
+
+
+    def get_thresholds(self, fdata, mean, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, bsz):
+        thresholds = [] # List of threshold values
+        num_batches = len(fdata)//bsz
+
+        for i in range(num_batches):
+            fdata_batch = fdata[(i*bsz):((i+1)*bsz)]
+            ddata = np.matmul(eigvectors.T,(fdata_batch - mean).T)**2/eigvalues  # shape (dim, batch size)
+            # Normalise the data
+            ddata = (ddata - dtrain_1d_mean)/(dtrain_1d_std +1e-10) # shape (dim, batch)
+
+            # shape (dim) average of all data in batch size
+            ddata = np.mean(ddata,axis= 1) # shape : (dim)
+            
+            # Sum of the deviations of each individual dimension
+            ddata_deviation = np.sum(np.abs(ddata))
+
+            thresholds.append(ddata_deviation)
+        
+        return thresholds
+    '''
+    

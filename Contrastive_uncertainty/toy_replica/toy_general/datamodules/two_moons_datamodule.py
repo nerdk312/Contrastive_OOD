@@ -61,7 +61,8 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         self.test_dataset = CustomTensorDataset((torch.from_numpy(self.train_data).float(), torch.from_numpy(self.train_labels)),transform = self.test_transforms)
         #self.val_dataset = CustomTensorDataset((torch.from_numpy(self.val_data).float(),torch.from_numpy(self.val_labels)), transform = self.test_transforms)
         #self.test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)), transform = self.test_transforms)
-
+        # Test dataset where no augmenation is applied
+        self.non_augmented_test_dataset = CustomTensorDataset((torch.from_numpy(self.test_data).float(), torch.from_numpy(self.test_labels)))
         #self.idx2class = {v: k for k, v in Dataset.class_to_idx.items()}
         self.idx2class  = {0:'0 - orange',1:'1 - blue'} # Dict for two moons
 
@@ -84,8 +85,11 @@ class TwoMoonsDataModule(LightningDataModule): # Data module for Two Moons datas
         test_loader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
         return test_loader
 
+    def non_augmented_test_dataloader(self):
+        ''' return test loader without augmentation'''
 
-
+        non_augmented_test_loader = DataLoader(self.non_augmented_test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=True, num_workers=8)  # Batch size is entire test set
+        return non_augmented_test_loader
 
 
 class PCLTwoMoons(TwoMoonsDataModule):

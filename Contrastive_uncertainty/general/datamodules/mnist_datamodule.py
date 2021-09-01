@@ -190,12 +190,19 @@ class MNISTDataModule(LightningDataModule):
 
     def setup_test(self):
         test_transforms = self.default_transforms() if self.test_transforms is None else self.test_transforms
-        self.test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)        
+        self.test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, transform=test_transforms, **self.extra_args)
+                
         if isinstance(self.test_dataset.targets, list):
             self.test_dataset.targets = torch.Tensor(self.test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
         elif isinstance(self.test_dataset.targets,np.ndarray):
             self.test_dataset.targets = torch.from_numpy(self.test_dataset.targets).type(torch.int64)
 
+
+        self.non_augmented_test_dataset = self.DATASET_with_indices(self.data_dir, train=False, download=False, **self.extra_args)
+        if isinstance(self.non_augmented_test_dataset .targets, list):
+            self.non_augmented_test_dataset .targets = torch.Tensor(self.non_augmented_test_dataset.targets).type(torch.int64) # Need to change into int64 to use in test step 
+        elif isinstance(self.non_augmented_test_dataset.targets, np.ndarray):
+            self.non_augmented_test_dataset.targets = torch.from_numpy(self.non_augmented_test_dataset.targets).type(torch.int64)
 
     def train_dataloader(self):
         """
@@ -276,6 +283,20 @@ class MNISTDataModule(LightningDataModule):
             pin_memory=True
         )
         return loader
+
+    def non_augmented_test_dataloader(self):
+        ''' return test loader without augmentation'''
+
+        loader = DataLoader(
+            self.non_augmented_test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            drop_last=True,
+            pin_memory=True
+        )
+        return loader
+
 
     def default_transforms(self):
         MNIST_transforms = transform_lib.Compose([
