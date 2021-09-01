@@ -60,8 +60,7 @@ class Mahalanobis_OOD(pl.Callback):
         # Skip if fast testing as this can lead to issues with the code
         self.forward_callback(trainer=trainer, pl_module=pl_module) 
     '''
-
-    
+        
     def on_test_epoch_end(self, trainer, pl_module):
         #import ipdb; ipdb.set_trace()
         self.forward_callback(trainer=trainer, pl_module=pl_module) 

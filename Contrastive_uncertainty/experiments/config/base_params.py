@@ -15,8 +15,8 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet50', # Use resnet 18 for confusion log probability 
-bsz = 256,
-dataset = 'MNIST',
+bsz = 512,
+dataset = 'KMNIST',
 #OOD_dataset = ['CIFAR10'],
 #dataset = 'CIFAR100',
 #OOD_dataset = ['SVHN'],
@@ -90,7 +90,7 @@ weighting = 0.25,
 
 
 #callbacks = ['Model_saving','Variational'],
-callbacks = ['Model_saving'],
+callbacks = ['Model_saving','Mahalanobis Distance'],
 #callbacks = ['Model_saving', 'Confusion Log Probability'],
 #callbacks = ['Model_saving','MMD_instance','Metrics','Visualisation','Mahalanobis','Dataset_distances'],
 #callbacks = ['Aggregated','Differing'],
