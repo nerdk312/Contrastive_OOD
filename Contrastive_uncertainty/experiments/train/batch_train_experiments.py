@@ -153,7 +153,7 @@ def batch_train(base_dict):
         base_dict['seed'] = seeds[i]
     '''
     
-    weightings = [0.01,0.1, 0.25, 0.5]
+    weightings = [1e-9,0.01,0.1, 0.25, 0.5]
     for i in range(len(weightings)):
         # Update the seed
         base_dict['weighting'] = weightings[i]

@@ -102,7 +102,7 @@ class Moco2MultiCIFAR10Transforms:
     """
     def __init__(self, height=32):
         # image augmentation functions
-        self.train_transform = transforms.Compose([
+        self.multi_transform = transforms.Compose([
             transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
             transforms.RandomApply([
                 transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
@@ -170,7 +170,7 @@ class Moco2MultiCIFAR100Transforms:
     """
     def __init__(self, height=32):
         # image augmentation functions
-        self.train_transform = transforms.Compose([
+        self.multi_transform = transforms.Compose([
             transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
             transforms.RandomApply([
                 transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
@@ -236,7 +236,7 @@ class Moco2MultiSVHNTransforms:
     """
     def __init__(self, height=32):
         # image augmentation functions
-        self.train_transform = transforms.Compose([
+        self.multi_transform = transforms.Compose([
             transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
             transforms.RandomApply([
                 transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
