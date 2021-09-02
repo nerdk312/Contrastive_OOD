@@ -31,7 +31,7 @@ val_check = 1,
 model_saving = 1, # Used to control how often the model is saved
 typicality_bootstrap = 50,
 typicality_batch = 5,
-
+num_augmentations = 5, # Used to control the number of data augmentations for multiloader callback
 
 # Wandb parameters in common
 project = 'Toy_evaluation',

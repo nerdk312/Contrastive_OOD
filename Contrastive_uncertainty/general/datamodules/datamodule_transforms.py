@@ -100,7 +100,8 @@ class Moco2MultiCIFAR10Transforms:
     Moco 2 augmentation:
     https://arxiv.org/pdf/2003.04297.pdf
     """
-    def __init__(self, height=32):
+    def __init__(self,num_augmentations, height=32):
+        self.num_augmentations = num_augmentations
         # image augmentation functions
         self.multi_transform = transforms.Compose([
             transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
@@ -115,7 +116,7 @@ class Moco2MultiCIFAR10Transforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(self.num_augmentations)]
         return multiple_aug_inp
 
 
@@ -168,8 +169,9 @@ class Moco2MultiCIFAR100Transforms:
     Moco 2 augmentation:
     https://arxiv.org/pdf/2003.04297.pdf
     """
-    def __init__(self, height=32):
+    def __init__(self,num_augmentations, height=32):
         # image augmentation functions
+        self.num_augmentations = num_augmentations
         self.multi_transform = transforms.Compose([
             transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
             transforms.RandomApply([
@@ -183,7 +185,7 @@ class Moco2MultiCIFAR100Transforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(self.num_augmentations)]
         return multiple_aug_inp
 
 class Moco2TrainSVHNTransforms:
@@ -234,8 +236,9 @@ class Moco2MultiSVHNTransforms:
     Moco 2 augmentation:
     https://arxiv.org/pdf/2003.04297.pdf
     """
-    def __init__(self, height=32):
+    def __init__(self,num_augmentations, height=32):
         # image augmentation functions
+        self.num_augmentations = num_augmentations
         self.multi_transform = transforms.Compose([
             transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
             transforms.RandomApply([
@@ -249,7 +252,7 @@ class Moco2MultiSVHNTransforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(self.num_augmentations)]
         return multiple_aug_inp
 
 class Moco2TrainSTL10Transforms:
@@ -341,8 +344,9 @@ class Moco2MultiFashionMNISTTransforms:
     Moco 2 augmentation:
     https://arxiv.org/pdf/2003.04297.pdf
     """
-    def __init__(self, height=28):
+    def __init__(self,num_augmentations,height=28):
         # image augmentation functions
+        self.num_augmentations = num_augmentations
         self.multi_transform = transforms.Compose([
             transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
             transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
@@ -352,7 +356,7 @@ class Moco2MultiFashionMNISTTransforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(self.num_augmentations)]
         return multiple_aug_inp
 
 
@@ -400,8 +404,9 @@ class Moco2MultiMNISTTransforms:
     Moco 2 augmentation:
     https://arxiv.org/pdf/2003.04297.pdf
     """
-    def __init__(self, height=28):
+    def __init__(self,num_augmentations, height=28):
         # image augmentation functions
+        self.num_augmentations = num_augmentations
         self.multi_transform = transforms.Compose([
             transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
             transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
@@ -411,7 +416,7 @@ class Moco2MultiMNISTTransforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(self.num_augmentations)]
         return multiple_aug_inp
         
 
@@ -454,6 +459,26 @@ class Moco2EvalKMNISTTransforms:
         k = self.test_transform(inp)
         return q, k
 
+class Moco2MultiKMNISTTransforms:
+    """
+    Moco 2 augmentation:
+    https://arxiv.org/pdf/2003.04297.pdf
+    """
+    def __init__(self,num_augmentations, height=28):
+        # image augmentation functions
+        self.num_augmentations = num_augmentations
+        self.multi_transform = transforms.Compose([
+            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
+            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            kmnist_normalization()
+        ])
+
+    def __call__(self, inp):
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(self.num_augmentations)]
+        return multiple_aug_inp
+        
 class Moco2TrainEMNISTTransforms:
     """
     Moco 2 augmentation:
@@ -474,24 +499,7 @@ class Moco2TrainEMNISTTransforms:
         k = self.train_transform(inp)
         return q, k
 
-class Moco2MultiKMNISTTransforms:
-    """
-    Moco 2 augmentation:
-    https://arxiv.org/pdf/2003.04297.pdf
-    """
-    def __init__(self, height=28):
-        # image augmentation functions
-        self.multi_transform = transforms.Compose([
-            transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
-            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            kmnist_normalization()
-        ])
 
-    def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
-        return multiple_aug_inp
 
 class Moco2EvalEMNISTTransforms:
     """
@@ -517,8 +525,9 @@ class Moco2MultiEMNISTTransforms:
     Moco 2 augmentation:
     https://arxiv.org/pdf/2003.04297.pdf
     """
-    def __init__(self, height=28):
+    def __init__(self,num_augmentations, height=28):
         # image augmentation functions
+        self.num_augmentations = num_augmentations
         self.multi_transform = transforms.Compose([
             transforms.RandomResizedCrop(height, scale=(0.2, 1.)),
             transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
@@ -528,7 +537,7 @@ class Moco2MultiEMNISTTransforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(self.num_augmentations)]
         return multiple_aug_inp
 
 

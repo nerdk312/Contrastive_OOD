@@ -31,6 +31,7 @@ val_check = 20,
 model_saving = 200, # Used to control how often the model is saved
 typicality_bootstrap = 50,
 typicality_batch = 25,
+num_augmentations = 5, # Used to control the number of data augmentations for multiloader callback
 pretrained_network = None,#'Pretrained_models/finetuned_network.pt',
 
 #vector_level = ['instance'],

@@ -43,12 +43,13 @@ def eval_run_name(model_name,config, group=None):
 
 def Datamodule_selection(data_dict, dataset, config):
     # Information regarding the configuration of the data module for the specific task
+    num_augmentations = config['num_augmentations']
     datamodule_info =  data_dict[dataset] # Specific module
     Datamodule = datamodule_info['module'](data_dir= './',batch_size = config['bsz'],seed = config['seed'])
     Datamodule.train_transforms = datamodule_info['train_transform']
     Datamodule.val_transforms = datamodule_info['val_transform']
     Datamodule.test_transforms = datamodule_info['test_transform']
-    Datamodule.multi_transforms = datamodule_info['multi_transform']
+    Datamodule.multi_transforms = datamodule_info['multi_transform'](num_augmentations)
     Datamodule.prepare_data()
     Datamodule.setup()
     return Datamodule

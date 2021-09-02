@@ -1054,7 +1054,8 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
         self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
         
-        self.augmentations = 1
+        #
+        self.augmentations = self.Datamodule.multi_transforms.num_augmentations
         self.summary_key = f'Normalized Data augmented Point One Dim Class Typicality Batch Size {self.augmentations} OOD  - {self.OOD_Datamodule.name}'
         
     def forward_callback(self, trainer, pl_module):
