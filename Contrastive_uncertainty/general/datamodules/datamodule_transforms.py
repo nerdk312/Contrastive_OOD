@@ -115,7 +115,7 @@ class Moco2MultiCIFAR10Transforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
         return multiple_aug_inp
 
 
@@ -183,7 +183,7 @@ class Moco2MultiCIFAR100Transforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
         return multiple_aug_inp
 
 class Moco2TrainSVHNTransforms:
@@ -249,7 +249,7 @@ class Moco2MultiSVHNTransforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
         return multiple_aug_inp
 
 class Moco2TrainSTL10Transforms:
@@ -352,7 +352,7 @@ class Moco2MultiFashionMNISTTransforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
         return multiple_aug_inp
 
 
@@ -411,7 +411,7 @@ class Moco2MultiMNISTTransforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
         return multiple_aug_inp
         
 
@@ -490,7 +490,7 @@ class Moco2MultiKMNISTTransforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
         return multiple_aug_inp
 
 class Moco2EvalEMNISTTransforms:
@@ -528,7 +528,7 @@ class Moco2MultiEMNISTTransforms:
         ])
 
     def __call__(self, inp):
-        multiple_aug_inp = [self.multi_transform(inp) for i in range(10)]
+        multiple_aug_inp = [self.multi_transform(inp) for i in range(1)]
         return multiple_aug_inp
 
 

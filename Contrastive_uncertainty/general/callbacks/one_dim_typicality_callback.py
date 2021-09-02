@@ -1054,7 +1054,7 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
         self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
         self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
         
-        self.augmentations = 10
+        self.augmentations = 1
         self.summary_key = f'Normalized Data augmented Point One Dim Class Typicality Batch Size {self.augmentations} OOD  - {self.OOD_Datamodule.name}'
         
     def forward_callback(self, trainer, pl_module):
@@ -1066,9 +1066,8 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
         
         # Obtain representations of the data
         features_train, labels_train = self.get_features(pl_module, train_loader)
-        features_test, labels_test = self.get_augmented_features(pl_module, multi_loader)
-        features_ood, labels_ood = self.get_augmented_features(pl_module, multi_ood_loader)
-        
+        features_test, labels_test = self.get_augmented_features(pl_module, multi_loader) #  shape (num aug, num_data_points, emb_dim)
+        features_ood, labels_ood = self.get_augmented_features(pl_module, multi_ood_loader) 
         self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
@@ -1092,10 +1091,10 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
             else: # Used for the case of the OOD data
                 label = label[0]
 
-            num_augmentations = len(img)
+            num_augmentations = len(img) # Img contains several augmented version of the same data point
             # Turn all augmented images to pytorch
             img = [img[i].to(pl_module.device) for i in range(num_augmentations)]
-            augmented_features = [pl_module.callback_vector(img[i]) for i in range(num_augmentations)]
+            augmented_features = [pl_module.callback_vector(img[i]) for i in range(num_augmentations)] # Passing all the different data points through
 
             augmented_features = torch.stack(augmented_features)
             features += list(augmented_features.data.cpu().numpy()) 
@@ -1103,58 +1102,24 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
         
         return np.array(features), np.array(labels)
     
-    '''
-    # Performs data augmentation on the dataloader
-    def get_augmented_features(self, pl_module, non_augmented_dataloader):
-        features, labels = [], []
-        
-        loader = quickloading(self.quick_callback, non_augmented_dataloader)
-        for index, (img, *label, indices) in enumerate(loader):
-            assert len(loader)>0, 'loader is empty'
-            augmented_features = []
-
-            # Selects the correct label based on the desired label level
-            if len(label) > 1:
-                label_index = 0
-                label = label[label_index]
-            else: # Used for the case of the OOD data
-                label = label[0]
-
-            for i in range(self.augmentations//2):
-                img1, img2 = self.transforms(img)
-
-                img1, img2 = img1.to(pl_module.device), img2.to(pl_module.device)
-                # Compute feature vector and place in list
-                feature_vector = pl_module.callback_vector(img1) # Performs the callback for the desired level
-                
-                augmented_features.append(feature_vector)
-                feature_vector2 = pl_module.callback_vector(img2)
-                augmented_features.append(feature_vector2)
-
-            augmented_features = torch.stack(augmented_features)
-            features += list(augmented_features.data.cpu().numpy()) 
-            labels += list(label.data.cpu().numpy()) 
-        
-        return np.array(features), np.array(labels)
-    '''
 
     def get_thresholds(self, fdata, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std):
-        ddata = [np.einsum('ij, klj->ikl',eigvectors[class_num].T,fdata - means[class_num])**2/np.expand_dims(eigvalues[class_num],axis=1) for class_num in range(len(means))]
-        
+        ddata = [np.einsum('ij, klj->ikl',eigvectors[class_num].T,fdata - means[class_num])**2/np.expand_dims(eigvalues[class_num],axis=1) for class_num in range(len(means))] # list with number of elements equal to the number of classes, each element of list contains shape (emb dim, num augment, num_datapoints)
         #ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
         
         # obtain the normalised the scores for the different classes
-        ddata = [ddata[class_num] - np.expand_dims(dtrain_1d_mean[class_num],axis=1)/(np.expand_dims(dtrain_1d_std[class_num],axis=1) + +1e-10) for class_num in range(len(means))]
+        ddata = [ddata[class_num] - np.expand_dims(dtrain_1d_mean[class_num],axis=1)/(np.expand_dims(dtrain_1d_std[class_num],axis=1) + +1e-10) for class_num in range(len(means))] # list with num elements equal to num class and shape (emb dim, num augment, num_datapoints)
         #ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
 
         # Obtain the sum of absolute normalised scores
-        scores = [np.sum(np.abs(ddata[class_num]),axis=(0,1)) for class_num in range(len(means))]
+        scores = [np.sum(np.abs(ddata[class_num]),axis=(0,1)) for class_num in range(len(means))] # list with elements equal to num classes with shape (num_datapoint)
 
         #ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
         #ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
         #scores = [np.sum(np.abs(ddata[class_num]),axis=0) for class_num in range(len(means))]
         # Obtain the scores corresponding to the lowest class
-        ddata = np.min(scores,axis=0)
+
+        ddata = np.min(scores,axis=0) # scores for the number of data points present shape: (num data points)
 
         return ddata
         
