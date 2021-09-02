@@ -51,7 +51,7 @@ def evaluation(run_path, update_dict, model_module, model_function,datamodule_di
     # Update the trainer and the callbacks for a specific test
     
     
-    new_config_params = ['callbacks','typicality_bootstrap','typicality_batch','vector_level','label_level']
+    new_config_params = ['callbacks','typicality_bootstrap','typicality_batch','num_augmentations','vector_level','label_level']
 
     for update_k, update_v in update_dict.items():
         if update_k in new_config_params:

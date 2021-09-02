@@ -3,7 +3,7 @@ from re import search
 from pytorch_lightning.core import datamodule
 
 from Contrastive_uncertainty.general.callbacks.general_callbacks import  ModelSaving,MMD_distance
-from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR, Class_Mahalanobis_OOD  #Euclidean_OOD, IsoForest
+from Contrastive_uncertainty.general.callbacks.ood_callbacks import Mahalanobis_OOD, Mahalanobis_OOD_Datasets, Mahalanobis_OvO, Mahalanobis_OvR, Class_Mahalanobis_OOD, Data_Augmented_Mahalanobis  #Euclidean_OOD, IsoForest
 from Contrastive_uncertainty.general.callbacks.experimental_ood_callbacks import Aggregated_Mahalanobis_OOD, Differing_Mahalanobis_OOD
 from Contrastive_uncertainty.general.callbacks.visualisation_callback import Visualisation
 from Contrastive_uncertainty.general.callbacks.typicality_ood_callback import Typicality_OVR, Typicality_OVO, Typicality_OVR_diff_bsz, Typicality_General_Point, Typicality_General_Point_updated, Typicality_OVR_diff_batch_updated
@@ -27,7 +27,10 @@ from Contrastive_uncertainty.general.callbacks.total_centroid_similarity_callbac
 from Contrastive_uncertainty.general.callbacks.confusion_log_probability_callback import ConfusionLogProbability
 from Contrastive_uncertainty.general.callbacks.bottom_k_mahalanobis_callback import Bottom_K_Mahalanobis, Bottom_K_Mahalanobis_Difference
 from Contrastive_uncertainty.general.callbacks.feature_entropy_callback import Feature_Entropy
-from Contrastive_uncertainty.general.callbacks.one_dim_typicality_callback import One_Dim_Typicality, One_Dim_Typicality_Class, One_Dim_Typicality_Marginal_Oracle, One_Dim_Typicality_Marginal, One_Dim_Typicality_Normalised_Marginal, Point_One_Dim_Class_Typicality_Normalised, Point_One_Dim_Relative_Class_Typicality_Analysis, Point_One_Dim_Relative_Class_Typicality_Normalised, Data_Augmented_Point_One_Dim_Class_Typicality_Normalised
+from Contrastive_uncertainty.general.callbacks.one_dim_typicality_callback import One_Dim_Typicality, One_Dim_Typicality_Class, One_Dim_Typicality_Marginal_Oracle,\
+    One_Dim_Typicality_Marginal, One_Dim_Typicality_Normalised_Marginal,\
+    Point_One_Dim_Class_Typicality_Normalised, Point_One_Dim_Relative_Class_Typicality_Analysis, Point_One_Dim_Relative_Class_Typicality_Normalised,\
+    Data_Augmented_Point_One_Dim_Class_Typicality_Normalised, Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -99,8 +102,9 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Point One Dim Class Typicality Normalised {ood_dataset}':Point_One_Dim_Class_Typicality_Normalised(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Point One Dim Relative Class Typicality Normalised {ood_dataset}': Point_One_Dim_Relative_Class_Typicality_Normalised(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Data Augmented Point One Dim Class Typicality Normalised {ood_dataset}':Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
+                f'Alternative Data Augmented Point One Dim Class Typicality Normalised {ood_dataset}':Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Datamodule,OOD_Datamodule, quick_callback),
+                f'Data Augmented Mahalanobis {ood_dataset}': Data_Augmented_Mahalanobis(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
                 f'Point One Dim Relative Class Typicality Analysis {ood_dataset}': Point_One_Dim_Relative_Class_Typicality_Analysis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
-
                 
                 
                 f'IForest {ood_dataset}': IForest(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),

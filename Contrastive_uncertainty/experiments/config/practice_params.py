@@ -96,7 +96,13 @@ weighting = 0.25,
 #callbacks = ['Confusion Log Probability','Model_saving'],
 #callbacks = [],
 #callbacks = ['Model_saving'],
-callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
+#callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
+#callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised'],
+
+#callbacks = ['Data Augmented Mahalanobis'],
+callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Mahalanobis'],
+
+
 #callbacks = ['Practice Hierarchical scores'],
 # Either goes through all the models or goes through baselines
 

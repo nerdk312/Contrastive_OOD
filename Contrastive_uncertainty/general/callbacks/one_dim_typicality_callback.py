@@ -1130,39 +1130,36 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
         AUROC = get_roc_sklearn(din, dood)
         wandb.run.summary[self.summary_key] = AUROC
         
-    '''
-    def get_thresholds(self, fdata, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std):
-        ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
+    
+
+# Alternative approach to calculating the one dim typicality (using a single value for the batch size), calculates in the usual way but uses the multiloader which has data a
+class Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Class_Typicality_Normalised):
+    def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool):
+        super().__init__(Datamodule, OOD_Datamodule, quick_callback)
         
-        # obtain the normalised the scores for the different classes
-        ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
-
-        # Obtain the sum of absolute normalised scores
-        scores = [np.sum(np.abs(ddata[class_num]),axis=0) for class_num in range(len(means))]
-        # Obtain the scores corresponding to the lowest class
-        ddata = np.min(scores,axis=0)
-
-        return ddata
-
-
-    def get_thresholds(self, fdata, mean, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, bsz):
-        thresholds = [] # List of threshold values
-        num_batches = len(fdata)//bsz
-
-        for i in range(num_batches):
-            fdata_batch = fdata[(i*bsz):((i+1)*bsz)]
-            ddata = np.matmul(eigvectors.T,(fdata_batch - mean).T)**2/eigvalues  # shape (dim, batch size)
-            # Normalise the data
-            ddata = (ddata - dtrain_1d_mean)/(dtrain_1d_std +1e-10) # shape (dim, batch)
-
-            # shape (dim) average of all data in batch size
-            ddata = np.mean(ddata,axis= 1) # shape : (dim)
-            
-            # Sum of the deviations of each individual dimension
-            ddata_deviation = np.sum(np.abs(ddata))
-
-            thresholds.append(ddata_deviation)
+        self.OOD_Datamodule.multi_transforms = self.Datamodule.multi_transforms #  Make the transform of the OOD data the same as the actual data
+        self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
+        self.quick_callback = quick_callback # Quick callback used to make dataloaders only use a single batch of the data in order to make the testing process occur quickly
         
-        return thresholds
-    '''
+        # Use a fixed 
+        self.augmentations = 1
+        self.summary_key = f'Normalized Alternative Data augmented Point One Dim Class Typicality Batch Size {self.augmentations} OOD - {self.OOD_Datamodule.name}'
+        
+    def forward_callback(self, trainer, pl_module):
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+
+        multi_loader = self.Datamodule.multi_dataloader()
+        multi_ood_loader = self.OOD_Datamodule.multi_dataloader()
+        
+        
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        # Uses only a single augmented features with the multiloader, does not use the stack of features for the task
+        features_test, labels_test = self.get_features(pl_module, multi_loader) #  shape (num_data_points, emb_dim)
+        features_ood, labels_ood = self.get_features(pl_module, multi_ood_loader) 
+        self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train))
     

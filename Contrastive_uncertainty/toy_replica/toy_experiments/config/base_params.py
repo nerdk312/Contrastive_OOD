@@ -31,7 +31,7 @@ val_check = 1,
 model_saving = 1, # Used to control how often the model is saved
 typicality_bootstrap = 50,
 typicality_batch = 5,
-num_augmentations = 5, # Used to control the number of data augmentations for multiloader callback
+num_augmentations = 2, # Used to control the number of data augmentations for multiloader callback
 
 # Wandb parameters in common
 project = 'Toy_evaluation',
@@ -109,7 +109,11 @@ weighting = 0.25,
 
 #callbacks = ['Point One Dim Class Typicality Normalised'],
 #callbacks = ['Point One Dim Relative Class Typicality Normalised'],
-callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
+
+#callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
+#callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised'],
+#callbacks = ['Data Augmented Mahalanobis'],
+callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Mahalanobis'],
 #callbacks = ['Point One Dim Relative Class Typicality Analysis'],
 #callbacks = [],
 

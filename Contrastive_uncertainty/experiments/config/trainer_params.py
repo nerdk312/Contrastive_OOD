@@ -12,6 +12,7 @@ test_ratio = 1.0,
 val_check = 1,  # evaluation, Moco_training
 typicality_bootstrap = 50,
 typicality_batch = 10,
+num_augmentations = 5,
 
 # Used to update callback dict
 vector_level = ['instance', 'fine', 'coarse'],
@@ -55,7 +56,10 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Centroid Distances','MMD'],
 #callbacks = ['Point One Dim Class Typicality Normalised'],
 #callbacks = ['Point One Dim Relative Class Typicality Normalised'],
-callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
+#callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
+
+callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Mahalanobis'],
+
 
 #callbacks = ['One Dim Typicality'],
 #callbacks = ['One Dim Typicality Class'],

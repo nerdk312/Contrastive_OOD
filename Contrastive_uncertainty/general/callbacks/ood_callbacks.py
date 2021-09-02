@@ -229,6 +229,52 @@ class Mahalanobis_OOD(pl.Callback):
         wandb.log({ood_histogram_name: wandb.plot.histogram(ood_table, "scores",title=ood_histogram_name)})
 
 
+
+
+
+
+# Using mahalanobis distance with data augmented data loader (training and testing)
+class Data_Augmented_Mahalanobis(Mahalanobis_OOD):
+    def __init__(self, Datamodule, OOD_Datamodule, vector_level: str, label_level: str, quick_callback: bool):
+        super().__init__(Datamodule, OOD_Datamodule, vector_level=vector_level, label_level=label_level, quick_callback=quick_callback)
+
+        self.OOD_Datamodule.multi_transforms = self.Datamodule.multi_transforms #  Make the transform of the OOD data the same as the actual data
+        self.OOD_Datamodule.setup() # SETUP AGAIN TO RESET AFTER PROVIDING THE TRANSFORM FOR THE DATA
+        self.summary_key = f'Mahalanobis Data augmented AUROC OOD - {self.OOD_Datamodule.name}'
+
+
+    def forward_callback(self, trainer, pl_module):
+        self.vector_dict = {'vector_level':{'instance':pl_module.instance_vector, 'fine':pl_module.fine_vector, 'coarse':pl_module.coarse_vector},
+        'label_level':{'fine':0,'coarse':1}}
+        
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+
+        multi_loader = self.Datamodule.multi_dataloader()
+        multi_ood_loader = self.OOD_Datamodule.multi_dataloader()
+    
+    # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        # Uses only a single augmented features with the multiloader, does not use the stack of features for the task
+        features_test, labels_test = self.get_features(pl_module, multi_loader) #  shape (num_data_points, emb_dim)
+        features_ood, labels_ood = self.get_features(pl_module, multi_ood_loader)
+    
+        self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train))
+    
+    def get_eval_results(self,ftrain, ftest, food, labelstrain):
+        """
+            None.
+        """
+        ftrain_norm,ftest_norm,food_norm = self.normalise(ftrain,ftest,food)
+        # Nawid - obtain the scores for the test data and the OOD data
+        
+        dtest, dood, indices_dtest, indices_dood = self.get_scores(ftrain_norm, ftest_norm, food_norm, labelstrain)
+        AUROC = get_roc_sklearn(dtest, dood)
+        wandb.run.summary[self.summary_key] = AUROC
+
 # Calculate the Mahalanobis scores for all the dataset
 class Mahalanobis_OOD_Datasets(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodules,
