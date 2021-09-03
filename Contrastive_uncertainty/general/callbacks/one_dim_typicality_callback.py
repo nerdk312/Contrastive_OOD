@@ -1,3 +1,4 @@
+from numpy.core.fromnumeric import reshape
 from numpy.lib.function_base import quantile
 from pandas.io.formats.format import DataFrameFormatter
 import torch
@@ -1069,6 +1070,8 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
         features_train, labels_train = self.get_features(pl_module, train_loader)
         features_test, labels_test = self.get_augmented_features(pl_module, multi_loader) #  shape (num aug, num_data_points, emb_dim)
         features_ood, labels_ood = self.get_augmented_features(pl_module, multi_ood_loader) 
+        
+        
         self.get_eval_results(
             np.copy(features_train),
             np.copy(features_test),
@@ -1098,18 +1101,31 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
             augmented_features = [pl_module.callback_vector(img[i]) for i in range(num_augmentations)] # Passing all the different data points through
 
             augmented_features = torch.stack(augmented_features)
-            features += list(augmented_features.data.cpu().numpy()) 
+            features.append(augmented_features)
+            #features += list(augmented_features.data.cpu().numpy()) 
+            
+            
             labels += list(label.data.cpu().numpy()) 
-        
-        return np.array(features), np.array(labels)
-    
+            
+        # Required to get the features of the data correctly in the shape (num augment, datasize, embedding dim)            
+        features = torch.cat(features,axis=1)
+
+        return np.array(features.cpu()), np.array(labels)
 
     def get_thresholds(self, fdata, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std):
+        
+        '''
+        data = [np.einsum('ij, klj->ikl',eigvectors[class_num].T,fdata - means[class_num]) for class_num in range(len(means))]
+        data_matmul = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).reshape(fdata.shape[2],-1)).reshape(128,2,256) for class_num in range(len(means))]
+        import ipdb; ipdb.set_trace()
+        '''
         ddata = [np.einsum('ij, klj->ikl',eigvectors[class_num].T,fdata - means[class_num])**2/np.expand_dims(eigvalues[class_num],axis=1) for class_num in range(len(means))] # list with number of elements equal to the number of classes, each element of list contains shape (emb dim, num augment, num_datapoints)
+        #ddata_matmul = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).reshape(fdata.shape[2],-1))**2/np.expand_dims(eigvalues[class_num],axis=1) for class_num in range(len(means))]
+        
         #ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
         
         # obtain the normalised the scores for the different classes
-        ddata = [ddata[class_num] - np.expand_dims(dtrain_1d_mean[class_num],axis=1)/(np.expand_dims(dtrain_1d_std[class_num],axis=1) + +1e-10) for class_num in range(len(means))] # list with num elements equal to num class and shape (emb dim, num augment, num_datapoints)
+        ddata = [ddata[class_num] - np.expand_dims(dtrain_1d_mean[class_num],axis=1)/(np.expand_dims(dtrain_1d_std[class_num],axis=1) +1e-10) for class_num in range(len(means))] # list with num elements equal to num class and shape (emb dim, num augment, num_datapoints)
         #ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
 
         # Obtain the sum of absolute normalised scores

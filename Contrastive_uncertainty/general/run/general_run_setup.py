@@ -102,7 +102,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Point One Dim Class Typicality Normalised {ood_dataset}':Point_One_Dim_Class_Typicality_Normalised(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Point One Dim Relative Class Typicality Normalised {ood_dataset}': Point_One_Dim_Relative_Class_Typicality_Normalised(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
                 f'Data Augmented Point One Dim Class Typicality Normalised {ood_dataset}':Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Datamodule,OOD_Datamodule,quick_callback=quick_callback),
-                f'Alternative Data Augmented Point One Dim Class Typicality Normalised {ood_dataset}':Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Datamodule,OOD_Datamodule, quick_callback),
+                #f'Alternative Data Augmented Point One Dim Class Typicality Normalised {ood_dataset}':Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Datamodule,OOD_Datamodule, quick_callback),
                 f'Data Augmented Mahalanobis {ood_dataset}': Data_Augmented_Mahalanobis(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
                 f'Point One Dim Relative Class Typicality Analysis {ood_dataset}': Point_One_Dim_Relative_Class_Typicality_Analysis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 

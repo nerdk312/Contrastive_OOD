@@ -11,7 +11,7 @@ weight_decay = 1e-4,
 # Training parameters in common
 emb_dim = 128,
 instance_encoder = 'resnet50',
-bsz = 256,
+bsz = 64,
 dataset = 'Blobs',
 OOD_dataset = ['TwoMoons'],
 # OOD_dataset = ['TwoMoons'],
@@ -23,7 +23,7 @@ epochs = 1,
 
 # Trainer configurations in common
 fast_run = False,
-quick_callback = True,
+quick_callback = False,#True,
 training_ratio = 1.0,
 validation_ratio = 1.0,
 test_ratio = 1.0,
@@ -113,7 +113,10 @@ weighting = 0.25,
 #callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
 #callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised'],
 #callbacks = ['Data Augmented Mahalanobis'],
-callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Mahalanobis'],
+#callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Mahalanobis'],
+
+callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
+
 #callbacks = ['Point One Dim Relative Class Typicality Analysis'],
 #callbacks = [],
 
