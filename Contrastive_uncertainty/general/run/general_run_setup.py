@@ -32,7 +32,7 @@ from Contrastive_uncertainty.general.callbacks.one_dim_typicality_callback impor
     Point_One_Dim_Class_Typicality_Normalised, Point_One_Dim_Relative_Class_Typicality_Analysis, Point_One_Dim_Relative_Class_Typicality_Normalised,\
     Data_Augmented_Point_One_Dim_Class_Typicality_Normalised, Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised
 
-from Contrastive_uncertainty.general.callbacks.one_dim_typicality_analysis_callback import Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Variance_Analysis
+from Contrastive_uncertainty.general.callbacks.one_dim_typicality_analysis_callback import Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Variance_Analysis, Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Single_Variance_Analysis
 
 def train_run_name(model_name, config, group=None):
     run_name = 'Train_' + model_name + '_DS:'+str(config['dataset']) +'_Epochs:'+ str(config['epochs']) + '_seed:' +str(config['seed'])  
@@ -108,6 +108,7 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Data Augmented Mahalanobis {ood_dataset}': Data_Augmented_Mahalanobis(Datamodule,OOD_Datamodule,quick_callback=quick_callback,vector_level='instance', label_level='fine'),
                 f'Point One Dim Relative Class Typicality Analysis {ood_dataset}': Point_One_Dim_Relative_Class_Typicality_Analysis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'Data Augmented Point One Dim Marginal Typicality Normalised Variance Analysis {ood_dataset}':Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Variance_Analysis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
+                f'Data Augmented Point One_Dim Marginal Typicality Normalised Single Variance Analysis':Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Single_Variance_Analysis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
 
                 
 

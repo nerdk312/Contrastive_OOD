@@ -177,3 +177,28 @@ class Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Single_Varianc
         return super().get_thresholds(fdata, mean, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std)
 
 
+    def get_scores(self, ftrain_norm, ftest_norm, food_norm):
+        return super().get_scores(ftrain_norm, ftest_norm, food_norm)
+
+    def datasaving(self, din_std_1d):
+        num_dimensions = len(din_std_1d)
+        flattened_1d_std_values = din_std_1d.flatten()
+        dimensions = np.arange(0,num_dimensions)
+        repeated_dims = np.tile(dimensions,len(flattened_1d_std_values)//num_dimensions) 
+        
+        # Add the data and the dimensions together
+        collated_data = np.stack((flattened_1d_std_values,repeated_dims),axis=1)
+        columns = ['ID Standard Deviation Values','Dimension']
+        
+
+        df = pd.DataFrame(collated_data,columns=columns) #  Need to transpose the column to get it into the correct shape
+        table = wandb.Table(dataframe=df)
+        wandb.log({'ID Data augmentation 1D Standard Deviation Values':table})
+
+    def get_eval_results(self,ftrain, ftest, food):
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain, ftest, food)
+        din_std_1d, dood_std_1d = self.get_scores(ftrain_norm,ftest_norm,food_norm)
+        self.datasaving(din_std_1d)
+            
+
+
