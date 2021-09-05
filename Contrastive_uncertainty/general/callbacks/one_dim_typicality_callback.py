@@ -1117,7 +1117,6 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
         '''
         data = [np.einsum('ij, klj->ikl',eigvectors[class_num].T,fdata - means[class_num]) for class_num in range(len(means))]
         data_matmul = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).reshape(fdata.shape[2],-1)).reshape(128,2,256) for class_num in range(len(means))]
-        import ipdb; ipdb.set_trace()
         '''
         ddata = [np.einsum('ij, klj->ikl',eigvectors[class_num].T,fdata - means[class_num])**2/np.expand_dims(eigvalues[class_num],axis=1) for class_num in range(len(means))] # list with number of elements equal to the number of classes, each element of list contains shape (emb dim, num augment, num_datapoints)
         #ddata_matmul = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).reshape(fdata.shape[2],-1))**2/np.expand_dims(eigvalues[class_num],axis=1) for class_num in range(len(means))]
@@ -1140,14 +1139,35 @@ class Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Cla
 
         return ddata
         
-
     def get_eval_results(self, ftrain, ftest, food, labelstrain):
         din, dood = self.get_scores(ftrain, ftest, food, labelstrain)
         AUROC = get_roc_sklearn(din, dood)
         wandb.run.summary[self.summary_key] = AUROC
-        
-    
 
+class Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Data_Augmented_Point_One_Dim_Class_Typicality_Normalised):
+    def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool):
+        super().__init__(Datamodule, OOD_Datamodule, quick_callback)
+        
+        self.summary_key = f'Normalized Alternative Data augmented Point One Dim Class Typicality Batch Size {self.augmentations} OOD - {self.OOD_Datamodule.name}'
+        
+    def get_thresholds(self, fdata, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std):
+        # Iterate based on the different augmentations
+        # collect the scores from the different augmented versions
+        collated_scores = []
+        for i in range(self.augmentations):
+            # Calculate the score for each augmented version one by one
+            ddata = [np.matmul(eigvectors[class_num].T,(fdata[i] - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
+            ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] +1e-10) for class_num in range(len(means))] # shape (dim, batch)
+            scores = [np.sum(np.abs(ddata[class_num]),axis=0) for class_num in range(len(means))]
+            collated_scores.append(scores) # collated scores is a list of lists, the number of lists is num augmentations and within that there is num classes list
+        
+        #https://stackoverflow.com/questions/14050824/add-sum-of-values-of-two-lists-into-new-list - obtaining a list of lists for the different values
+        # Sum over the list of lists to calculate the sum of the scores from the different data augmentations
+        final_scores =  [sum(x) for x in zip(*collated_scores)]
+        ddata = np.min(scores,axis=0)
+        return ddata
+
+'''
 # Alternative approach to calculating the one dim typicality (using a single value for the batch size), calculates in the usual way but uses the multiloader which has data a
 class Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point_One_Dim_Class_Typicality_Normalised):
     def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool):
@@ -1178,4 +1198,5 @@ class Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point
             np.copy(features_test),
             np.copy(features_ood),
             np.copy(labels_train))
-    
+
+'''

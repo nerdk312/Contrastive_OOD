@@ -115,8 +115,10 @@ weighting = 0.25,
 #callbacks = ['Data Augmented Mahalanobis'],
 #callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Mahalanobis'],
 
-callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
-
+#callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
+#callbacks = ['Data Augmented Alternative Point One Dim Class Typicality Normalised'],
+#callbacks = ['Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Alternative Point One Dim Class Typicality Normalised'],
+callbacks = ['Data Augmented Point One Dim Marginal Typicality Normalised Variance Analysis'],
 #callbacks = ['Point One Dim Relative Class Typicality Analysis'],
 #callbacks = [],
 

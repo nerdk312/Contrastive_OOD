@@ -100,8 +100,8 @@ weighting = 0.25,
 #callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised'],
 
 #callbacks = ['Data Augmented Mahalanobis'],
-callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Mahalanobis'],
-
+#callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Mahalanobis'],
+callbacks = ['Data Augmented Alternative Point One Dim Class Typicality Normalised'],
 
 #callbacks = ['Practice Hierarchical scores'],
 # Either goes through all the models or goes through baselines
