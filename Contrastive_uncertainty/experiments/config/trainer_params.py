@@ -57,9 +57,10 @@ label_level = ['fine','fine','coarse'],
 #callbacks = ['Point One Dim Class Typicality Normalised'],
 #callbacks = ['Point One Dim Relative Class Typicality Normalised'],
 #callbacks = ['Data Augmented Point One Dim Class Typicality Normalised'],
-callbacks = ['Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Alternative Point One Dim Class Typicality Normalised'],
+#callbacks = ['Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Alternative Point One Dim Class Typicality Normalised'],
 #callbacks = ['Alternative Data Augmented Point One Dim Class Typicality Normalised','Data Augmented Mahalanobis'],
 
+callbacks = ['Data Augmented Point One Dim Marginal Typicality Normalised Variance Analysis','Data Augmented Point One_Dim Marginal Typicality Normalised Single Variance Analysis'],
 
 #callbacks = ['One Dim Typicality'],
 #callbacks = ['One Dim Typicality Class'],
