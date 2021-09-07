@@ -328,8 +328,13 @@ class One_Dim_Background_Class_divergence_analysis(Data_Augmented_Point_One_Dim_
             background_class_1d_kl = [torch.distributions.kl.kl_divergence(background_1d_gaussian,class_1d_gaussian[class_num]).item() for class_num in range(num_classes)]
             dimension_val = [i for class_num in range(num_classes)]
             # Extend used to a list to the end of another list
-            kl_values.extend(background_class_1d_kl)
-            dimension_values.extend(dimension_val)
+            # Caclculate the mean directly for the case of CIFAR100 as I cannot place enough data for the table
+            if num_classes > 30: 
+                kl_values.append(np.mean(background_class_1d_kl))
+                dimension_values.append(i)
+            else:    
+                kl_values.extend(background_class_1d_kl)
+                dimension_values.extend(dimension_val)
 
             '''
             for class_num in range(num_classes):
@@ -351,6 +356,7 @@ class One_Dim_Background_Class_divergence_analysis(Data_Augmented_Point_One_Dim_
         # Add the data and the dimensions together
         columns = ['1D Total Class KL Values','Dimension']
         df = pd.DataFrame(collated_data,columns=columns) #  Need to transpose the column to get it into the correct shape
+        import ipdb; ipdb.set_trace()
         table = wandb.Table(dataframe=df)
         wandb.log({'1D Total Class KL Values':table})
 
