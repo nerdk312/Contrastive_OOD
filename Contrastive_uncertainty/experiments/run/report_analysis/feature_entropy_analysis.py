@@ -63,8 +63,8 @@ def feature_entropy_saving():
 
 def feature_entropy_plotting():
     ID = 'CIFAR100'
-    #desired_key = 'marginal feature entropy'
-    desired_key = 'class conditional feature entropy'
+    desired_key = 'marginal feature entropy'
+    #desired_key = 'class conditional feature entropy'
     datadict = {}
     api = wandb.Api()
     # Gets the runs corresponding to a specific filter

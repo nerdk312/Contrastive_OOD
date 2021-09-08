@@ -62,7 +62,8 @@ label_level = ['fine','fine','coarse'],
 
 #callbacks = ['Data Augmented Point One Dim Marginal Typicality Normalised Variance Analysis','Data Augmented Point One_Dim Marginal Typicality Normalised Single Variance Analysis'],
 
-callbacks = ['One_Dim_Background_Class_divergence_analysis'],
+#callbacks = ['One_Dim_Background_Class_divergence_analysis'],
+callbacks = ['Point One Dim Class Typicality Normalised Divergence'],
 #callbacks = ['One Dim Typicality'],
 #callbacks = ['One Dim Typicality Class'],
 #callbacks = ['One Dim Typicality Marginal Oracle'],

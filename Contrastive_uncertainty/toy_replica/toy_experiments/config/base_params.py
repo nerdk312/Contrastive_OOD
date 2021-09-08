@@ -123,7 +123,9 @@ weighting = 0.25,
 #callbacks = ['Data Augmented Point One_Dim Marginal Typicality Normalised Single Variance Analysis'],
 #callbacks = ['Data Augmented Point One Dim Marginal Typicality Normalised Variance Analysis','Data Augmented Point One_Dim Marginal Typicality Normalised Single Variance Analysis'],
 #callbacks = ['eigenvalue_order_check'],
-callbacks = ['One_Dim_Background_Class_divergence_analysis'],
+
+#callbacks = ['One_Dim_Background_Class_divergence_analysis'],
+callbacks = ['Point One Dim Class Typicality Normalised Divergence'],
 #callbacks = ['Point One Dim Relative Class Typicality Analysis'],
 #callbacks = [],
 

@@ -32,7 +32,6 @@ from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_roc_skle
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k
 
 
-
 # Performs 1 dimensional typicality using a single data point
 class One_Dim_Typicality(pl.Callback):
     def __init__(self, Datamodule,OOD_Datamodule,
@@ -696,7 +695,7 @@ class Point_One_Dim_Class_Typicality_Normalised(pl.Callback):
         ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
         
         # obtain the normalised the scores for the different classes
-        ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num] + +1e-10) for class_num in range(len(means))] # shape (dim, batch)
+        ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num]  +1e-10) for class_num in range(len(means))] # shape (dim, batch)
 
         # Obtain the sum of absolute normalised scores
         scores = [np.sum(np.abs(ddata[class_num]),axis=0) for class_num in range(len(means))]
@@ -1200,3 +1199,145 @@ class Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised(Point
             np.copy(labels_train))
 
 '''
+
+# Performs the point one dim typicality based on choosing specific eigenvalues and eigenvectors of interest
+class Point_One_Dim_Class_Typicality_Normalised_Divergence(Point_One_Dim_Class_Typicality_Normalised):
+    def __init__(self, Datamodule, OOD_Datamodule, quick_callback: bool):
+        super().__init__(Datamodule, OOD_Datamodule, quick_callback)
+
+        self.desired_dimensions = 30
+        self.summary_key =  f'Normalized Point One Dim Class Typicality Divergence {self.desired_dimensions} Dimensions OOD - {self.OOD_Datamodule.name}'
+
+    def forward_callback(self, trainer, pl_module):
+        train_loader = self.Datamodule.deterministic_train_dataloader()
+        test_loader = self.Datamodule.test_dataloader()
+        ood_loader = self.OOD_Datamodule.test_dataloader()
+
+        # Obtain representations of the data
+        features_train, labels_train = self.get_features(pl_module, train_loader)
+        features_test, labels_test = self.get_features(pl_module, test_loader) #  shape (num aug, num_data_points, emb_dim)
+        features_ood, labels_ood = self.get_features(pl_module, ood_loader) 
+
+        self.get_eval_results(
+            np.copy(features_train),
+            np.copy(features_test),
+            np.copy(features_ood),
+            np.copy(labels_train))
+        
+    def get_features(self, pl_module, dataloader):
+        return super().get_features(pl_module, dataloader)
+    
+    
+    
+    # normalise scores to get the predictions of food
+    def normalise(self,ftrain,ftest,food):
+        # Nawid -normalise the featues for the training, test and ood data
+        # standardize data
+        
+        ftrain /= np.linalg.norm(ftrain, axis=-1, keepdims=True) + 1e-10
+        ftest /= np.linalg.norm(ftest, axis=-1, keepdims=True) + 1e-10
+        food /= np.linalg.norm(food, axis=-1, keepdims=True) + 1e-10
+        # Nawid - calculate the mean and std of the traiing features
+        m, s = np.mean(ftrain, axis=0, keepdims=True), np.std(ftrain, axis=0, keepdims=True)
+        # Nawid - normalise data using the mean and std
+        ftrain = (ftrain - m) / (s + 1e-10)
+        ftest = (ftest - m) / (s + 1e-10)
+        food = (food - m) / (s + 1e-10)
+        
+        return ftrain, ftest, food
+    
+    def get_1d_train(self, ftrain, ypred):
+        ####### Background information ##########
+        background_cov = np.cov(ftrain.T, bias=True)
+        background_mean = np.mean(ftrain,axis=0,keepdims=True)
+        background_eigvalues, background_eigvectors = np.linalg.eigh(background_cov)
+        background_eigvalues =  np.expand_dims(background_eigvalues,axis=1)
+
+        xc = [ftrain[ypred == i] for i in np.unique(ypred)] # Nawid - training data which have been predicted to belong to a particular class
+        covs = [np.cov(x.T, bias=True) for x in xc] # Cov and means part should be fine
+        means = [np.mean(x,axis=0,keepdims=True) for x in xc] # Calculates mean from (B,embdim) to (1,embdim)
+
+        eigvalues = []
+        eigvectors = []
+
+        dtrain_1d_mean = [] # 1D mean for each class
+        dtrain_1d_std = [] # 1D std for each class
+        all_dtrain_class = [] # 1d scores for each class
+
+        for class_num, class_cov in enumerate(covs):
+            class_eigvals, class_eigvectors = np.linalg.eigh(class_cov) # Each column is a normalised eigenvector of
+            
+            # Reverse order as the eigenvalues and eigenvectors are in ascending order (lowest value first), therefore it would be beneficial to get them in descending order
+            #class_eigvals, class_eigvectors = np.flip(class_eigvals, axis=0), np.flip(class_eigvectors,axis=0)
+            eigvalues.append(np.expand_dims(class_eigvals,axis=1))
+            eigvectors.append(class_eigvectors)
+
+            # Get the distribution of the 1d Scores from the certain class, which involves seeing the one dimensional scores for a specific class and calculating the mean and the standard deviation
+            dtrain_class = np.matmul(eigvectors[class_num].T,(xc[class_num] - means[class_num]).T)**2/eigvalues[class_num]
+            dtrain_1d_mean.append(np.mean(dtrain_class, axis= 1, keepdims=True))
+            dtrain_1d_std.append(np.std(dtrain_class, axis= 1, keepdims=True))
+            all_dtrain_class.append(dtrain_class)
+        
+
+        # Information related to the background statistics of each class
+        background_class = np.matmul(background_eigvectors.T,(ftrain - background_mean).T)**2/background_eigvalues
+        background_class_1d_mean = np.mean(background_class, axis= 1, keepdims=True)
+        background_class_1d_std = np.std(background_class, axis= 1, keepdims=True)
+        
+        return means, covs, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std
+
+    # Uses the 1d kl to find the dimensions of the data which are effective for the task
+    def filter_1d_kl(self,eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std):
+        num_dimensions = len(background_class_1d_std)
+        num_classes = len(dtrain_1d_mean)
+        kl_values = []
+        for i in range(num_dimensions):
+            background_1d_gaussian = torch.distributions.normal.Normal(torch.tensor([background_class_1d_mean[i]]),torch.tensor([background_class_1d_std[i]]))
+            class_1d_gaussian = [torch.distributions.normal.Normal(torch.tensor([dtrain_1d_mean[class_num][i]]),torch.tensor([dtrain_1d_std[class_num][i]])) for class_num in range(num_classes)]
+            background_class_1d_kl = [torch.distributions.kl.kl_divergence(background_1d_gaussian,class_1d_gaussian[class_num]).item() for class_num in range(num_classes)]
+            # Calculate KL values for the different dimensions
+            kl_values.append(np.mean(background_class_1d_kl))
+        
+        top_indices = np.array(kl_values).argsort()[:self.desired_dimensions]
+        return top_indices
+        '''
+        filtered_eigvalues = [eigvalues[class_num][top_indices] for class_num in range(num_classes)]
+        filtered_eigvectors = [eigvectors[class_num][top_indices] for class_num in range(num_classes)]
+        filtered_dtrain_1d_mean = [dtrain_1d_mean[class_num][top_indices] for class_num in range(num_classes)]
+        filtered_dtrain_1d_std = [dtrain_1d_std[class_num][top_indices] for class_num in range(num_classes)]
+        
+        return filtered_eigvalues, filtered_eigvectors, filtered_dtrain_1d_mean, filtered_dtrain_1d_std
+        '''
+    # Calculates the minimum score using the filtered eigvalues, eigvectors and dtrain_mean and dtrain_std
+    def get_thresholds(self, fdata, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, top_indices):
+        ddata = [np.matmul(eigvectors[class_num].T,(fdata - means[class_num]).T)**2/eigvalues[class_num] for class_num in range(len(means))] # Calculate the 1D scores for all the different classes 
+        
+        # obtain the normalised the scores for the different classes
+        ddata = [ddata[class_num] - dtrain_1d_mean[class_num]/(dtrain_1d_std[class_num]  +1e-10) for class_num in range(len(means))] # shape (dim, batch)
+        ################## PART WHICH IS DIFFERENT -only use the indices which are the most distinct in terms of KL divergence to the background ##############################
+        filtered_ddata = [ddata[class_num][top_indices] for class_num in range(len(means))]
+
+        # Obtain the sum of absolute normalised scores
+        scores = [np.sum(np.abs(filtered_ddata[class_num]),axis=0) for class_num in range(len(means))]
+        # Obtain the scores corresponding to the lowest class
+        ddata = np.min(scores,axis=0)
+        
+        return ddata
+
+    def get_eval_results(self, ftrain, ftest, food, labelstrain):
+        ftrain_norm, ftest_norm, food_norm = self.normalise(ftrain,ftest,food)
+        means, covs,eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std = self.get_1d_train(ftrain_norm, labelstrain)    
+        # calculate the indices which are the most distinct from the background
+        top_indices = self.filter_1d_kl(eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std)
+        
+        din = self.get_thresholds(ftest_norm, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, top_indices)
+        dood = self.get_thresholds(food_norm, means, eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, top_indices)
+        AUROC = get_roc_sklearn(din, dood)        
+        wandb.run.summary[self.summary_key] = AUROC
+
+        '''
+        filtered_eigvalues, filtered_eigvectors, filtered_dtrain_1d_mean, filtered_dtrain_1d_std = self.filter_1d_kl(eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std)
+        din = self.get_thresholds(ftest_norm, means,filtered_eigvalues, filtered_eigvectors, filtered_dtrain_1d_mean, filtered_dtrain_1d_std )
+        dood = self.get_thresholds(food_norm, means,filtered_eigvalues, filtered_eigvectors, filtered_dtrain_1d_mean, filtered_dtrain_1d_std )
+        '''
+    

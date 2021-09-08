@@ -314,7 +314,7 @@ class One_Dim_Background_Class_divergence_analysis(Data_Augmented_Point_One_Dim_
         background_class_1d_mean = np.mean(background_class, axis= 1, keepdims=True)
         background_class_1d_std = np.std(background_class, axis= 1, keepdims=True)
         
-        return dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std
+        return eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std
 
     def get_1d_kl(self,dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std):
         num_dimensions = len(background_class_1d_std)
@@ -356,7 +356,6 @@ class One_Dim_Background_Class_divergence_analysis(Data_Augmented_Point_One_Dim_
         # Add the data and the dimensions together
         columns = ['1D Total Class KL Values','Dimension']
         df = pd.DataFrame(collated_data,columns=columns) #  Need to transpose the column to get it into the correct shape
-        import ipdb; ipdb.set_trace()
         table = wandb.Table(dataframe=df)
         wandb.log({'1D Total Class KL Values':table})
 
@@ -366,7 +365,7 @@ class One_Dim_Background_Class_divergence_analysis(Data_Augmented_Point_One_Dim_
     def get_eval_results(self,ftrain,labelstrain):
         ftrain_norm= self.normalise(ftrain)
         
-        dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std = self.get_1d_train(ftrain_norm, labelstrain)
+        eigvalues, eigvectors, dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std = self.get_1d_train(ftrain_norm, labelstrain)
         kl_values, dimension_values = self.get_1d_kl(dtrain_1d_mean, dtrain_1d_std, background_class_1d_mean, background_class_1d_std)
 
         self.datasaving(kl_values, dimension_values)

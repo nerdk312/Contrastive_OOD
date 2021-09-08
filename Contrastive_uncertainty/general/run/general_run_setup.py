@@ -30,7 +30,8 @@ from Contrastive_uncertainty.general.callbacks.feature_entropy_callback import F
 from Contrastive_uncertainty.general.callbacks.one_dim_typicality_callback import One_Dim_Typicality, One_Dim_Typicality_Class, One_Dim_Typicality_Marginal_Oracle,\
     One_Dim_Typicality_Marginal, One_Dim_Typicality_Normalised_Marginal,\
     Point_One_Dim_Class_Typicality_Normalised, Point_One_Dim_Relative_Class_Typicality_Analysis, Point_One_Dim_Relative_Class_Typicality_Normalised,\
-    Data_Augmented_Point_One_Dim_Class_Typicality_Normalised, Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised
+    Data_Augmented_Point_One_Dim_Class_Typicality_Normalised, Alternative_Data_Augmented_Point_One_Dim_Class_Typicality_Normalised,\
+    Point_One_Dim_Class_Typicality_Normalised_Divergence
 
 from Contrastive_uncertainty.general.callbacks.one_dim_typicality_analysis_callback import Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Variance_Analysis, Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Single_Variance_Analysis, eigenvalue_order_check, One_Dim_Background_Class_divergence_analysis
 
@@ -110,9 +111,9 @@ def callback_dictionary(Datamodule,config,data_dict):
                 f'Data Augmented Point One Dim Marginal Typicality Normalised Variance Analysis {ood_dataset}':Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Variance_Analysis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 f'Data Augmented Point One_Dim Marginal Typicality Normalised Single Variance Analysis':Data_Augmented_Point_One_Dim_Marginal_Typicality_Normalised_Single_Variance_Analysis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 
+                f'Point One Dim Class Typicality Normalised Divergence {ood_dataset}':Point_One_Dim_Class_Typicality_Normalised_Divergence(Datamodule,OOD_Datamodule,quick_callback),
                 f'One_Dim_Background_Class_divergence_analysis':One_Dim_Background_Class_divergence_analysis(Datamodule,OOD_Datamodule, quick_callback=quick_callback),
                 
-
                 
                 f'IForest {ood_dataset}': IForest(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),
                 f'Class Variance': Dataset_class_variance(Datamodule, OOD_Datamodule,quick_callback=quick_callback, vector_level='fine',label_level='fine'),

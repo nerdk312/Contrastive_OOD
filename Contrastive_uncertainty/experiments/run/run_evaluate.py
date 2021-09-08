@@ -10,13 +10,14 @@ run_paths = []
 api = wandb.Api()
 # Gets the runs corresponding to a specific filter
 # https://github.com/wandb/client/blob/v0.10.31/wandb/apis/public.py
-
+#https://github.com/wandb/client/blob/v0.12.1/wandb/apis/public.py#L752-L851
 
 #runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Confusion Log Probability Evaluation"})
 #runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"OOD hierarchy baselines"}) # "OOD detection at different scales experiment" (other group I use to run experiments)
 #runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"OOD hierarchy baselines","$or": [{"config.model_type":"Moco" }, {"config.model_type": "SupCon"}]})
 # Choose specifcally the specific group, the CIFAR100 dataset as well as choosing Moco or Supcon model
-runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"OOD hierarchy baselines","config.dataset": "CIFAR100","$or": [{"config.model_type":"Moco" }, {"config.model_type": "SupCon"}]})
+#runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"OOD hierarchy baselines","config.dataset": "CIFAR100","$or": [{"config.model_type":"Moco" }, {"config.model_type": "SupCon"}]})
+runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"OOD hierarchy baselines","$or": [{"config.dataset":"CIFAR100" }, {"config.dataset":"CIFAR10"}],"$or": [{"config.model_type":"Moco" }, {"config.model_type": "SupCon"}]})
 
 #runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Baselines Repeats","$or": [{"config.model_type":"Moco" }, {"config.model_type": "CE"}]})
 #runs = api.runs(path="nerdk312/evaluation", filters={"config.group":"Baselines Repeats","$or": [{"config.model_type": "SupCon"}]})
