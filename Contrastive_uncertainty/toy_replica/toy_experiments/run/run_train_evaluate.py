@@ -1,6 +1,0 @@
-# Import general params
-from Contrastive_uncertainty.experiments.config.base_trainer_params import practice_hparams, trainer_hparams
-from Contrastive_uncertainty.experiments.train.train_evaluate_experiments import train_evaluate
-
-
-train_evaluate(practice_hparams,trainer_hparams)
