@@ -27,10 +27,6 @@ from Contrastive_uncertainty.general.callbacks.general_callbacks import quickloa
 from Contrastive_uncertainty.general.callbacks.ood_callbacks import get_roc_sklearn, get_roc_plot, table_saving
 from Contrastive_uncertainty.general.utils.pl_metrics import precision_at_k
 
-
-
-
-
 # Performs the typicality test between the ID test data and the OOD data
 class ConfusionLogProbability(pl.Callback):
     def __init__(self, Confusion_Datamodule,
@@ -40,8 +36,6 @@ class ConfusionLogProbability(pl.Callback):
 
         self.Confusion_Datamodule = Confusion_Datamodule
         self.quick_callback = quick_callback
-
-
     
     def on_test_epoch_end(self, trainer, pl_module):
         self.forward_callback(trainer=trainer, pl_module=pl_module)
@@ -63,7 +57,7 @@ class ConfusionLogProbability(pl.Callback):
     def get_predictions(self, pl_module, dataloader):
         
         loader = quickloading(self.quick_callback, dataloader)
-        all_predictions = []
+        all_predictions = [] # Stores the predictions from all the different models
         for index, (img, *label, indices) in enumerate(loader):
             assert len(loader)>0, 'loader is empty'
             if isinstance(img, tuple) or isinstance(img, list):
@@ -75,7 +69,7 @@ class ConfusionLogProbability(pl.Callback):
                 
 
             img = img.to(pl_module.device) 
-            model_predictions = []
+            model_predictions = [] # Obtains the predictions of a single model
             # Go through each member in the ensemble and obtain a classification prediction
             for i in range(pl_module.num_models):
                 logits = pl_module.class_forward(img, i)
@@ -91,7 +85,6 @@ class ConfusionLogProbability(pl.Callback):
         all_predictions = torch.cat(all_predictions, dim=1)
         return all_predictions
                 
-    
     def confusion_calculation(self, predictions):
         '''
         Args:
@@ -107,7 +100,6 @@ class ConfusionLogProbability(pl.Callback):
         #import ipdb; ipdb.set_trace()
         ## Perfrom summation over all inlier classes, then calculate the mean and the log
         
-
         CLP = torch.sum(inlier_predictions, dim=1)
         CLP = torch.log(torch.mean(CLP))
         min_classwise_CLP = torch.min(classwise_CLP)
@@ -128,10 +120,6 @@ class ConfusionLogProbability(pl.Callback):
         table = wandb.Table(data= df)
         wandb.log({'Class Wise Confusion Log Probability': table})
 
-        
-
         '''
         CLP = torch.mean(inlier_predictions)
         '''
-        
-
